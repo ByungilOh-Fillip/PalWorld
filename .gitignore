@@ -65,19 +65,22 @@ palworld/SourceArt/**/*.tga
 .vs/
 *.suo
 *.user
-*.sln          # UE5가 자동 생성 — 직접 편집 불필요
 *.opensdf
 *.sdf
 *.VC.db
 *.VC.opendb
+
+# 하위 폴더(PalWorld/) 내의 모든 sln 및 slnx 파일을 제외하도록 수정
+**/*.sln
+**/*.slnx
 
 
 # -------------------------------------------------------------
 # [IDE] JetBrains Rider
 # -------------------------------------------------------------
 
-.idea/
-*.DotSettings.user
+**/.idea/
+**/*.DotSettings.user
 
 
 # -------------------------------------------------------------
