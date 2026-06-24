@@ -8,15 +8,15 @@ public class PalWorld : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "Slate", "SlateCore" });
 		
 		// 팀원 ROLE에 따라 나뉜 파트를 한번에 빌드할 때 사용
 		PublicIncludePaths.AddRange(
 			new string[] {
-				System.IO.Path.Combine(ModuleDirectory, "CCW/Public"),
-				System.IO.Path.Combine(ModuleDirectory, "OBI/Public"),
-				System.IO.Path.Combine(ModuleDirectory, "PJH/Public"),
-				System.IO.Path.Combine(ModuleDirectory, "Global/Public"),
+				System.IO.Path.Combine(ModuleDirectory, "CCW/public"),
+				System.IO.Path.Combine(ModuleDirectory, "OBI/public"),
+				System.IO.Path.Combine(ModuleDirectory, "PJH/public"),
+				System.IO.Path.Combine(ModuleDirectory, "Global/public"),
 				// 추가되는 역할(ROLE) 폴더가 있다면 여기에 동일하게 경로 지정
 			}
 		);
