@@ -17,6 +17,26 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "ModelContextProtocol",
+			"Enabled": true
+		},
+		{
+			"Name": "MCPClientToolset",
+			"Enabled": true
+		},
+		{
+			"Name": "AllToolsets",
+			"Enabled": true
+		},
+		{
+			"Name": "AIModuleToolset",
+			"Enabled": true
+		},
+		{
+			"Name": "UnrealMCP",
+			"Enabled": true
 		}
 	]
 }
