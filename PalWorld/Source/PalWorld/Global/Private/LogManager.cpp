@@ -1,5 +1,8 @@
 ﻿#include "LogManager.h"
 
+#include "Engine/Engine.h"
+#include "Logging/LogMacros.h"
+
 DEFINE_LOG_CATEGORY(LogIntegrated);
 DEFINE_LOG_CATEGORY(LogGameplay);
 

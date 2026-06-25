@@ -8,7 +8,8 @@ public class PalWorld : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 		
 		// 팀원 ROLE에 따라 나뉜 파트를 한번에 빌드할 때 사용
 		PublicIncludePaths.AddRange(
@@ -20,9 +21,6 @@ public class PalWorld : ModuleRules
 				// 추가되는 역할(ROLE) 폴더가 있다면 여기에 동일하게 경로 지정
 			}
 		);
-		
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
