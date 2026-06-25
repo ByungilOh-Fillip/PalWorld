@@ -16,6 +16,7 @@ public class PalWorld : ModuleRules
 				System.IO.Path.Combine(ModuleDirectory, "CCW/Public"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/Public"),
 				System.IO.Path.Combine(ModuleDirectory, "PJH/Public"),
+				System.IO.Path.Combine(ModuleDirectory, "LMK/Public"),
 				System.IO.Path.Combine(ModuleDirectory, "Global/Public"),
 				// 추가되는 역할(ROLE) 폴더가 있다면 여기에 동일하게 경로 지정
 			}
