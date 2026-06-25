@@ -6,6 +6,15 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/Components/PWPalCommandComponent.h"
+#include "Player/Components/PWPlayerActionComponent.h"
+#include "Player/Components/PWPlayerCaptureComponent.h"
+#include "Player/Components/PWPlayerCombatComponent.h"
+#include "Player/Components/PWPlayerInteractionComponent.h"
+#include "Player/Components/PWPlayerInventoryLinkComponent.h"
+#include "Player/Components/PWPlayerMountComponent.h"
+#include "Player/Components/PWPlayerSkillComponent.h"
+#include "Player/Components/PWPlayerStatComponent.h"
 
 APWPlayerCharacter::APWPlayerCharacter()
 {
@@ -23,6 +32,7 @@ APWPlayerCharacter::APWPlayerCharacter()
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchedWalkSpeed;
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -33,6 +43,16 @@ APWPlayerCharacter::APWPlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	ActionComponent = CreateDefaultSubobject<UPWPlayerActionComponent>(TEXT("ActionComponent"));
+	StatComponent = CreateDefaultSubobject<UPWPlayerStatComponent>(TEXT("StatComponent"));
+	CombatComponent = CreateDefaultSubobject<UPWPlayerCombatComponent>(TEXT("CombatComponent"));
+	SkillComponent = CreateDefaultSubobject<UPWPlayerSkillComponent>(TEXT("SkillComponent"));
+	PalCommandComponent = CreateDefaultSubobject<UPWPalCommandComponent>(TEXT("PalCommandComponent"));
+	InteractionComponent = CreateDefaultSubobject<UPWPlayerInteractionComponent>(TEXT("InteractionComponent"));
+	InventoryLinkComponent = CreateDefaultSubobject<UPWPlayerInventoryLinkComponent>(TEXT("InventoryLinkComponent"));
+	CaptureComponent = CreateDefaultSubobject<UPWPlayerCaptureComponent>(TEXT("CaptureComponent"));
+	MountComponent = CreateDefaultSubobject<UPWPlayerMountComponent>(TEXT("MountComponent"));
 }
 
 void APWPlayerCharacter::BeginPlay()
@@ -49,9 +69,10 @@ void APWPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(APWPlayerCharacter, bIsSprinting);
 }
 
+// 이 입력들은 CharacterMovement가 클라 예측/서버 보정을 기본으로 처리한다.
 void APWPlayerCharacter::Move(const FVector2D& MovementVector)
 {
-	if (!Controller || MovementVector.IsNearlyZero())
+	if (!Controller || IsRolling() || MovementVector.IsNearlyZero())
 	{
 		return;
 	}
@@ -79,6 +100,11 @@ void APWPlayerCharacter::Look(const FVector2D& LookVector)
 
 void APWPlayerCharacter::StartJump()
 {
+	if (IsRolling())
+	{
+		return;
+	}
+
 	Jump();
 }
 
@@ -89,7 +115,7 @@ void APWPlayerCharacter::StopJump()
 
 void APWPlayerCharacter::StartSprint()
 {
-	if (bIsCrouched)
+	if (!CanStartSprint())
 	{
 		return;
 	}
@@ -112,8 +138,14 @@ void APWPlayerCharacter::StopSprint()
 	}
 }
 
+// Crouch/UnCrouch는 ACharacter의 기본 복제 crouch 상태를 사용한다.
 void APWPlayerCharacter::StartCrouch()
 {
+	if (IsRolling())
+	{
+		return;
+	}
+
 	StopSprint();
 	Crouch();
 }
@@ -123,6 +155,23 @@ void APWPlayerCharacter::StopCrouch()
 	UnCrouch();
 }
 
+void APWPlayerCharacter::StartRoll()
+{
+	if (ActionComponent)
+	{
+		ActionComponent->TryStartRoll();
+	}
+}
+
+bool APWPlayerCharacter::IsRolling() const
+{
+	return ActionComponent && ActionComponent->IsRolling();
+}
+
+// --------------------
+// 커스텀 복제 이동 상태
+// --------------------
+
 void APWPlayerCharacter::OnRep_IsSprinting()
 {
 	ApplyMovementSpeed();
@@ -130,11 +179,29 @@ void APWPlayerCharacter::OnRep_IsSprinting()
 
 void APWPlayerCharacter::ServerSetSprinting_Implementation(bool bNewIsSprinting)
 {
+	if (bNewIsSprinting && !CanStartSprint())
+	{
+		SetSprinting(false);
+		return;
+	}
+
 	SetSprinting(bNewIsSprinting);
+}
+
+bool APWPlayerCharacter::CanStartSprint() const
+{
+	return !bIsCrouched
+		&& !IsRolling()
+		&& (!StatComponent || StatComponent->CanStartSprint());
 }
 
 void APWPlayerCharacter::SetSprinting(bool bNewIsSprinting)
 {
+	if (bNewIsSprinting && !CanStartSprint())
+	{
+		bNewIsSprinting = false;
+	}
+
 	if (bIsSprinting == bNewIsSprinting)
 	{
 		return;
@@ -142,9 +209,15 @@ void APWPlayerCharacter::SetSprinting(bool bNewIsSprinting)
 
 	bIsSprinting = bNewIsSprinting;
 	ApplyMovementSpeed();
+
+	if (HasAuthority() && StatComponent)
+	{
+		StatComponent->SetSprintDrainActive(bIsSprinting);
+	}
 }
 
 void APWPlayerCharacter::ApplyMovementSpeed()
 {
 	GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchedWalkSpeed;
 }

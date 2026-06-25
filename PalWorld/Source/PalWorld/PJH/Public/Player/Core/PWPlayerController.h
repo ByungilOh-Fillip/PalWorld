@@ -9,6 +9,7 @@
 class APWPlayerCharacter;
 class UInputAction;
 class UInputMappingContext;
+class UPWPlayerHUDWidget;
 struct FInputActionValue;
 
 UCLASS()
@@ -21,6 +22,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void AcknowledgePossession(APawn* P) override;
 	virtual void SetupInputComponent() override;
 
 private:
@@ -45,6 +48,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Movement")
 	TObjectPtr<UInputAction> CrouchAction;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Movement")
+	TObjectPtr<UInputAction> RollAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|UI")
+	TSubclassOf<UPWPlayerHUDWidget> PlayerHUDWidgetClass;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPWPlayerHUDWidget> PlayerHUDWidget;
+
 	void HandleMove(const FInputActionValue& Value);
 	void HandleLook(const FInputActionValue& Value);
 	void HandleJumpStarted(const FInputActionValue& Value);
@@ -53,6 +65,9 @@ private:
 	void HandleSprintCompleted(const FInputActionValue& Value);
 	void HandleCrouchStarted(const FInputActionValue& Value);
 	void HandleCrouchCompleted(const FInputActionValue& Value);
+	void HandleRollStarted(const FInputActionValue& Value);
 
 	APWPlayerCharacter* GetPWPlayerCharacter() const;
+	void CreatePlayerHUD();
+	void InitializePlayerHUD();
 };

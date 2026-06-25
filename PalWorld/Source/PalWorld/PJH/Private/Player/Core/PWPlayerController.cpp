@@ -6,7 +6,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
+#include "Blueprint/UserWidget.h"
+#include "Engine/LocalPlayer.h"
 #include "Player/Core/PWPlayerCharacter.h"
+#include "Player/UI/PWPlayerHUDWidget.h"
 
 APWPlayerController::APWPlayerController()
 {
@@ -33,6 +36,23 @@ void APWPlayerController::BeginPlay()
 	{
 		InputSubsystem->AddMappingContext(GameplayMappingContext, GameplayMappingPriority);
 	}
+
+	CreatePlayerHUD();
+	InitializePlayerHUD();
+}
+
+void APWPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	InitializePlayerHUD();
+}
+
+void APWPlayerController::AcknowledgePossession(APawn* P)
+{
+	Super::AcknowledgePossession(P);
+
+	InitializePlayerHUD();
 }
 
 void APWPlayerController::SetupInputComponent()
@@ -75,8 +95,14 @@ void APWPlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleCrouchCompleted);
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleCrouchCompleted);
 	}
+
+	if (RollAction)
+	{
+		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &APWPlayerController::HandleRollStarted);
+	}
 }
 
+// 입력 핸들러는 얇게 유지하고, 권한 판단은 캐릭터/컴포넌트에서 처리한다.
 void APWPlayerController::HandleMove(const FInputActionValue& Value)
 {
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
@@ -141,7 +167,44 @@ void APWPlayerController::HandleCrouchCompleted(const FInputActionValue& Value)
 	}
 }
 
+void APWPlayerController::HandleRollStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StartRoll();
+	}
+}
+
 APWPlayerCharacter* APWPlayerController::GetPWPlayerCharacter() const
 {
 	return Cast<APWPlayerCharacter>(GetPawn());
+}
+
+void APWPlayerController::CreatePlayerHUD()
+{
+	if (!IsLocalController() || PlayerHUDWidget || !PlayerHUDWidgetClass)
+	{
+		return;
+	}
+
+	PlayerHUDWidget = CreateWidget<UPWPlayerHUDWidget>(this, PlayerHUDWidgetClass);
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->AddToViewport();
+	}
+}
+
+void APWPlayerController::InitializePlayerHUD()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	CreatePlayerHUD();
+
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->InitializeWithPlayerCharacter(GetPWPlayerCharacter());
+	}
 }
