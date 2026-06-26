@@ -237,7 +237,10 @@ FString UUnrealMCPBridge::ExecuteCommand(const FString& CommandType, const TShar
                      CommandType == TEXT("take_screenshot") ||
                      CommandType == TEXT("list_landscapes") ||
                      CommandType == TEXT("get_landscape_layers") ||
-                     CommandType == TEXT("paint_landscape_layer_at_location"))
+                     CommandType == TEXT("create_landscape_paint_setup") ||
+                     CommandType == TEXT("paint_landscape_layer_at_location") ||
+                     CommandType == TEXT("paint_landscape_open_world_biome") ||
+                     CommandType == TEXT("execute_console_command"))
             {
                 ResultJson = EditorCommands->HandleCommand(CommandType, Params);
             }

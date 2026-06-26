@@ -36,7 +36,8 @@ public class UnrealMCP : ModuleRules
 				"JsonUtilities",
 				"DeveloperSettings",
 				"Landscape",
-				"Foliage"
+				"Foliage",
+				"AssetRegistry"
 			}
 		);
 		

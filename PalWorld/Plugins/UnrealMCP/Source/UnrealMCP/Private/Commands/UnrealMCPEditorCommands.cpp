@@ -20,11 +20,15 @@
 #include "Subsystems/EditorActorSubsystem.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Landscape.h"
 #include "LandscapeEdit.h"
 #include "LandscapeInfo.h"
 #include "LandscapeLayerInfoObject.h"
 #include "LandscapeProxy.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialExpressionConstant.h"
+#include "Materials/MaterialExpressionLandscapeLayerBlend.h"
 #include "ScopedTransaction.h"
 
 FUnrealMCPEditorCommands::FUnrealMCPEditorCommands()
@@ -89,9 +93,21 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleCommand(const FString& C
     {
         return HandleGetLandscapeLayers(Params);
     }
+    else if (CommandType == TEXT("create_landscape_paint_setup"))
+    {
+        return HandleCreateLandscapePaintSetup(Params);
+    }
     else if (CommandType == TEXT("paint_landscape_layer_at_location"))
     {
         return HandlePaintLandscapeLayerAtLocation(Params);
+    }
+    else if (CommandType == TEXT("paint_landscape_open_world_biome"))
+    {
+        return HandlePaintLandscapeOpenWorldBiome(Params);
+    }
+    else if (CommandType == TEXT("execute_console_command"))
+    {
+        return HandleExecuteConsoleCommand(Params);
     }
     
     return FUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Unknown editor command: %s"), *CommandType));
@@ -133,6 +149,32 @@ static TSharedPtr<FJsonObject> LandscapeProxyToJson(ALandscapeProxy* Proxy)
     Obj->SetStringField(TEXT("path"), Proxy ? Proxy->GetPathName() : TEXT(""));
     Obj->SetStringField(TEXT("landscape_material"), Proxy && Proxy->GetLandscapeMaterial() ? Proxy->GetLandscapeMaterial()->GetPathName() : TEXT("None"));
     return Obj;
+}
+
+static FString SanitizeAssetNameSegment(const FString& Value)
+{
+    FString Result = Value;
+    const TCHAR* InvalidChars = TEXT(" .,/\\:;!@#$%^&*()+={}[]|'\"<>?");
+    for (const TCHAR* Char = InvalidChars; *Char; ++Char)
+    {
+        Result.ReplaceCharInline(*Char, TEXT('_'));
+    }
+    return Result.IsEmpty() ? TEXT("Layer") : Result;
+}
+
+template <typename ObjectType>
+static ObjectType* LoadOrCreateAsset(const FString& PackageName, const FString& AssetName)
+{
+    if (ObjectType* ExistingAsset = LoadObject<ObjectType>(nullptr, *PackageName))
+    {
+        return ExistingAsset;
+    }
+
+    UPackage* Package = CreatePackage(*PackageName);
+    ObjectType* NewAsset = NewObject<ObjectType>(Package, *AssetName, RF_Public | RF_Standalone);
+    FAssetRegistryModule::AssetCreated(NewAsset);
+    Package->MarkPackageDirty();
+    return NewAsset;
 }
 
 TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleGetActorsInLevel(const TSharedPtr<FJsonObject>& Params)
@@ -724,6 +766,172 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleGetLandscapeLayers(const
     return ResultObj;
 }
 
+TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleCreateLandscapePaintSetup(const TSharedPtr<FJsonObject>& Params)
+{
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to get editor world"));
+    }
+
+    FString LandscapeName;
+    Params->TryGetStringField(TEXT("landscape_name"), LandscapeName);
+
+    FString FolderPath = TEXT("/Game/_Private/LMK/LandscapePaint");
+    Params->TryGetStringField(TEXT("folder_path"), FolderPath);
+    FolderPath.RemoveFromEnd(TEXT("/"));
+
+    FString MaterialName = TEXT("M_MCP_LandscapePaint");
+    Params->TryGetStringField(TEXT("material_name"), MaterialName);
+    MaterialName = SanitizeAssetNameSegment(MaterialName);
+
+    TArray<FString> LayerNames;
+    const TArray<TSharedPtr<FJsonValue>>* LayerNameValues = nullptr;
+    if (Params->TryGetArrayField(TEXT("layer_names"), LayerNameValues))
+    {
+        for (const TSharedPtr<FJsonValue>& Value : *LayerNameValues)
+        {
+            FString LayerName;
+            if (Value.IsValid() && Value->TryGetString(LayerName) && !LayerName.IsEmpty())
+            {
+                LayerNames.Add(SanitizeAssetNameSegment(LayerName));
+            }
+        }
+    }
+
+    if (LayerNames.Num() == 0)
+    {
+        LayerNames = { TEXT("Grass"), TEXT("Dirt") };
+    }
+
+    ALandscapeProxy* Proxy = FindLandscapeProxyByName(World, LandscapeName);
+    if (!Proxy)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Landscape not found: %s"), LandscapeName.IsEmpty() ? TEXT("<any>") : *LandscapeName));
+    }
+
+    ULandscapeInfo* LandscapeInfo = Proxy->GetLandscapeInfo();
+    if (!LandscapeInfo)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Landscape has no LandscapeInfo"));
+    }
+
+    const FString MaterialPackageName = FolderPath + TEXT("/") + MaterialName;
+    UMaterial* Material = LoadOrCreateAsset<UMaterial>(MaterialPackageName, MaterialName);
+    if (!Material)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to create landscape material"));
+    }
+
+    if (Material->GetExpressionCollection().Expressions.Num() == 0)
+    {
+        Material->Modify();
+
+        UMaterialExpressionLandscapeLayerBlend* LayerBlend = NewObject<UMaterialExpressionLandscapeLayerBlend>(Material);
+        LayerBlend->Material = Material;
+        LayerBlend->Desc = TEXT("MCP generated Landscape paint layer blend");
+        LayerBlend->MaterialExpressionEditorX = -400;
+        LayerBlend->MaterialExpressionEditorY = 0;
+
+        const TArray<FVector> DefaultColors = {
+            FVector(0.18f, 0.42f, 0.12f),
+            FVector(0.42f, 0.28f, 0.12f),
+            FVector(0.18f, 0.24f, 0.30f),
+            FVector(0.55f, 0.50f, 0.42f)
+        };
+
+        for (int32 Index = 0; Index < LayerNames.Num(); ++Index)
+        {
+            FLayerBlendInput& Input = LayerBlend->Layers.AddDefaulted_GetRef();
+            Input.LayerName = FName(*LayerNames[Index]);
+            Input.BlendType = LB_WeightBlend;
+            Input.PreviewWeight = Index == 0 ? 1.0f : 0.0f;
+            Input.ConstLayerInput = DefaultColors[Index % DefaultColors.Num()];
+        }
+
+        LayerBlend->UpdateMaterialExpressionGuid(true, true);
+        Material->GetExpressionCollection().AddExpression(LayerBlend);
+
+        if (UMaterialEditorOnlyData* EditorOnlyData = Material->GetEditorOnlyData())
+        {
+            EditorOnlyData->BaseColor.Expression = LayerBlend;
+
+            UMaterialExpressionConstant* Roughness = NewObject<UMaterialExpressionConstant>(Material);
+            Roughness->Material = Material;
+            Roughness->R = 1.0f;
+            Roughness->Desc = TEXT("Roughness fixed high by MCP");
+            Roughness->MaterialExpressionEditorX = -400;
+            Roughness->MaterialExpressionEditorY = 220;
+            Roughness->UpdateMaterialExpressionGuid(true, true);
+            Material->GetExpressionCollection().AddExpression(Roughness);
+            EditorOnlyData->Roughness.Expression = Roughness;
+
+            UMaterialExpressionConstant* Specular = NewObject<UMaterialExpressionConstant>(Material);
+            Specular->Material = Material;
+            Specular->R = 0.0f;
+            Specular->Desc = TEXT("Specular fixed low by MCP");
+            Specular->MaterialExpressionEditorX = -400;
+            Specular->MaterialExpressionEditorY = 320;
+            Specular->UpdateMaterialExpressionGuid(true, true);
+            Material->GetExpressionCollection().AddExpression(Specular);
+            EditorOnlyData->Specular.Expression = Specular;
+        }
+
+        Material->PreEditChange(nullptr);
+        Material->PostEditChange();
+        Material->MarkPackageDirty();
+    }
+
+    TArray<TSharedPtr<FJsonValue>> CreatedLayerInfos;
+    for (const FString& LayerName : LayerNames)
+    {
+        const FString LayerInfoName = TEXT("LI_") + SanitizeAssetNameSegment(LayerName);
+        const FString LayerInfoPackageName = FolderPath + TEXT("/") + LayerInfoName;
+        ULandscapeLayerInfoObject* LayerInfo = LoadOrCreateAsset<ULandscapeLayerInfoObject>(LayerInfoPackageName, LayerInfoName);
+        if (!LayerInfo)
+        {
+            continue;
+        }
+
+        LayerInfo->Modify();
+        LayerInfo->SetLayerName(FName(*LayerName), false);
+        LayerInfo->SetLayerUsageDebugColor(LayerInfo->GenerateLayerUsageDebugColor(), false, EPropertyChangeType::ValueSet);
+        LayerInfo->MarkPackageDirty();
+
+        LandscapeInfo->CreateTargetLayerSettingsFor(LayerInfo);
+
+        TSharedPtr<FJsonObject> LayerObj = MakeShared<FJsonObject>();
+        LayerObj->SetStringField(TEXT("name"), LayerName);
+        LayerObj->SetStringField(TEXT("asset"), LayerInfo->GetPathName());
+        CreatedLayerInfos.Add(MakeShared<FJsonValueObject>(LayerObj));
+    }
+
+    LandscapeInfo->ForEachLandscapeProxy([Material](ALandscapeProxy* LandscapeProxy)
+    {
+        if (LandscapeProxy)
+        {
+            LandscapeProxy->Modify();
+            if (FObjectPropertyBase* MaterialProperty = FindFProperty<FObjectPropertyBase>(LandscapeProxy->GetClass(), TEXT("LandscapeMaterial")))
+            {
+                MaterialProperty->SetObjectPropertyValue_InContainer(LandscapeProxy, Material);
+                FPropertyChangedEvent PropertyChangedEvent(MaterialProperty);
+                LandscapeProxy->PostEditChangeProperty(PropertyChangedEvent);
+            }
+        }
+        return true;
+    });
+
+    LandscapeInfo->UpdateLayerInfoMap(Proxy, true);
+    Proxy->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+    ResultObj->SetBoolField(TEXT("success"), true);
+    ResultObj->SetStringField(TEXT("material"), Material->GetPathName());
+    ResultObj->SetArrayField(TEXT("layer_infos"), CreatedLayerInfos);
+    ResultObj->SetObjectField(TEXT("landscape"), LandscapeProxyToJson(Proxy));
+    return ResultObj;
+}
+
 TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandlePaintLandscapeLayerAtLocation(const TSharedPtr<FJsonObject>& Params)
 {
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
@@ -845,5 +1053,181 @@ TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandlePaintLandscapeLayerAtLoc
     ResultObj->SetStringField(TEXT("layer"), LayerName);
     ResultObj->SetNumberField(TEXT("painted_samples"), PaintedSamples);
     ResultObj->SetObjectField(TEXT("bounds"), BoundsObj);
+    return ResultObj;
+}
+
+TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandlePaintLandscapeOpenWorldBiome(const TSharedPtr<FJsonObject>& Params)
+{
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to get editor world"));
+    }
+
+    FString LandscapeName;
+    Params->TryGetStringField(TEXT("landscape_name"), LandscapeName);
+
+    FString GrassLayerName = TEXT("Grass");
+    Params->TryGetStringField(TEXT("grass_layer"), GrassLayerName);
+
+    FString DirtLayerName = TEXT("Dirt");
+    Params->TryGetStringField(TEXT("dirt_layer"), DirtLayerName);
+
+    ALandscapeProxy* Proxy = FindLandscapeProxyByName(World, LandscapeName);
+    if (!Proxy)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(FString::Printf(TEXT("Landscape not found: %s"), LandscapeName.IsEmpty() ? TEXT("<any>") : *LandscapeName));
+    }
+
+    ULandscapeInfo* LandscapeInfo = Proxy->GetLandscapeInfo();
+    if (!LandscapeInfo)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Landscape has no LandscapeInfo"));
+    }
+
+    ULandscapeLayerInfoObject* GrassLayerInfo = LandscapeInfo->GetLayerInfoByName(FName(*GrassLayerName), Proxy);
+    ULandscapeLayerInfoObject* DirtLayerInfo = LandscapeInfo->GetLayerInfoByName(FName(*DirtLayerName), Proxy);
+    if (!GrassLayerInfo || !DirtLayerInfo)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Grass or Dirt layer not found"));
+    }
+
+    int32 MinX = 0;
+    int32 MinY = 0;
+    int32 MaxX = 0;
+    int32 MaxY = 0;
+    if (!LandscapeInfo->GetLandscapeExtent(MinX, MinY, MaxX, MaxY))
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to get landscape extent"));
+    }
+
+    const int32 Width = MaxX - MinX + 1;
+    const int32 Height = MaxY - MinY + 1;
+    if (Width <= 0 || Height <= 0)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Landscape extent is invalid"));
+    }
+
+    TArray<uint16> HeightData;
+    HeightData.SetNumUninitialized(Width * Height);
+
+    FHeightmapAccessor<false> HeightAccessor(LandscapeInfo);
+    HeightAccessor.GetDataFast(MinX, MinY, MaxX, MaxY, HeightData.GetData());
+
+    uint16 MinHeight = TNumericLimits<uint16>::Max();
+    uint16 MaxHeight = TNumericLimits<uint16>::Min();
+    for (uint16 Sample : HeightData)
+    {
+        MinHeight = FMath::Min(MinHeight, Sample);
+        MaxHeight = FMath::Max(MaxHeight, Sample);
+    }
+
+    const float HeightRange = FMath::Max(1.0f, static_cast<float>(MaxHeight - MinHeight));
+    const float DirtNoiseScale = Params->HasField(TEXT("dirt_noise_scale")) ? FMath::Max(1.0f, static_cast<float>(Params->GetNumberField(TEXT("dirt_noise_scale")))) : 180.0f;
+    const float SlopeDirtBoost = Params->HasField(TEXT("slope_dirt_boost")) ? FMath::Max(0.0f, static_cast<float>(Params->GetNumberField(TEXT("slope_dirt_boost")))) : 5.0f;
+    const float LowlandDirtBoost = Params->HasField(TEXT("lowland_dirt_boost")) ? FMath::Max(0.0f, static_cast<float>(Params->GetNumberField(TEXT("lowland_dirt_boost")))) : 0.35f;
+
+    TArray<uint8> GrassAlpha;
+    TArray<uint8> DirtAlpha;
+    GrassAlpha.SetNumUninitialized(Width * Height);
+    DirtAlpha.SetNumUninitialized(Width * Height);
+
+    int32 GrassSamples = 0;
+    int32 DirtSamples = 0;
+    for (int32 Y = 0; Y < Height; ++Y)
+    {
+        for (int32 X = 0; X < Width; ++X)
+        {
+            const int32 Index = Y * Width + X;
+            const float Height01 = (static_cast<float>(HeightData[Index]) - static_cast<float>(MinHeight)) / HeightRange;
+
+            const int32 LeftIndex = Y * Width + FMath::Max(0, X - 1);
+            const int32 RightIndex = Y * Width + FMath::Min(Width - 1, X + 1);
+            const int32 DownIndex = FMath::Max(0, Y - 1) * Width + X;
+            const int32 UpIndex = FMath::Min(Height - 1, Y + 1) * Width + X;
+            const float Dx = FMath::Abs(static_cast<float>(HeightData[RightIndex]) - static_cast<float>(HeightData[LeftIndex])) / HeightRange;
+            const float Dy = FMath::Abs(static_cast<float>(HeightData[UpIndex]) - static_cast<float>(HeightData[DownIndex])) / HeightRange;
+            const float Slope = FMath::Clamp((Dx + Dy) * SlopeDirtBoost, 0.0f, 1.0f);
+
+            const float WorldX = static_cast<float>(MinX + X);
+            const float WorldY = static_cast<float>(MinY + Y);
+            const float Noise = FMath::Frac(FMath::Sin(WorldX * 12.9898f / DirtNoiseScale + WorldY * 78.233f / DirtNoiseScale) * 43758.5453f);
+            const float Lowland = 1.0f - FMath::SmoothStep(0.18f, 0.42f, Height01);
+            const float DirtWeight = FMath::Clamp(0.12f + Lowland * LowlandDirtBoost + Slope * 0.55f + Noise * 0.16f, 0.0f, 0.92f);
+            const float GrassWeight = 1.0f - DirtWeight;
+
+            GrassAlpha[Index] = static_cast<uint8>(FMath::RoundToInt(GrassWeight * 255.0f));
+            DirtAlpha[Index] = static_cast<uint8>(FMath::RoundToInt(DirtWeight * 255.0f));
+
+            if (GrassAlpha[Index] > DirtAlpha[Index])
+            {
+                ++GrassSamples;
+            }
+            else
+            {
+                ++DirtSamples;
+            }
+        }
+    }
+
+    const FScopedTransaction Transaction(NSLOCTEXT("UnrealMCP", "PaintLandscapeOpenWorldBiome", "Paint Landscape Open World Biome"));
+    Proxy->Modify();
+
+    TAlphamapAccessor<false> GrassAccessor(LandscapeInfo, GrassLayerInfo);
+    GrassAccessor.SetData(MinX, MinY, MaxX, MaxY, GrassAlpha.GetData(), ELandscapeLayerPaintingRestriction::None);
+    GrassAccessor.Flush();
+
+    TAlphamapAccessor<false> DirtAccessor(LandscapeInfo, DirtLayerInfo);
+    DirtAccessor.SetData(MinX, MinY, MaxX, MaxY, DirtAlpha.GetData(), ELandscapeLayerPaintingRestriction::None);
+    DirtAccessor.Flush();
+
+    LandscapeInfo->UpdateLayerInfoMap(Proxy, true);
+    LandscapeInfo->ForEachLandscapeProxy([](ALandscapeProxy* LandscapeProxy)
+    {
+        if (LandscapeProxy)
+        {
+            LandscapeProxy->MarkPackageDirty();
+        }
+        return true;
+    });
+
+    TSharedPtr<FJsonObject> BoundsObj = MakeShared<FJsonObject>();
+    BoundsObj->SetNumberField(TEXT("x1"), MinX);
+    BoundsObj->SetNumberField(TEXT("y1"), MinY);
+    BoundsObj->SetNumberField(TEXT("x2"), MaxX);
+    BoundsObj->SetNumberField(TEXT("y2"), MaxY);
+
+    TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+    ResultObj->SetBoolField(TEXT("success"), true);
+    ResultObj->SetStringField(TEXT("landscape"), Proxy->GetName());
+    ResultObj->SetNumberField(TEXT("width"), Width);
+    ResultObj->SetNumberField(TEXT("height"), Height);
+    ResultObj->SetNumberField(TEXT("min_height"), MinHeight);
+    ResultObj->SetNumberField(TEXT("max_height"), MaxHeight);
+    ResultObj->SetNumberField(TEXT("grass_dominant_samples"), GrassSamples);
+    ResultObj->SetNumberField(TEXT("dirt_dominant_samples"), DirtSamples);
+    ResultObj->SetObjectField(TEXT("bounds"), BoundsObj);
+    return ResultObj;
+}
+
+TSharedPtr<FJsonObject> FUnrealMCPEditorCommands::HandleExecuteConsoleCommand(const TSharedPtr<FJsonObject>& Params)
+{
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Failed to get editor world"));
+    }
+
+    FString Command;
+    if (!Params->TryGetStringField(TEXT("command"), Command) || Command.IsEmpty())
+    {
+        return FUnrealMCPCommonUtils::CreateErrorResponse(TEXT("Missing 'command' parameter"));
+    }
+
+    const bool bExecuted = GEngine && GEngine->Exec(World, *Command);
+
+    TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+    ResultObj->SetBoolField(TEXT("success"), bExecuted);
+    ResultObj->SetStringField(TEXT("command"), Command);
     return ResultObj;
 }

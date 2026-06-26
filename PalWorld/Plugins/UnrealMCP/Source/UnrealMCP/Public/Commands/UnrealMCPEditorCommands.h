@@ -35,5 +35,8 @@ private:
     // Landscape commands
     TSharedPtr<FJsonObject> HandleListLandscapes(const TSharedPtr<FJsonObject>& Params);
     TSharedPtr<FJsonObject> HandleGetLandscapeLayers(const TSharedPtr<FJsonObject>& Params);
+    TSharedPtr<FJsonObject> HandleCreateLandscapePaintSetup(const TSharedPtr<FJsonObject>& Params);
     TSharedPtr<FJsonObject> HandlePaintLandscapeLayerAtLocation(const TSharedPtr<FJsonObject>& Params);
+    TSharedPtr<FJsonObject> HandlePaintLandscapeOpenWorldBiome(const TSharedPtr<FJsonObject>& Params);
+    TSharedPtr<FJsonObject> HandleExecuteConsoleCommand(const TSharedPtr<FJsonObject>& Params);
 }; 
