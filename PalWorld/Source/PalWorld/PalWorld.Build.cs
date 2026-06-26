@@ -14,9 +14,10 @@ public class PalWorld : ModuleRules
 		PublicIncludePaths.AddRange(
 			new string[] {
 				System.IO.Path.Combine(ModuleDirectory, "CCW/public"),
-				System.IO.Path.Combine(ModuleDirectory, "OBI/public"),
+				System.IO.Path.Combine(ModuleDirectory, "OBI/DummyPlayer/public"),
 				System.IO.Path.Combine(ModuleDirectory, "PJH/public"),
-				System.IO.Path.Combine(ModuleDirectory, "Global/public"),
+				System.IO.Path.Combine(ModuleDirectory, "Global/Log/public"),
+				System.IO.Path.Combine(ModuleDirectory, "Global/Components/public"),
 				// 추가되는 역할(ROLE) 폴더가 있다면 여기에 동일하게 경로 지정
 			}
 		);
