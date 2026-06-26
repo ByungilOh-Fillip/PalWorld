@@ -15,6 +15,9 @@ public class PalWorld : ModuleRules
 			new string[] {
 				System.IO.Path.Combine(ModuleDirectory, "CCW/public"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/DummyPlayer/public"),
+				System.IO.Path.Combine(ModuleDirectory, "OBI/Components/public"),
+				System.IO.Path.Combine(ModuleDirectory, "OBI/Pal/public"),
+				System.IO.Path.Combine(ModuleDirectory, "OBI/Data"),
 				System.IO.Path.Combine(ModuleDirectory, "PJH/public"),
 				System.IO.Path.Combine(ModuleDirectory, "Global/Log/public"),
 				System.IO.Path.Combine(ModuleDirectory, "Global/Components/public"),

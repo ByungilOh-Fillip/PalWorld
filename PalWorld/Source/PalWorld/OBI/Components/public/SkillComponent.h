@@ -13,7 +13,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "OBI/Data/PalDataTypes.h"
+#include "PalDataTypes.h"
 #include "SkillComponent.generated.h"
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
