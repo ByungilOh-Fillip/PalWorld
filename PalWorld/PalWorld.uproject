@@ -20,6 +20,14 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "IKRig",
+			"Enabled": true
+		},
+		{
+			"Name": "RelativeIKOp",
+			"Enabled": true
 		}
 	]
 }
