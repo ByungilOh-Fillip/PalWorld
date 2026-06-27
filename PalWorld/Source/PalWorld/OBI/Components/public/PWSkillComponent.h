@@ -13,16 +13,16 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "PalDataTypes.h"
-#include "SkillComponent.generated.h"
+#include "PWPalDataTypes.h"
+#include "PWSkillComponent.generated.h"
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class PALWORLD_API USkillComponent : public UActorComponent
+class PALWORLD_API UPWSkillComponent : public UActorComponent
 {
     GENERATED_BODY()
 
 public:    
-    USkillComponent();
+    UPWSkillComponent();
 
 protected:
     virtual void BeginPlay() override;

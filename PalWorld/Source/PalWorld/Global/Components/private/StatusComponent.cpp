@@ -24,6 +24,9 @@ UStatusComponent::UStatusComponent()
     Defense = 10.0f;
     WorkSpeed = 100.0f;
     FeedPerDay = 1;
+
+    MaxCarryWeight = 300.0f;
+    CurrentCarryWeight = 0.0f;
 }
 
 void UStatusComponent::BeginPlay()
@@ -52,6 +55,8 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(UStatusComponent, CurrentSP);
     DOREPLIFETIME(UStatusComponent, CurrentHunger);
     DOREPLIFETIME(UStatusComponent, CurrentSanity);
+    DOREPLIFETIME(UStatusComponent, CurrentCarryWeight);
+    DOREPLIFETIME(UStatusComponent, ActiveStatusEffects);
 }
 
 void UStatusComponent::OnRep_CurrentHP()
@@ -68,5 +73,13 @@ void UStatusComponent::OnRep_CurrentHunger()
 }
 
 void UStatusComponent::OnRep_CurrentSanity()
+{
+}
+
+void UStatusComponent::OnRep_CurrentCarryWeight()
+{
+}
+
+void UStatusComponent::OnRep_ActiveStatusEffects()
 {
 }
