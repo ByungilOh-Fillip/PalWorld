@@ -1,8 +1,8 @@
-#include "PalBase.h"
+#include "PWPalBase.h"
 #include "StatusComponent.h"
-#include "SkillComponent.h"
+#include "PWSkillComponent.h"
 
-APalBase::APalBase()
+APWPalBase::APWPalBase()
 {
     PrimaryActorTick.bCanEverTick = true;
     
@@ -11,15 +11,15 @@ APalBase::APalBase()
 
     // 컴포넌트 생성 및 부착
     StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
-    SkillComponent = CreateDefaultSubobject<USkillComponent>(TEXT("SkillComponent"));
+    SkillComponent = CreateDefaultSubobject<UPWSkillComponent>(TEXT("SkillComponent"));
 }
 
-void APalBase::BeginPlay()
+void APWPalBase::BeginPlay()
 {
     Super::BeginPlay();
 }
 
-void APalBase::Tick(float DeltaTime)
+void APWPalBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 }

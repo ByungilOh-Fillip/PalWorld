@@ -20,10 +20,13 @@
  * @property Defense 방어력
  * @property WorkSpeed 작업 속도 베이스 배율
  * @property FeedPerDay 하루 식사 필요량 (FPD)
+ * @property CurrentCarryWeight 현재 소지 중량 (네트워크 동기화)
+ * @property MaxCarryWeight 최대 소지 가능 중량
  */
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameplayTagContainer.h"
 #include "StatusComponent.generated.h"
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -98,4 +101,21 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pal|Status")
     int32 FeedPerDay;
+
+    // Carry Weight
+    UPROPERTY(ReplicatedUsing = OnRep_CurrentCarryWeight, BlueprintReadWrite, Category = "Pal|Status")
+    float CurrentCarryWeight;
+
+    UFUNCTION()
+    void OnRep_CurrentCarryWeight();
+
+    UPROPERTY(EditDefaultsOnly, Category = "Pal|Status")
+    float MaxCarryWeight;
+
+    // Status Effects (GameplayTags)
+    UPROPERTY(ReplicatedUsing = OnRep_ActiveStatusEffects, BlueprintReadWrite, Category = "Pal|Status")
+    FGameplayTagContainer ActiveStatusEffects;
+
+    UFUNCTION()
+    void OnRep_ActiveStatusEffects();
 };

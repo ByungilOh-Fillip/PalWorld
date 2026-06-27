@@ -2,18 +2,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "PalBase.generated.h"
+#include "PWPalBase.generated.h"
 
 class UStatusComponent;
-class USkillComponent;
+class UPWSkillComponent;
 
 UCLASS()
-class PALWORLD_API APalBase : public AActor
+class PALWORLD_API APWPalBase : public AActor
 {
     GENERATED_BODY()
 
 public:
-    APalBase();
+    APWPalBase();
 
 protected:
     virtual void BeginPlay() override;
@@ -28,5 +28,5 @@ protected:
 
     // 팰 스킬 및 적성 관리 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|Components")
-    USkillComponent* SkillComponent;
+    UPWSkillComponent* SkillComponent;
 };
