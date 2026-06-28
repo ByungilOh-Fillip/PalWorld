@@ -8,7 +8,7 @@ class UStatusComponent;
 class UPWSkillComponent;
 
 UCLASS()
-class PALWORLD_API APWPalBase : public AActor
+class PALWORLD_API APWPalBase : public ACharacter
 {
     GENERATED_BODY()
 
