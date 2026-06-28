@@ -61,6 +61,7 @@ private:
 	TObjectPtr<UPWPlayerHUDWidget> PlayerHUDWidget;
 
 	void HandleMove(const FInputActionValue& Value);
+	void HandleMoveCompleted(const FInputActionValue& Value);
 	void HandleLook(const FInputActionValue& Value);
 	void HandleJumpStarted(const FInputActionValue& Value);
 	void HandleJumpCompleted(const FInputActionValue& Value);

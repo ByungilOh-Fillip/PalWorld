@@ -68,6 +68,8 @@ void APWPlayerController::SetupInputComponent()
 	if (MoveAction)
 	{
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APWPlayerController::HandleMove);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleMoveCompleted);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleMoveCompleted);
 	}
 
 	if (LookAction)
@@ -113,6 +115,14 @@ void APWPlayerController::HandleMove(const FInputActionValue& Value)
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->Move(Value.Get<FVector2D>());
+	}
+}
+
+void APWPlayerController::HandleMoveCompleted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->Move(FVector2D::ZeroVector);
 	}
 }
 

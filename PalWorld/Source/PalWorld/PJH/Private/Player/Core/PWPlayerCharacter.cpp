@@ -9,6 +9,7 @@
 #include "Player/Components/PWPalCommandComponent.h"
 #include "Player/Components/PWPlayerActionComponent.h"
 #include "Player/Components/PWPlayerCaptureComponent.h"
+#include "Player/Components/PWPlayerClimbComponent.h"
 #include "Player/Components/PWPlayerCombatComponent.h"
 #include "Player/Components/PWPlayerGatherComponent.h"
 #include "Player/Components/PWPlayerInteractionComponent.h"
@@ -19,7 +20,7 @@
 
 APWPlayerCharacter::APWPlayerCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	bReplicates = true;
 	SetReplicateMovement(true);
@@ -55,6 +56,7 @@ APWPlayerCharacter::APWPlayerCharacter()
 	InventoryLinkComponent = CreateDefaultSubobject<UPWPlayerInventoryLinkComponent>(TEXT("InventoryLinkComponent"));
 	CaptureComponent = CreateDefaultSubobject<UPWPlayerCaptureComponent>(TEXT("CaptureComponent"));
 	MountComponent = CreateDefaultSubobject<UPWPlayerMountComponent>(TEXT("MountComponent"));
+	ClimbComponent = CreateDefaultSubobject<UPWPlayerClimbComponent>(TEXT("ClimbComponent"));
 }
 
 void APWPlayerCharacter::BeginPlay()
@@ -62,6 +64,11 @@ void APWPlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	ApplyMovementSpeed();
+}
+
+void APWPlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
 }
 
 void APWPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -74,7 +81,18 @@ void APWPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 // 이 입력들은 CharacterMovement가 클라 예측/서버 보정을 기본으로 처리한다.
 void APWPlayerCharacter::Move(const FVector2D& MovementVector)
 {
-	if (!Controller || IsRolling() || MovementVector.IsNearlyZero())
+	if (!Controller || IsRolling() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
+	if (ClimbComponent && ClimbComponent->IsClimbing())
+	{
+		ClimbComponent->SetClimbInput(MovementVector);
+		return;
+	}
+
+	if (MovementVector.IsNearlyZero())
 	{
 		return;
 	}
@@ -102,7 +120,19 @@ void APWPlayerCharacter::Look(const FVector2D& LookVector)
 
 void APWPlayerCharacter::StartJump()
 {
-	if (IsRolling())
+	if (IsRolling() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
+	if (ClimbComponent && ClimbComponent->IsClimbing())
+	{
+		ClimbComponent->StopClimb(true);
+		return;
+	}
+
+	const UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (MovementComponent && !MovementComponent->IsMovingOnGround() && ClimbComponent && ClimbComponent->TryStartClimb())
 	{
 		return;
 	}
@@ -143,7 +173,7 @@ void APWPlayerCharacter::StopSprint()
 // Crouch/UnCrouch는 ACharacter의 기본 복제 crouch 상태를 사용한다.
 void APWPlayerCharacter::StartCrouch()
 {
-	if (IsRolling())
+	if (IsRolling() || IsWallClimbing() || IsWallClimbTopOut())
 	{
 		return;
 	}
@@ -159,6 +189,11 @@ void APWPlayerCharacter::StopCrouch()
 
 void APWPlayerCharacter::StartRoll()
 {
+	if (IsWallClimbing() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
 	if (ActionComponent)
 	{
 		ActionComponent->TryStartRoll();
@@ -167,6 +202,11 @@ void APWPlayerCharacter::StartRoll()
 
 void APWPlayerCharacter::StartGather()
 {
+	if (IsWallClimbing() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
 	if (GatherComponent)
 	{
 		GatherComponent->TryGatherFromView();
@@ -176,6 +216,56 @@ void APWPlayerCharacter::StartGather()
 bool APWPlayerCharacter::IsRolling() const
 {
 	return ActionComponent && ActionComponent->IsRolling();
+}
+
+bool APWPlayerCharacter::IsWallClimbing() const
+{
+	return ClimbComponent && ClimbComponent->IsClimbing();
+}
+
+bool APWPlayerCharacter::IsWallClimbTopOut() const
+{
+	return ClimbComponent && ClimbComponent->IsClimbTopOut();
+}
+
+float APWPlayerCharacter::GetClimbInputX() const
+{
+	return ClimbComponent ? ClimbComponent->GetClimbInputX() : 0.f;
+}
+
+float APWPlayerCharacter::GetClimbInputY() const
+{
+	return ClimbComponent ? ClimbComponent->GetClimbInputY() : 0.f;
+}
+
+float APWPlayerCharacter::GetWallClimbVerticalSpeed() const
+{
+	return ClimbComponent ? ClimbComponent->GetWallClimbVerticalSpeed() : 0.f;
+}
+
+float APWPlayerCharacter::GetWallClimbHorizontalSpeed() const
+{
+	return ClimbComponent ? ClimbComponent->GetWallClimbHorizontalSpeed() : 0.f;
+}
+
+float APWPlayerCharacter::GetWallClimbHorizontalBlendValue() const
+{
+	return ClimbComponent ? ClimbComponent->GetWallClimbHorizontalBlendValue() : 0.f;
+}
+
+float APWPlayerCharacter::GetWallClimbVerticalBlendValue() const
+{
+	return ClimbComponent ? ClimbComponent->GetWallClimbVerticalBlendValue() : 0.f;
+}
+
+bool APWPlayerCharacter::IsSprinting() const
+{
+	return IsSprintMovementActive();
+}
+
+bool APWPlayerCharacter::ShouldDrainSprintStamina() const
+{
+	return IsSprintMovementActive();
 }
 
 // --------------------
@@ -202,6 +292,8 @@ bool APWPlayerCharacter::CanStartSprint() const
 {
 	return !bIsCrouched
 		&& !IsRolling()
+		&& !IsWallClimbing()
+		&& !IsWallClimbTopOut()
 		&& (!StatComponent || StatComponent->CanStartSprint());
 }
 
@@ -224,6 +316,23 @@ void APWPlayerCharacter::SetSprinting(bool bNewIsSprinting)
 	{
 		StatComponent->SetSprintDrainActive(bIsSprinting);
 	}
+}
+
+bool APWPlayerCharacter::IsSprintMovementActive() const
+{
+	const UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+	if (!bIsSprinting || !MovementComponent)
+	{
+		return false;
+	}
+
+	// Shift 입력 자체가 아니라 서버가 계산한 실제 이동 결과를 기준으로 달리기 판정한다.
+	return !bIsCrouched
+		&& !IsRolling()
+		&& !IsWallClimbing()
+		&& !IsWallClimbTopOut()
+		&& MovementComponent->IsMovingOnGround()
+		&& MovementComponent->Velocity.SizeSquared2D() > FMath::Square(MinSprintActiveSpeed);
 }
 
 void APWPlayerCharacter::ApplyMovementSpeed()

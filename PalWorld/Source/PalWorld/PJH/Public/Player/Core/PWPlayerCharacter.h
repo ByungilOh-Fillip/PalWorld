@@ -11,6 +11,7 @@ class USpringArmComponent;
 class UPWPalCommandComponent;
 class UPWPlayerActionComponent;
 class UPWPlayerCaptureComponent;
+class UPWPlayerClimbComponent;
 class UPWPlayerCombatComponent;
 class UPWPlayerGatherComponent;
 class UPWPlayerInteractionComponent;
@@ -27,7 +28,7 @@ class PALWORLD_API APWPlayerCharacter : public ACharacter
 public:
 	APWPlayerCharacter();
 
-	// 입력 래퍼는 CharacterMovement에 넘기거나 커스텀 액션 컴포넌트로 전달한다.
+	// 입력 래퍼는 CharacterMovement 또는 전용 컴포넌트로 전달한다.
 	void Move(const FVector2D& MovementVector);
 	void Look(const FVector2D& LookVector);
 	void StartJump();
@@ -41,18 +42,49 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Player|Movement")
-	bool IsSprinting() const { return bIsSprinting; }
+	bool IsSprinting() const;
+
+	bool ShouldDrainSprintStamina() const;
 
 	UFUNCTION(BlueprintPure, Category = "Player|Movement")
 	bool IsRolling() const;
 
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	bool IsWallClimbing() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	bool IsWallClimbTopOut() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	bool IsClimbing() const { return IsWallClimbing(); }
+
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	float GetClimbInputX() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	float GetClimbInputY() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	float GetWallClimbVerticalSpeed() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	float GetWallClimbHorizontalSpeed() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	float GetWallClimbHorizontalBlendValue() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
+	float GetWallClimbVerticalBlendValue() const;
+
 	UPWPlayerActionComponent* GetActionComponent() const { return ActionComponent; }
 	UPWPlayerStatComponent* GetStatComponent() const { return StatComponent; }
 	UPWPlayerGatherComponent* GetGatherComponent() const { return GatherComponent; }
+	UPWPlayerClimbComponent* GetClimbComponent() const { return ClimbComponent; }
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Player|Camera")
@@ -91,6 +123,9 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerMountComponent> MountComponent;
 
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPWPlayerClimbComponent> ClimbComponent;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement")
 	float WalkSpeed = 480.f;
 
@@ -99,6 +134,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement")
 	float CrouchedWalkSpeed = 220.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement", meta = (ClampMin = "0.0"))
+	float MinSprintActiveSpeed = 10.f;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsSprinting)
 	bool bIsSprinting = false;
@@ -112,5 +150,6 @@ private:
 
 	bool CanStartSprint() const;
 	void SetSprinting(bool bNewIsSprinting);
+	bool IsSprintMovementActive() const;
 	void ApplyMovementSpeed();
 };
