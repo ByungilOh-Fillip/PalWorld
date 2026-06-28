@@ -100,6 +100,11 @@ void APWPlayerController::SetupInputComponent()
 	{
 		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &APWPlayerController::HandleRollStarted);
 	}
+
+	if (GatherAction)
+	{
+		EnhancedInputComponent->BindAction(GatherAction, ETriggerEvent::Started, this, &APWPlayerController::HandleGatherStarted);
+	}
 }
 
 // 입력 핸들러는 얇게 유지하고, 권한 판단은 캐릭터/컴포넌트에서 처리한다.
@@ -172,6 +177,14 @@ void APWPlayerController::HandleRollStarted(const FInputActionValue& Value)
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->StartRoll();
+	}
+}
+
+void APWPlayerController::HandleGatherStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StartGather();
 	}
 }
 

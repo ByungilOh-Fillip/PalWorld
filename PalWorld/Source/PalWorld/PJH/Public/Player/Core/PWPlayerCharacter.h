@@ -12,6 +12,7 @@ class UPWPalCommandComponent;
 class UPWPlayerActionComponent;
 class UPWPlayerCaptureComponent;
 class UPWPlayerCombatComponent;
+class UPWPlayerGatherComponent;
 class UPWPlayerInteractionComponent;
 class UPWPlayerInventoryLinkComponent;
 class UPWPlayerMountComponent;
@@ -36,6 +37,7 @@ public:
 	void StartCrouch();
 	void StopCrouch();
 	void StartRoll();
+	void StartGather();
 
 protected:
 	virtual void BeginPlay() override;
@@ -50,6 +52,7 @@ public:
 
 	UPWPlayerActionComponent* GetActionComponent() const { return ActionComponent; }
 	UPWPlayerStatComponent* GetStatComponent() const { return StatComponent; }
+	UPWPlayerGatherComponent* GetGatherComponent() const { return GatherComponent; }
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Player|Camera")
@@ -66,6 +69,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerCombatComponent> CombatComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPWPlayerGatherComponent> GatherComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerSkillComponent> SkillComponent;

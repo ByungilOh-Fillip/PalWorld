@@ -51,6 +51,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Movement")
 	TObjectPtr<UInputAction> RollAction;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Gather")
+	TObjectPtr<UInputAction> GatherAction;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Player|UI")
 	TSubclassOf<UPWPlayerHUDWidget> PlayerHUDWidgetClass;
 
@@ -66,6 +69,7 @@ private:
 	void HandleCrouchStarted(const FInputActionValue& Value);
 	void HandleCrouchCompleted(const FInputActionValue& Value);
 	void HandleRollStarted(const FInputActionValue& Value);
+	void HandleGatherStarted(const FInputActionValue& Value);
 
 	APWPlayerCharacter* GetPWPlayerCharacter() const;
 	void CreatePlayerHUD();

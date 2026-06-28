@@ -10,6 +10,7 @@
 #include "Player/Components/PWPlayerActionComponent.h"
 #include "Player/Components/PWPlayerCaptureComponent.h"
 #include "Player/Components/PWPlayerCombatComponent.h"
+#include "Player/Components/PWPlayerGatherComponent.h"
 #include "Player/Components/PWPlayerInteractionComponent.h"
 #include "Player/Components/PWPlayerInventoryLinkComponent.h"
 #include "Player/Components/PWPlayerMountComponent.h"
@@ -47,6 +48,7 @@ APWPlayerCharacter::APWPlayerCharacter()
 	ActionComponent = CreateDefaultSubobject<UPWPlayerActionComponent>(TEXT("ActionComponent"));
 	StatComponent = CreateDefaultSubobject<UPWPlayerStatComponent>(TEXT("StatComponent"));
 	CombatComponent = CreateDefaultSubobject<UPWPlayerCombatComponent>(TEXT("CombatComponent"));
+	GatherComponent = CreateDefaultSubobject<UPWPlayerGatherComponent>(TEXT("GatherComponent"));
 	SkillComponent = CreateDefaultSubobject<UPWPlayerSkillComponent>(TEXT("SkillComponent"));
 	PalCommandComponent = CreateDefaultSubobject<UPWPalCommandComponent>(TEXT("PalCommandComponent"));
 	InteractionComponent = CreateDefaultSubobject<UPWPlayerInteractionComponent>(TEXT("InteractionComponent"));
@@ -160,6 +162,14 @@ void APWPlayerCharacter::StartRoll()
 	if (ActionComponent)
 	{
 		ActionComponent->TryStartRoll();
+	}
+}
+
+void APWPlayerCharacter::StartGather()
+{
+	if (GatherComponent)
+	{
+		GatherComponent->TryGatherFromView();
 	}
 }
 
