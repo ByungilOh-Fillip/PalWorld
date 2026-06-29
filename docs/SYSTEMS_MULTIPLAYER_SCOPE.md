@@ -7,7 +7,7 @@ The first implementation pass focuses on field systems, monster spawning, and mu
 
 | Area | Responsibility |
 |---|---|
-| World | Field state, time, weather, field events |
+| World | Field state, time, field events |
 | Monster Spawner | Spawn points, spawn zones, server-authoritative spawning, respawn rules |
 | Session | Create, find, join, and destroy multiplayer sessions |
 | Replication | Synchronize world state and spawned field actors |
@@ -58,13 +58,6 @@ class PALWORLD_API APW_MonsterSpawner : public AActor
     GENERATED_BODY()
 };
 
-UENUM(BlueprintType)
-enum class EPW_WeatherType : uint8
-{
-    Clear,
-    Rain,
-    Storm
-};
 ```
 
 ## 5. Multiplayer Authority Rules
@@ -88,9 +81,9 @@ Recommended interface boundaries:
 
 | Interface | Purpose |
 |---|---|
-| `IPW_WorldStateProvider` | Read current day, hour, weather, and future world state |
+| `IPW_WorldStateProvider` | Read current day, hour, and future world state |
 | `IPW_SpawnableActor` | Allow spawned actors to expose spawn lifecycle callbacks without depending on a monster class |
-| `IPW_SpawnRuleProvider` | Provide spawn permission checks such as time, weather, or area state |
+| `IPW_SpawnRuleProvider` | Provide spawn permission checks such as time or area state |
 | `IPW_SaveSerializable` | Let world-owned objects provide save/load data without hard references |
 
 Recommended delegates:
@@ -99,7 +92,6 @@ Recommended delegates:
 |---|---|
 | `FPW_OnSessionOperationCompleted` | Notify create, find, join, and destroy session result |
 | `FPW_OnWorldTimeChanged` | Notify local systems when replicated time changes |
-| `FPW_OnWeatherChanged` | Notify local systems when replicated weather changes |
 | `FPW_OnMonsterSpawned` | Notify optional listeners when a spawner creates an actor |
 | `FPW_OnMonsterDespawned` | Notify optional listeners when a spawned actor is removed |
 
@@ -132,7 +124,6 @@ Responsible for replicated field state:
 
 - Current day
 - Current hour
-- Weather type
 - Optional world difficulty if needed by gameplay
 
 Recommended owner:
@@ -143,8 +134,8 @@ Implementation notes:
 
 - Use `ReplicatedUsing` for client-facing state changes.
 - Register replicated properties in `GetLifetimeReplicatedProps`.
-- Only the server should advance time or change weather.
-- Broadcast time and weather changes through delegates from `OnRep` handlers.
+- Only the server should advance time.
+- Broadcast time changes through delegates from `OnRep` handlers.
 - Expose read-only access through a world state provider interface when another system needs world state.
 
 ### Monster Spawner
@@ -175,7 +166,6 @@ Implementation notes:
 Responsible for persistent world data:
 
 - Time
-- Weather
 - Any future field state that must persist
 
 Implementation notes:
@@ -196,7 +186,7 @@ Implementation notes:
 ## 9. Acceptance Criteria
 
 - Sessions can be created, searched, joined, and destroyed in Listen Server flow.
-- World day, hour, and weather are server-owned and replicated to clients.
+- World day and hour are server-owned and replicated to clients.
 - Monster spawners create monsters only on the server.
 - Spawned monsters appear on connected clients through replication.
 - Session, world state, spawning, and save code are separated by responsibility.

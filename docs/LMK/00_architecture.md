@@ -7,8 +7,8 @@
 
 | 위치 | 책임 | 예시 |
 |---|---|---|
-| `APW_WorldGameState` | 클라이언트에 복제될 월드 상태 | 시간, 낮/밤, 날씨 |
-| `UWorldSubsystem` | 월드 단위 서버 실행 로직 | 시간 진행, 날씨 변경, 스폰 관리 |
+| `APW_WorldGameState` | 클라이언트에 복제될 월드 상태 | 시간, 낮/밤 |
+| `UWorldSubsystem` | 월드 단위 서버 실행 로직 | 시간 진행, 스폰 관리 |
 | `AActor` | 레벨에 배치되는 대상 | 스포너, 온도 볼륨, 작업 건물 |
 | `UActorComponent` | Actor 내부 기능 분리 | 작업 슬롯, 온도 영향, 상호작용 |
 | Interface | 파트 간 직접 참조 방지 | 작업 수행자, 상태 태그 대상 |
@@ -31,14 +31,13 @@ Client
 | 시스템 | 실행 로직 | 복제 상태 | 배치 대상 |
 |---|---|---|---|
 | 시간 | `UPW_WorldTimeSubsystem` | `APW_WorldGameState` | 없음 |
-| 날씨 | `UPW_WeatherSubsystem` | `APW_WorldGameState` | 없음 |
 | 온도 | `UPW_TemperatureSubsystem` | 필요 시 GameState | `APW_TemperatureVolume` |
 | 야생 팰 스폰 | `UPW_WildPalSpawnSubsystem` | 스폰된 Actor Replication | `APW_WildPalSpawner` |
 | 작업 건물 | 필요 시 `UPW_WorkTargetSubsystem` | 건물 Actor Replication | `APW_WorkBuildingBase` |
 
 ## 금지 구조
 
-- 하나의 `UPW_WorldSubsystem`에 시간, 날씨, 온도, 스폰, 작업 건물을 모두 넣지 않는다.
+- 하나의 `UPW_WorldSubsystem`에 시간, 온도, 스폰, 작업 건물을 모두 넣지 않는다.
 - `GameState`에 스폰 루프, 온도 샘플링, 작업 탐색 같은 실행 로직을 몰아넣지 않는다.
 - 클라이언트가 월드 권한 상태를 직접 변경하지 않는다.
 - 플레이어/팰 구체 클래스를 LMK 시스템이 직접 참조하지 않는다.

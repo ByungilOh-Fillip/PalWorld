@@ -12,8 +12,7 @@
 | 시스템 | 책임 |
 |---|---|
 | World Time | 서버 기준 시간 흐름, 낮/밤 판정, 클라이언트 동기화 |
-| Weather | 날씨 상태 관리, 온도와 스폰 조건에 영향 제공 |
-| Temperature | 지역/시간/날씨 기반 온도 계산, 탐험 상태 태그 적용 요청 |
+| Temperature | 지역/시간 기반 온도 계산, 탐험 상태 태그 적용 요청 |
 | Wild Pal Spawn | 야생 팰 스폰 포인트/존, 스폰 조건, 리스폰, 디스폰 |
 | Work Building | 작업 건물의 요구 작업 태그, 작업 슬롯, 팰 배정 인터페이스 |
 | World Bridge | 플레이어 파트/팰 파트와 월드 시스템 사이의 인터페이스 |
@@ -43,7 +42,6 @@ PalWorld/Source/PalWorld/LMK/
 
 ```text
 World/
-Weather/
 Temperature/
 Spawn/
 Work/

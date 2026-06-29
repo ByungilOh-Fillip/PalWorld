@@ -22,7 +22,6 @@ AI 에이전트는 작업 시작 전에 아래 순서로 문서를 읽는다.
 | 태그, GameplayTag, 상태 | [02_gameplay_tags.md](02_gameplay_tags.md) |
 | 인터페이스, 팰/플레이어 연동 | [03_interfaces.md](03_interfaces.md) |
 | 시간, 낮, 밤 | [04_world_time.md](04_world_time.md) |
-| 날씨 | [05_weather.md](05_weather.md) |
 | 온도, 추위, 더위 | [06_temperature.md](06_temperature.md) |
 | 야생 팰, 스폰, 리스폰 | [07_wild_pal_spawn.md](07_wild_pal_spawn.md) |
 | 작업 건물, 작업 슬롯 | [08_work_building.md](08_work_building.md) |
@@ -39,7 +38,6 @@ AI 에이전트는 작업 시작 전에 아래 순서로 문서를 읽는다.
 | [02_gameplay_tags.md](02_gameplay_tags.md) | GameplayTag 사용 기준 |
 | [03_interfaces.md](03_interfaces.md) | 플레이어/팰/월드 연결 인터페이스 |
 | [04_world_time.md](04_world_time.md) | 낮/밤, 시간 동기화 |
-| [05_weather.md](05_weather.md) | 날씨 상태와 연동 지점 |
 | [06_temperature.md](06_temperature.md) | 온도 계산과 탐험 상태 태그 |
 | [07_wild_pal_spawn.md](07_wild_pal_spawn.md) | 야생 팰 스폰 조건과 생명주기 |
 | [08_work_building.md](08_work_building.md) | 작업 건물과 팰 작업 적성 연결 |
@@ -59,10 +57,9 @@ AI 에이전트는 작업 시작 전에 아래 순서로 문서를 읽는다.
 ## 우선순위 요약
 
 1. 월드 시간과 낮/밤 동기화
-2. 날씨 상태 동기화
-3. 온도 볼륨과 상태 태그 적용 요청
-4. 낮/밤 조건 기반 야생 팰 스폰
-5. 작업 건물의 `Work.*` 요구 태그와 작업 슬롯
+2. 온도 볼륨과 상태 태그 적용 요청
+3. 낮/밤 조건 기반 야생 팰 스폰
+4. 작업 건물의 `Work.*` 요구 태그와 작업 슬롯
 
 ## Agent Working Rules
 

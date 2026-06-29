@@ -8,12 +8,11 @@ public class PalWorld : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "Slate", "SlateCore", "GameplayTags" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "Slate", "SlateCore", "GameplayTags", "NavigationSystem" });
 		
 		// 팀원 ROLE에 따라 나뉜 파트를 한번에 빌드할 때 사용
 		PublicIncludePaths.AddRange(
 			new string[] {
-				System.IO.Path.Combine(ModuleDirectory, "CCW/Public"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/DummyPlayer/public"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/Components/public"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/Pal/public"),
