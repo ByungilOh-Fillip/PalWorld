@@ -6,14 +6,13 @@
 
 1. `APW_WorldGameState`에 복제될 월드 상태 정의
 2. `UPW_WorldTimeSubsystem`에서 서버 시간 진행 구현
-3. `UPW_WeatherSubsystem`에서 서버 날씨 변경 구현
-4. 공통 인터페이스 정의
-5. Temperature Volume과 상태 태그 적용 요청 구현
-6. `UPW_WildPalSpawnSubsystem`과 `APW_WildPalSpawner` 구현
-7. 스포너에 낮/밤, 날씨, 온도 조건 연결
-8. `UPW_WorkTargetSubsystem`, `APW_WorkBuildingBase`, 작업 슬롯 구현
-9. 작업 건물에 `Work.*` 태그 요구 조건 연결
-10. Save hook 정리
+3. 공통 인터페이스 정의
+4. Temperature Volume과 상태 태그 적용 요청 구현
+5. `UPW_WildPalSpawnSubsystem`과 `APW_WildPalSpawner` 구현
+6. 스포너에 낮/밤, 온도 조건 연결
+7. `UPW_WorkTargetSubsystem`, `APW_WorkBuildingBase`, 작업 슬롯 구현
+8. 작업 건물에 `Work.*` 태그 요구 조건 연결
+9. Save hook 정리
 
 ## Phase 1: 월드 상태
 
@@ -21,18 +20,15 @@
 - [ ] `UPW_WorldTimeSubsystem` 구현
 - [ ] 낮/밤 판정
 - [ ] 시간 값 Replication
-- [ ] `UPW_WeatherSubsystem` 구현
-- [ ] 날씨 값 Replication
 
 검증:
 
 - [ ] PIE 2인 이상 환경에서 시간이 서버 기준으로 동기화됨
-- [ ] PIE 2인 이상 환경에서 날씨가 서버 기준으로 동기화됨
 
 ## Phase 2: 온도
 
 - [ ] 온도 볼륨 배치
-- [ ] 시간/날씨 보정 적용
+- [ ] 시간 보정 적용
 - [ ] 추위/더위 태그 적용 요청
 
 검증:
@@ -44,7 +40,6 @@
 
 - [ ] 서버 권한 스폰
 - [ ] 낮/밤 조건
-- [ ] 날씨 조건
 - [ ] 온도 조건
 
 검증:

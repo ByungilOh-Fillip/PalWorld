@@ -1,19 +1,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
+#include "GameFramework/Actor.h"
 #include "PWPalBase.generated.h"
 
 class UStatusComponent;
 class UPWSkillComponent;
 
-UCLASS()
+UCLASS(Blueprintable)
 class PALWORLD_API APWPalBase : public AActor
 {
     GENERATED_BODY()
 
 public:
     APWPalBase();
+
+    // TODO: Pal movement/AI integration may require APWPalBase to become ACharacter or own a movement component.
 
 protected:
     virtual void BeginPlay() override;
