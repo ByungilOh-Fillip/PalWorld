@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "level": "/Game/_Private/LMK/Levels/Palworld",
+  "globalFog": {
+    "mode": "disabledForTerrainAuthoring",
+    "actor": "/Game/_Private/LMK/Levels/Palworld.Palworld:PersistentLevel.ExponentialHeightFog_UAID_D843AE82EA8B20E802_1969538194",
+    "component": "/Game/_Private/LMK/Levels/Palworld.Palworld:PersistentLevel.ExponentialHeightFog_UAID_D843AE82EA8B20E802_1969538194.HeightFogComponent0",
+    "FogDensity": 0.0,
+    "FogHeightFalloff": 0.05,
+    "FogMaxOpacity": 0.0,
+    "StartDistance": 100000,
+    "FogCutoffDistance": 1,
+    "VolumetricFogExtinctionScale": 0.0,
+    "VolumetricFogDistance": 1
+  },
+  "localizedFogZones": [
+    {
+      "name": "lowland_valley_mist",
+      "status": "planned",
+      "intent": "Use localized fog only in valleys, lakesides, or low basins instead of covering the whole map."
+    }
+  ]
+}
