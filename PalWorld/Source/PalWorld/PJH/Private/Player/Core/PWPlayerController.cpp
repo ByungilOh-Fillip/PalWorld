@@ -68,6 +68,8 @@ void APWPlayerController::SetupInputComponent()
 	if (MoveAction)
 	{
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APWPlayerController::HandleMove);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleMoveCompleted);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleMoveCompleted);
 	}
 
 	if (LookAction)
@@ -100,6 +102,28 @@ void APWPlayerController::SetupInputComponent()
 	{
 		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &APWPlayerController::HandleRollStarted);
 	}
+
+	if (PrimaryAction)
+	{
+		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Started, this, &APWPlayerController::HandlePrimaryActionStarted);
+	}
+
+	if (AimAction)
+	{
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &APWPlayerController::HandleAimStarted);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleAimCompleted);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleAimCompleted);
+	}
+
+	if (EquipmentWheelNextAction)
+	{
+		EnhancedInputComponent->BindAction(EquipmentWheelNextAction, ETriggerEvent::Started, this, &APWPlayerController::HandleEquipmentWheelNextStarted);
+	}
+
+	if (EquipmentWheelPreviousAction)
+	{
+		EnhancedInputComponent->BindAction(EquipmentWheelPreviousAction, ETriggerEvent::Started, this, &APWPlayerController::HandleEquipmentWheelPreviousStarted);
+	}
 }
 
 // 입력 핸들러는 얇게 유지하고, 권한 판단은 캐릭터/컴포넌트에서 처리한다.
@@ -108,6 +132,14 @@ void APWPlayerController::HandleMove(const FInputActionValue& Value)
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->Move(Value.Get<FVector2D>());
+	}
+}
+
+void APWPlayerController::HandleMoveCompleted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->Move(FVector2D::ZeroVector);
 	}
 }
 
@@ -175,6 +207,51 @@ void APWPlayerController::HandleRollStarted(const FInputActionValue& Value)
 	}
 }
 
+void APWPlayerController::HandlePrimaryActionStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StartPrimaryAction();
+	}
+}
+
+void APWPlayerController::HandleAimStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		if (PlayerCharacter->StartAim())
+		{
+			SetCrosshairVisible(true);
+		}
+	}
+}
+
+void APWPlayerController::HandleAimCompleted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StopAim();
+	}
+
+	SetCrosshairVisible(false);
+}
+
+void APWPlayerController::HandleEquipmentWheelNextStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->SelectNextEquipmentSlot();
+	}
+}
+
+void APWPlayerController::HandleEquipmentWheelPreviousStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->SelectPreviousEquipmentSlot();
+	}
+}
+
 APWPlayerCharacter* APWPlayerController::GetPWPlayerCharacter() const
 {
 	return Cast<APWPlayerCharacter>(GetPawn());
@@ -206,5 +283,20 @@ void APWPlayerController::InitializePlayerHUD()
 	if (PlayerHUDWidget)
 	{
 		PlayerHUDWidget->InitializeWithPlayerCharacter(GetPWPlayerCharacter());
+	}
+}
+
+void APWPlayerController::SetCrosshairVisible(bool bVisible)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	CreatePlayerHUD();
+
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->SetCrosshairVisible(bVisible);
 	}
 }

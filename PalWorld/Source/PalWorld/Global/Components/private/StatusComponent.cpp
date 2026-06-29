@@ -66,6 +66,7 @@ void UStatusComponent::OnRep_CurrentHP()
 
 void UStatusComponent::OnRep_CurrentSP()
 {
+    HandleCurrentSPChanged();
 }
 
 void UStatusComponent::OnRep_CurrentHunger()
@@ -81,5 +82,9 @@ void UStatusComponent::OnRep_CurrentCarryWeight()
 }
 
 void UStatusComponent::OnRep_ActiveStatusEffects()
+{
+}
+
+void UStatusComponent::HandleCurrentSPChanged()
 {
 }

@@ -65,6 +65,33 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Movement")
 	bool bIsRolling = false;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Climb")
+	bool bIsClimbing = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Climb")
+	float ClimbInputX = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Climb")
+	float ClimbInputY = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Movement")
+	bool bIsWallClimbing = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Movement")
+	bool bIsWallClimbTopOut = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Movement")
+	float WallClimbVerticalSpeed = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Movement")
+	float WallClimbHorizontalSpeed = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Movement")
+	float WallClimbHorizontal = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Movement")
+	float WallClimbVertical = 0.f;
+
 private:
 	void CacheOwningCharacter();
 };
