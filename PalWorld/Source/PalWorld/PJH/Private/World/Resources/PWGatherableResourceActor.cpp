@@ -2,6 +2,8 @@
 
 #include "World/Resources/PWGatherableResourceActor.h"
 
+#include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Net/UnrealNetwork.h"
 
 APWGatherableResourceActor::APWGatherableResourceActor()
@@ -9,6 +11,15 @@ APWGatherableResourceActor::APWGatherableResourceActor()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	SetReplicateMovement(true);
+
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	SetRootComponent(SceneRoot);
+
+	ResourceMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ResourceMesh"));
+	ResourceMesh->SetupAttachment(SceneRoot);
+	ResourceMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	ResourceMesh->SetCollisionResponseToAllChannels(ECR_Block);
+	ResourceMesh->SetGenerateOverlapEvents(false);
 }
 
 void APWGatherableResourceActor::BeginPlay()
@@ -28,8 +39,10 @@ void APWGatherableResourceActor::GetLifetimeReplicatedProps(TArray<FLifetimeProp
 	DOREPLIFETIME(APWGatherableResourceActor, CurrentHealth);
 }
 
-bool APWGatherableResourceActor::ApplyGatherDamage(AActor* GatherInstigator, float DamageAmount, EPWToolType ToolType)
+bool APWGatherableResourceActor::ApplyGatherDamage(AActor* GatherInstigator, float DamageAmount, EPWToolType ToolType, float& OutAppliedDamage)
 {
+	OutAppliedDamage = 0.f;
+
 	if (!HasAuthority() || IsDepleted() || DamageAmount <= 0.f)
 	{
 		return false;
@@ -43,6 +56,7 @@ bool APWGatherableResourceActor::ApplyGatherDamage(AActor* GatherInstigator, flo
 		return false;
 	}
 
+	OutAppliedDamage = AppliedDamage;
 	DamageSinceLastDrop += AppliedDamage;
 
 	int32 DropIntervalCount = 0;

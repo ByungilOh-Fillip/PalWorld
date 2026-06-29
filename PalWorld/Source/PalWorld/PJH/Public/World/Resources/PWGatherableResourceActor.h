@@ -7,6 +7,9 @@
 #include "Player/Types/PWPlayerGameplayTypes.h"
 #include "PWGatherableResourceActor.generated.h"
 
+class USceneComponent;
+class UStaticMeshComponent;
+
 UCLASS()
 class PALWORLD_API APWGatherableResourceActor : public AActor
 {
@@ -33,7 +36,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Gather")
 	bool IsDepleted() const { return CurrentHealth <= 0.f; }
 
-	bool ApplyGatherDamage(AActor* GatherInstigator, float DamageAmount, EPWToolType ToolType);
+	bool ApplyGatherDamage(AActor* GatherInstigator, float DamageAmount, EPWToolType ToolType, float& OutAppliedDamage);
 
 protected:
 	// 서버에서 자원 데미지를 받을 때 BP 연출을 붙일 수 있는 지점.
@@ -48,6 +51,12 @@ protected:
 	void BP_OnResourceDepleted(AActor* GatherInstigator);
 
 private:
+	UPROPERTY(VisibleAnywhere, Category = "Player|Gather|Components")
+	TObjectPtr<USceneComponent> SceneRoot;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Gather|Components")
+	TObjectPtr<UStaticMeshComponent> ResourceMesh;
+
 	UPROPERTY(EditAnywhere, Category = "Player|Gather")
 	EPWResourceType ResourceType = EPWResourceType::Tree;
 

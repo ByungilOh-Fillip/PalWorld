@@ -88,7 +88,7 @@ private:
 	float ClimbJumpUpStrength = 430.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
-	float ClimbJumpAwayStrength = 360.f;
+	float ClimbJumpAwayStrength = 100.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "45.0", ClampMax = "90.0"))
 	float MinClimbSurfaceAngleDegrees = 70.f;

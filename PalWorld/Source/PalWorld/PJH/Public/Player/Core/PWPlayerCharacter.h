@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/NetSerialization.h"
 #include "GameFramework/Character.h"
 #include "PWPlayerCharacter.generated.h"
 
@@ -13,6 +14,7 @@ class UPWPlayerActionComponent;
 class UPWPlayerCaptureComponent;
 class UPWPlayerClimbComponent;
 class UPWPlayerCombatComponent;
+class UPWPlayerEquipmentComponent;
 class UPWPlayerGatherComponent;
 class UPWPlayerInteractionComponent;
 class UPWPlayerInventoryLinkComponent;
@@ -38,7 +40,11 @@ public:
 	void StartCrouch();
 	void StopCrouch();
 	void StartRoll();
-	void StartGather();
+	void StartPrimaryAction();
+	bool StartAim();
+	void StopAim();
+	void SelectNextEquipmentSlot();
+	void SelectPreviousEquipmentSlot();
 
 protected:
 	virtual void BeginPlay() override;
@@ -53,6 +59,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Player|Movement")
 	bool IsRolling() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Aim")
+	bool IsAiming() const { return bIsAiming; }
 
 	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
 	bool IsWallClimbing() const;
@@ -84,6 +93,7 @@ public:
 	UPWPlayerActionComponent* GetActionComponent() const { return ActionComponent; }
 	UPWPlayerStatComponent* GetStatComponent() const { return StatComponent; }
 	UPWPlayerGatherComponent* GetGatherComponent() const { return GatherComponent; }
+	UPWPlayerEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
 	UPWPlayerClimbComponent* GetClimbComponent() const { return ClimbComponent; }
 
 private:
@@ -104,6 +114,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerGatherComponent> GatherComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPWPlayerEquipmentComponent> EquipmentComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerSkillComponent> SkillComponent;
@@ -138,18 +151,53 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement", meta = (ClampMin = "0.0"))
 	float MinSprintActiveSpeed = 10.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Camera", meta = (ClampMin = "0.0"))
+	float DefaultCameraArmLength = 400.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Camera", meta = (ClampMin = "0.0"))
+	float AimCameraArmLength = 350.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Camera", meta = (ClampMin = "0.0"))
+	float SprintCameraArmLength = 460.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Camera", meta = (ClampMin = "0.0"))
+	float ClimbCameraArmLength = 470.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Camera", meta = (ClampMin = "0.0"))
+	float CameraZoomInterpSpeed = 12.f;
+
 	UPROPERTY(ReplicatedUsing = OnRep_IsSprinting)
 	bool bIsSprinting = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsAiming)
+	bool bIsAiming = false;
 
 	// 달리기는 커스텀 속도 상태라 CharacterMovement 기본 이동과 별도로 복제한다.
 	UFUNCTION()
 	void OnRep_IsSprinting();
 
+	UFUNCTION()
+	void OnRep_IsAiming();
+
 	UFUNCTION(Server, Reliable)
 	void ServerSetSprinting(bool bNewIsSprinting);
 
+	UFUNCTION(Server, Reliable)
+	void ServerSetAiming(bool bNewIsAiming);
+
 	bool CanStartSprint() const;
 	void SetSprinting(bool bNewIsSprinting);
+	bool CanStartAim() const;
+	void SetAiming(bool bNewIsAiming);
 	bool IsSprintMovementActive() const;
 	void ApplyMovementSpeed();
+	void ApplyRotationMode();
+	void FacePrimaryActionDirection();
+	void ApplyPrimaryActionFacing(const FVector& RequestedDirection);
+	void UpdateAimRotation();
+	float GetTargetCameraArmLength() const;
+	void UpdateCameraArmLength(float DeltaSeconds);
+
+	UFUNCTION(Server, Reliable)
+	void ServerFacePrimaryActionDirection(FVector_NetQuantizeNormal RequestedDirection);
 };

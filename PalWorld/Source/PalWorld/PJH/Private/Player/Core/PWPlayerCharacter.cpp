@@ -11,6 +11,7 @@
 #include "Player/Components/PWPlayerCaptureComponent.h"
 #include "Player/Components/PWPlayerClimbComponent.h"
 #include "Player/Components/PWPlayerCombatComponent.h"
+#include "Player/Components/PWPlayerEquipmentComponent.h"
 #include "Player/Components/PWPlayerGatherComponent.h"
 #include "Player/Components/PWPlayerInteractionComponent.h"
 #include "Player/Components/PWPlayerInventoryLinkComponent.h"
@@ -39,7 +40,7 @@ APWPlayerCharacter::APWPlayerCharacter()
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 400.f;
+	CameraBoom->TargetArmLength = DefaultCameraArmLength;
 	CameraBoom->bUsePawnControlRotation = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -50,6 +51,7 @@ APWPlayerCharacter::APWPlayerCharacter()
 	StatComponent = CreateDefaultSubobject<UPWPlayerStatComponent>(TEXT("StatComponent"));
 	CombatComponent = CreateDefaultSubobject<UPWPlayerCombatComponent>(TEXT("CombatComponent"));
 	GatherComponent = CreateDefaultSubobject<UPWPlayerGatherComponent>(TEXT("GatherComponent"));
+	EquipmentComponent = CreateDefaultSubobject<UPWPlayerEquipmentComponent>(TEXT("EquipmentComponent"));
 	SkillComponent = CreateDefaultSubobject<UPWPlayerSkillComponent>(TEXT("SkillComponent"));
 	PalCommandComponent = CreateDefaultSubobject<UPWPalCommandComponent>(TEXT("PalCommandComponent"));
 	InteractionComponent = CreateDefaultSubobject<UPWPlayerInteractionComponent>(TEXT("InteractionComponent"));
@@ -64,11 +66,16 @@ void APWPlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	ApplyMovementSpeed();
+	ApplyRotationMode();
+	UpdateCameraArmLength(0.f);
 }
 
 void APWPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	UpdateAimRotation();
+	UpdateCameraArmLength(DeltaSeconds);
 }
 
 void APWPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -76,6 +83,7 @@ void APWPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(APWPlayerCharacter, bIsSprinting);
+	DOREPLIFETIME(APWPlayerCharacter, bIsAiming);
 }
 
 // 이 입력들은 CharacterMovement가 클라 예측/서버 보정을 기본으로 처리한다.
@@ -200,16 +208,62 @@ void APWPlayerCharacter::StartRoll()
 	}
 }
 
-void APWPlayerCharacter::StartGather()
+void APWPlayerCharacter::StartPrimaryAction()
 {
 	if (IsWallClimbing() || IsWallClimbTopOut())
 	{
 		return;
 	}
 
+	FacePrimaryActionDirection();
+
 	if (GatherComponent)
 	{
 		GatherComponent->TryGatherFromView();
+	}
+}
+
+bool APWPlayerCharacter::StartAim()
+{
+	if (!CanStartAim())
+	{
+		return false;
+	}
+
+	StopSprint();
+	SetAiming(true);
+
+	if (!HasAuthority())
+	{
+		ServerSetAiming(true);
+	}
+
+	return true;
+}
+
+void APWPlayerCharacter::StopAim()
+{
+	SetAiming(false);
+
+	if (!HasAuthority())
+	{
+		ServerSetAiming(false);
+	}
+}
+
+void APWPlayerCharacter::SelectNextEquipmentSlot()
+{
+	if (EquipmentComponent)
+	{
+		EquipmentComponent->SelectNextEquipmentSlot();
+	}
+}
+
+void APWPlayerCharacter::SelectPreviousEquipmentSlot()
+{
+	if (EquipmentComponent)
+	{
+		EquipmentComponent->SelectPreviousEquipmentSlot();
 	}
 }
 
@@ -277,6 +331,11 @@ void APWPlayerCharacter::OnRep_IsSprinting()
 	ApplyMovementSpeed();
 }
 
+void APWPlayerCharacter::OnRep_IsAiming()
+{
+	ApplyRotationMode();
+}
+
 void APWPlayerCharacter::ServerSetSprinting_Implementation(bool bNewIsSprinting)
 {
 	if (bNewIsSprinting && !CanStartSprint())
@@ -288,10 +347,22 @@ void APWPlayerCharacter::ServerSetSprinting_Implementation(bool bNewIsSprinting)
 	SetSprinting(bNewIsSprinting);
 }
 
+void APWPlayerCharacter::ServerSetAiming_Implementation(bool bNewIsAiming)
+{
+	if (bNewIsAiming && !CanStartAim())
+	{
+		SetAiming(false);
+		return;
+	}
+
+	SetAiming(bNewIsAiming);
+}
+
 bool APWPlayerCharacter::CanStartSprint() const
 {
 	return !bIsCrouched
 		&& !IsRolling()
+		&& !bIsAiming
 		&& !IsWallClimbing()
 		&& !IsWallClimbTopOut()
 		&& (!StatComponent || StatComponent->CanStartSprint());
@@ -318,6 +389,29 @@ void APWPlayerCharacter::SetSprinting(bool bNewIsSprinting)
 	}
 }
 
+bool APWPlayerCharacter::CanStartAim() const
+{
+	return !IsRolling()
+		&& !IsWallClimbing()
+		&& !IsWallClimbTopOut();
+}
+
+void APWPlayerCharacter::SetAiming(bool bNewIsAiming)
+{
+	if (bNewIsAiming && !CanStartAim())
+	{
+		bNewIsAiming = false;
+	}
+
+	if (bIsAiming == bNewIsAiming)
+	{
+		return;
+	}
+
+	bIsAiming = bNewIsAiming;
+	ApplyRotationMode();
+}
+
 bool APWPlayerCharacter::IsSprintMovementActive() const
 {
 	const UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
@@ -339,4 +433,108 @@ void APWPlayerCharacter::ApplyMovementSpeed()
 {
 	GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchedWalkSpeed;
+}
+
+void APWPlayerCharacter::ApplyRotationMode()
+{
+	const bool bUseAimRotation = bIsAiming && !IsWallClimbing() && !IsWallClimbTopOut();
+	bUseControllerRotationYaw = bUseAimRotation;
+
+	if (UCharacterMovementComponent* MovementComponent = GetCharacterMovement())
+	{
+		MovementComponent->bOrientRotationToMovement = !bUseAimRotation;
+	}
+}
+
+void APWPlayerCharacter::FacePrimaryActionDirection()
+{
+	if (!Controller)
+	{
+		return;
+	}
+
+	const FVector ViewDirection = Controller->GetControlRotation().Vector();
+	ApplyPrimaryActionFacing(ViewDirection);
+
+	if (!HasAuthority())
+	{
+		ServerFacePrimaryActionDirection(FVector_NetQuantizeNormal(ViewDirection));
+	}
+}
+
+void APWPlayerCharacter::ApplyPrimaryActionFacing(const FVector& RequestedDirection)
+{
+	FVector FlatDirection = RequestedDirection;
+	FlatDirection.Z = 0.f;
+
+	if (FlatDirection.IsNearlyZero())
+	{
+		return;
+	}
+
+	// 좌클릭 액션은 조준 상태로 들어가지 않고, 시작 순간만 카메라 Yaw를 바라본다.
+	SetActorRotation(FRotator(0.f, FlatDirection.Rotation().Yaw, 0.f));
+}
+
+void APWPlayerCharacter::ServerFacePrimaryActionDirection_Implementation(FVector_NetQuantizeNormal RequestedDirection)
+{
+	if (IsRolling() || IsWallClimbing() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
+	ApplyPrimaryActionFacing(RequestedDirection);
+}
+
+void APWPlayerCharacter::UpdateAimRotation()
+{
+	if (!bIsAiming || !Controller || IsWallClimbing() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
+	// 조준 중에는 이동 방향이 아니라 카메라가 바라보는 Yaw를 캐릭터 정면으로 사용한다.
+	const FRotator ControlRotation = Controller->GetControlRotation();
+	SetActorRotation(FRotator(0.f, ControlRotation.Yaw, 0.f));
+}
+
+float APWPlayerCharacter::GetTargetCameraArmLength() const
+{
+	if (bIsAiming)
+	{
+		return AimCameraArmLength;
+	}
+
+	if (IsWallClimbing() || IsWallClimbTopOut())
+	{
+		return ClimbCameraArmLength;
+	}
+
+	if (IsSprintMovementActive())
+	{
+		return SprintCameraArmLength;
+	}
+
+	return DefaultCameraArmLength;
+}
+
+void APWPlayerCharacter::UpdateCameraArmLength(float DeltaSeconds)
+{
+	if (!CameraBoom)
+	{
+		return;
+	}
+
+	const float TargetArmLength = GetTargetCameraArmLength();
+	if (DeltaSeconds <= 0.f || CameraZoomInterpSpeed <= 0.f)
+	{
+		CameraBoom->TargetArmLength = TargetArmLength;
+		return;
+	}
+
+	CameraBoom->TargetArmLength = FMath::FInterpTo(
+		CameraBoom->TargetArmLength,
+		TargetArmLength,
+		DeltaSeconds,
+		CameraZoomInterpSpeed);
 }

@@ -103,9 +103,26 @@ void APWPlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &APWPlayerController::HandleRollStarted);
 	}
 
-	if (GatherAction)
+	if (PrimaryAction)
 	{
-		EnhancedInputComponent->BindAction(GatherAction, ETriggerEvent::Started, this, &APWPlayerController::HandleGatherStarted);
+		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Started, this, &APWPlayerController::HandlePrimaryActionStarted);
+	}
+
+	if (AimAction)
+	{
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &APWPlayerController::HandleAimStarted);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleAimCompleted);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleAimCompleted);
+	}
+
+	if (EquipmentWheelNextAction)
+	{
+		EnhancedInputComponent->BindAction(EquipmentWheelNextAction, ETriggerEvent::Started, this, &APWPlayerController::HandleEquipmentWheelNextStarted);
+	}
+
+	if (EquipmentWheelPreviousAction)
+	{
+		EnhancedInputComponent->BindAction(EquipmentWheelPreviousAction, ETriggerEvent::Started, this, &APWPlayerController::HandleEquipmentWheelPreviousStarted);
 	}
 }
 
@@ -190,11 +207,48 @@ void APWPlayerController::HandleRollStarted(const FInputActionValue& Value)
 	}
 }
 
-void APWPlayerController::HandleGatherStarted(const FInputActionValue& Value)
+void APWPlayerController::HandlePrimaryActionStarted(const FInputActionValue& Value)
 {
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
-		PlayerCharacter->StartGather();
+		PlayerCharacter->StartPrimaryAction();
+	}
+}
+
+void APWPlayerController::HandleAimStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		if (PlayerCharacter->StartAim())
+		{
+			SetCrosshairVisible(true);
+		}
+	}
+}
+
+void APWPlayerController::HandleAimCompleted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StopAim();
+	}
+
+	SetCrosshairVisible(false);
+}
+
+void APWPlayerController::HandleEquipmentWheelNextStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->SelectNextEquipmentSlot();
+	}
+}
+
+void APWPlayerController::HandleEquipmentWheelPreviousStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->SelectPreviousEquipmentSlot();
 	}
 }
 
@@ -229,5 +283,20 @@ void APWPlayerController::InitializePlayerHUD()
 	if (PlayerHUDWidget)
 	{
 		PlayerHUDWidget->InitializeWithPlayerCharacter(GetPWPlayerCharacter());
+	}
+}
+
+void APWPlayerController::SetCrosshairVisible(bool bVisible)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	CreatePlayerHUD();
+
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->SetCrosshairVisible(bVisible);
 	}
 }

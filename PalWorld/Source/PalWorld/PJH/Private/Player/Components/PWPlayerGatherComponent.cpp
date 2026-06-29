@@ -6,8 +6,10 @@
 #include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Components/PWPlayerActionComponent.h"
+#include "Player/Components/PWPlayerEquipmentComponent.h"
 #include "Player/Components/PWPlayerStatComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
+#include "Player/UI/PWLocalDamageFloatActor.h"
 #include "TimerManager.h"
 #include "World/Resources/PWGatherableResourceActor.h"
 
@@ -26,6 +28,14 @@ void UPWPlayerGatherComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 
 void UPWPlayerGatherComponent::TryGatherFromView()
 {
+	FVector ViewLocation = FVector::ZeroVector;
+	FVector ViewDirection = FVector::ZeroVector;
+	if (!GetGatherView(ViewLocation, ViewDirection))
+	{
+		BP_OnGatherFailed();
+		return;
+	}
+
 	APWGatherableResourceActor* TargetResource = FindGatherTargetFromView();
 	if (!TargetResource)
 	{
@@ -36,11 +46,11 @@ void UPWPlayerGatherComponent::TryGatherFromView()
 	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
 	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
 	{
-		ServerRequestGather(TargetResource);
+		ServerRequestGatherFromView(FVector_NetQuantize(ViewLocation), FVector_NetQuantizeNormal(ViewDirection));
 		return;
 	}
 
-	GatherAuthority(TargetResource);
+	GatherAuthority(TargetResource, ViewDirection);
 }
 
 void UPWPlayerGatherComponent::RequestEquipTool(EPWToolType NewToolType)
@@ -55,14 +65,37 @@ void UPWPlayerGatherComponent::RequestEquipTool(EPWToolType NewToolType)
 	CurrentToolType = NewToolType;
 }
 
-void UPWPlayerGatherComponent::ServerRequestGather_Implementation(APWGatherableResourceActor* TargetResource)
+EPWToolType UPWPlayerGatherComponent::GetCurrentToolType() const
 {
-	GatherAuthority(TargetResource);
+	return ResolveCurrentToolType();
+}
+
+void UPWPlayerGatherComponent::ServerRequestGatherFromView_Implementation(FVector_NetQuantize RequestedViewLocation, FVector_NetQuantizeNormal RequestedViewDirection)
+{
+	if (!IsGatherViewLocationAllowed(RequestedViewLocation))
+	{
+		BP_OnGatherFailed();
+		return;
+	}
+
+	APWGatherableResourceActor* TargetResource = FindGatherTargetFromViewData(RequestedViewLocation, RequestedViewDirection);
+	if (!TargetResource)
+	{
+		BP_OnGatherFailed();
+		return;
+	}
+
+	GatherAuthority(TargetResource, RequestedViewDirection);
 }
 
 void UPWPlayerGatherComponent::ServerRequestEquipTool_Implementation(EPWToolType NewToolType)
 {
 	CurrentToolType = NewToolType;
+}
+
+void UPWPlayerGatherComponent::ClientShowGatherDamage_Implementation(float AppliedDamage, FVector_NetQuantize WorldLocation, EPWToolType ToolType, EPWResourceType ResourceType)
+{
+	ShowGatherDamageLocal(AppliedDamage, WorldLocation, ToolType, ResourceType);
 }
 
 void UPWPlayerGatherComponent::OnRep_CurrentToolType()
@@ -74,26 +107,83 @@ APWPlayerCharacter* UPWPlayerGatherComponent::GetPlayerCharacter() const
 	return Cast<APWPlayerCharacter>(GetOwner());
 }
 
-APWGatherableResourceActor* UPWPlayerGatherComponent::FindGatherTargetFromView() const
+bool UPWPlayerGatherComponent::GetGatherView(FVector& OutViewLocation, FVector& OutViewDirection) const
 {
 	const APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
 	if (!PlayerCharacter)
 	{
-		return nullptr;
+		return false;
 	}
 
 	const AController* Controller = PlayerCharacter->GetController();
 	if (!Controller)
 	{
+		return false;
+	}
+
+	FRotator ViewRotation = FRotator::ZeroRotator;
+	Controller->GetPlayerViewPoint(OutViewLocation, ViewRotation);
+	OutViewDirection = ViewRotation.Vector();
+
+	return !OutViewDirection.IsNearlyZero();
+}
+
+void UPWPlayerGatherComponent::ShowGatherDamageLocal(float AppliedDamage, const FVector& WorldLocation, EPWToolType ToolType, EPWResourceType ResourceType)
+{
+	if (UWorld* World = GetWorld())
+	{
+		UClass* FloatActorClass = DamageFloatActorClass
+			? DamageFloatActorClass.Get()
+			: APWLocalDamageFloatActor::StaticClass();
+
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.Owner = GetOwner();
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		if (APWLocalDamageFloatActor* DamageFloatActor = World->SpawnActor<APWLocalDamageFloatActor>(
+			FloatActorClass,
+			WorldLocation,
+			FRotator::ZeroRotator,
+			SpawnParameters))
+		{
+			DamageFloatActor->InitializeDamageFloat(AppliedDamage);
+		}
+	}
+
+	BP_OnLocalGatherDamageFloat(AppliedDamage, WorldLocation, ToolType, ResourceType);
+}
+
+APWGatherableResourceActor* UPWPlayerGatherComponent::FindGatherTargetFromView() const
+{
+	FVector ViewLocation = FVector::ZeroVector;
+	FVector ViewDirection = FVector::ZeroVector;
+	if (!GetGatherView(ViewLocation, ViewDirection))
+	{
 		return nullptr;
 	}
 
-	FVector ViewLocation = FVector::ZeroVector;
-	FRotator ViewRotation = FRotator::ZeroRotator;
-	Controller->GetPlayerViewPoint(ViewLocation, ViewRotation);
+	return FindGatherTarget(ViewLocation, ViewDirection);
+}
 
-	const FVector TraceStart = ViewLocation;
-	const FVector TraceEnd = TraceStart + ViewRotation.Vector() * GatherTraceDistance;
+APWGatherableResourceActor* UPWPlayerGatherComponent::FindGatherTargetFromViewData(const FVector& ViewLocation, const FVector& ViewDirection) const
+{
+	if (!IsGatherViewLocationAllowed(ViewLocation))
+	{
+		return nullptr;
+	}
+
+	return FindGatherTarget(ViewLocation, ViewDirection);
+}
+
+APWGatherableResourceActor* UPWPlayerGatherComponent::FindGatherTarget(const FVector& TraceStart, const FVector& TraceDirection) const
+{
+	const APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || TraceDirection.IsNearlyZero())
+	{
+		return nullptr;
+	}
+
+	const FVector TraceEnd = TraceStart + TraceDirection.GetSafeNormal() * GatherTraceDistance;
 
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(PWGatherTrace), false, PlayerCharacter);
 	QueryParams.AddIgnoredActor(PlayerCharacter);
@@ -106,6 +196,17 @@ APWGatherableResourceActor* UPWPlayerGatherComponent::FindGatherTargetFromView()
 	}
 
 	return Cast<APWGatherableResourceActor>(HitResult.GetActor());
+}
+
+bool UPWPlayerGatherComponent::IsGatherViewLocationAllowed(const FVector& ViewLocation) const
+{
+	const APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter)
+	{
+		return false;
+	}
+
+	return FVector::DistSquared(PlayerCharacter->GetActorLocation(), ViewLocation) <= FMath::Square(MaxGatherViewLocationDistance);
 }
 
 bool UPWPlayerGatherComponent::CanGatherTarget(const APWGatherableResourceActor* TargetResource) const
@@ -128,10 +229,12 @@ bool UPWPlayerGatherComponent::CanGatherTarget(const APWGatherableResourceActor*
 
 float UPWPlayerGatherComponent::ResolveGatherDamage(EPWResourceType ResourceType) const
 {
+	const EPWToolType ToolType = ResolveCurrentToolType();
+
 	switch (ResourceType)
 	{
 	case EPWResourceType::Tree:
-		switch (CurrentToolType)
+		switch (ToolType)
 		{
 		case EPWToolType::Axe:
 			return AxeTreeDamage;
@@ -143,7 +246,7 @@ float UPWPlayerGatherComponent::ResolveGatherDamage(EPWResourceType ResourceType
 		}
 
 	case EPWResourceType::Stone:
-		switch (CurrentToolType)
+		switch (ToolType)
 		{
 		case EPWToolType::Axe:
 			return AxeStoneDamage;
@@ -159,7 +262,33 @@ float UPWPlayerGatherComponent::ResolveGatherDamage(EPWResourceType ResourceType
 	}
 }
 
-void UPWPlayerGatherComponent::GatherAuthority(APWGatherableResourceActor* TargetResource)
+EPWToolType UPWPlayerGatherComponent::ResolveCurrentToolType() const
+{
+	const APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (PlayerCharacter)
+	{
+		if (const UPWPlayerEquipmentComponent* EquipmentComponent = PlayerCharacter->GetEquipmentComponent())
+		{
+			return EquipmentComponent->GetSelectedToolType();
+		}
+	}
+
+	return CurrentToolType;
+}
+
+float UPWPlayerGatherComponent::ApplyDamageVariance(float BaseDamage) const
+{
+	if (BaseDamage <= 0.f || DamageVarianceRatio <= 0.f)
+	{
+		return BaseDamage;
+	}
+
+	const float MinMultiplier = FMath::Max(0.f, 1.f - DamageVarianceRatio);
+	const float MaxMultiplier = 1.f + DamageVarianceRatio;
+	return BaseDamage * FMath::FRandRange(MinMultiplier, MaxMultiplier);
+}
+
+void UPWPlayerGatherComponent::GatherAuthority(APWGatherableResourceActor* TargetResource, const FVector& ActionDirection)
 {
 	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
 	if (!PlayerCharacter || !PlayerCharacter->HasAuthority() || !CanGatherTarget(TargetResource))
@@ -175,6 +304,14 @@ void UPWPlayerGatherComponent::GatherAuthority(APWGatherableResourceActor* Targe
 		return;
 	}
 
+	FVector FlatActionDirection = ActionDirection;
+	FlatActionDirection.Z = 0.f;
+	if (!FlatActionDirection.IsNearlyZero())
+	{
+		// 서버도 액션 방향을 확정해 다른 클라이언트가 보는 캐릭터 방향을 맞춘다.
+		PlayerCharacter->SetActorRotation(FRotator(0.f, FlatActionDirection.Rotation().Yaw, 0.f));
+	}
+
 	UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent();
 	if (StatComponent && !StatComponent->TryConsumeStamina(GatherStaminaCost))
 	{
@@ -186,8 +323,11 @@ void UPWPlayerGatherComponent::GatherAuthority(APWGatherableResourceActor* Targe
 		return;
 	}
 
-	const float GatherDamage = ResolveGatherDamage(TargetResource->GetResourceType());
-	if (!TargetResource->ApplyGatherDamage(PlayerCharacter, GatherDamage, CurrentToolType))
+	const EPWToolType ToolType = ResolveCurrentToolType();
+	const EPWResourceType ResourceType = TargetResource->GetResourceType();
+	const float GatherDamage = ApplyDamageVariance(ResolveGatherDamage(ResourceType));
+	float AppliedDamage = 0.f;
+	if (!TargetResource->ApplyGatherDamage(PlayerCharacter, GatherDamage, ToolType, AppliedDamage))
 	{
 		if (ActionComponent)
 		{
@@ -197,7 +337,21 @@ void UPWPlayerGatherComponent::GatherAuthority(APWGatherableResourceActor* Targe
 		return;
 	}
 
-	BP_OnGatherStarted(TargetResource, CurrentToolType);
+	BP_OnGatherStarted(TargetResource, ToolType);
+	const FVector DamageFloatLocation = TargetResource->GetActorLocation() + FVector(0.f, 0.f, 120.f);
+	if (PlayerCharacter->IsLocallyControlled())
+	{
+		// 단독 실행/리스슨 서버의 로컬 플레이어는 소유 클라 RPC를 기다리지 않고 즉시 표시한다.
+		ShowGatherDamageLocal(AppliedDamage, DamageFloatLocation, ToolType, ResourceType);
+	}
+	else
+	{
+		ClientShowGatherDamage(
+			AppliedDamage,
+			FVector_NetQuantize(DamageFloatLocation),
+			ToolType,
+			ResourceType);
+	}
 
 	if (UWorld* World = GetWorld())
 	{
@@ -213,8 +367,8 @@ void UPWPlayerGatherComponent::GatherAuthority(APWGatherableResourceActor* Targe
 	UE_LOG(LogTemp, Log, TEXT("[PWGather] Gather hit. Player=%s Resource=%s Tool=%s Damage=%.1f StaminaCost=%.1f"),
 		*PlayerCharacter->GetName(),
 		*TargetResource->GetName(),
-		*UEnum::GetValueAsString(CurrentToolType),
-		GatherDamage,
+		*UEnum::GetValueAsString(ToolType),
+		AppliedDamage,
 		GatherStaminaCost);
 }
 

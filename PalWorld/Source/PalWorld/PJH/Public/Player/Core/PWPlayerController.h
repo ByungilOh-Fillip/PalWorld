@@ -51,8 +51,18 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Movement")
 	TObjectPtr<UInputAction> RollAction;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input|Gather")
-	TObjectPtr<UInputAction> GatherAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Action")
+	TObjectPtr<UInputAction> PrimaryAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Action")
+	TObjectPtr<UInputAction> AimAction;
+
+	// 장비 변경은 마우스 휠 전용이다. 숫자키 1/2/3/4는 팰/스피어 조작에 사용한다.
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Equipment")
+	TObjectPtr<UInputAction> EquipmentWheelNextAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Equipment")
+	TObjectPtr<UInputAction> EquipmentWheelPreviousAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|UI")
 	TSubclassOf<UPWPlayerHUDWidget> PlayerHUDWidgetClass;
@@ -70,9 +80,14 @@ private:
 	void HandleCrouchStarted(const FInputActionValue& Value);
 	void HandleCrouchCompleted(const FInputActionValue& Value);
 	void HandleRollStarted(const FInputActionValue& Value);
-	void HandleGatherStarted(const FInputActionValue& Value);
+	void HandlePrimaryActionStarted(const FInputActionValue& Value);
+	void HandleAimStarted(const FInputActionValue& Value);
+	void HandleAimCompleted(const FInputActionValue& Value);
+	void HandleEquipmentWheelNextStarted(const FInputActionValue& Value);
+	void HandleEquipmentWheelPreviousStarted(const FInputActionValue& Value);
 
 	APWPlayerCharacter* GetPWPlayerCharacter() const;
 	void CreatePlayerHUD();
 	void InitializePlayerHUD();
+	void SetCrosshairVisible(bool bVisible);
 };
