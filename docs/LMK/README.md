@@ -27,6 +27,7 @@ AI 에이전트는 작업 시작 전에 아래 순서로 문서를 읽는다.
 | 야생 팰, 스폰, 리스폰 | [07_wild_pal_spawn.md](07_wild_pal_spawn.md) |
 | 작업 건물, 작업 슬롯 | [08_work_building.md](08_work_building.md) |
 | 저장, 로드 | [09_save_hooks.md](09_save_hooks.md) |
+| 채집 자원, 나무, 돌, 오픈월드 최적화 | [11_harvestable_resource_optimization.md](11_harvestable_resource_optimization.md) |
 | 구현 순서, 검증 | [10_implementation_order.md](10_implementation_order.md) |
 
 ## 문서 목록
@@ -44,6 +45,7 @@ AI 에이전트는 작업 시작 전에 아래 순서로 문서를 읽는다.
 | [08_work_building.md](08_work_building.md) | 작업 건물과 팰 작업 적성 연결 |
 | [09_save_hooks.md](09_save_hooks.md) | 저장 시스템 연동 기준 |
 | [10_implementation_order.md](10_implementation_order.md) | 구현 순서와 검증 기준 |
+| [11_harvestable_resource_optimization.md](11_harvestable_resource_optimization.md) | 채집 자원 오픈월드 최적화 기준 |
 
 ## 설계 원칙
 
