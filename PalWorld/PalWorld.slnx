@@ -10,14 +10,14 @@
     <Platform Name="Win64-arm64ec" />
   </Configurations>
   <Folder Name="/Engine/">
-    <Project Path="Intermediate/ProjectFiles/UE5.vcxproj" Id="2c63fc60-1e80-3b66-beb8-eb899379abc9">
+    <Project Path="Intermediate/ProjectFiles/UE5.vcxproj" Id="69a3b4fd-a47a-328e-9205-0ee8ef943755">
       <BuildType Project="BuiltWithUnrealBuildTool" />
       <Platform Project="Win64" />
       <Build Project="false" />
     </Project>
   </Folder>
   <Folder Name="/Games/">
-    <Project Path="Intermediate/ProjectFiles/PalWorld.vcxproj" Id="917d206d-ae54-3fb4-8af7-59873541d3ad">
+    <Project Path="Intermediate/ProjectFiles/PalWorld.vcxproj" Id="2d06a2db-4565-34e3-bb90-9b3fb38d2c7b">
       <BuildType Solution="DebugGame Editor|Win64" Project="DebugGame_Editor" />
       <BuildType Solution="DebugGame Editor|Win64-arm64" Project="Win64_arm64_DebugGame_Editor" />
       <BuildType Solution="DebugGame Editor|Win64-arm64ec" Project="Win64_arm64ec_DebugGame_Editor" />
