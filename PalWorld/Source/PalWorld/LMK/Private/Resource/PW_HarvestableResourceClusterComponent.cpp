@@ -1,6 +1,7 @@
 #include "Resource/PW_HarvestableResourceClusterComponent.h"
 
 #include "Engine/World.h"
+#include "Interfaces/PW_ItemReceiver.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 
@@ -21,10 +22,16 @@ void UPW_HarvestableResourceClusterComponent::InitializeInstances(int32 Instance
 {
 	const int32 SafeInstanceCount = FMath::Max(0, InstanceCount);
 	CurrentHealthByInstance.SetNum(SafeInstanceCount);
+	RewardDamageProgressByInstance.SetNum(SafeInstanceCount);
 
 	for (float& CurrentHealth : CurrentHealthByInstance)
 	{
 		CurrentHealth = MaxHealth;
+	}
+
+	for (float& RewardDamageProgress : RewardDamageProgressByInstance)
+	{
+		RewardDamageProgress = 0.f;
 	}
 
 	for (int32 Index = DepletedInstanceIndices.Num() - 1; Index >= 0; --Index)
@@ -53,8 +60,14 @@ bool UPW_HarvestableResourceClusterComponent::ApplyHarvestDamageToInstance(
 	}
 
 	float& CurrentHealth = CurrentHealthByInstance[InstanceIndex];
+	const float PreviousHealth = CurrentHealth;
 	CurrentHealth = FMath::Clamp(CurrentHealth - DamageAmount, 0.0f, MaxHealth);
-	OnInstanceDamaged.Broadcast(InstanceIndex, InstigatorActor, DamageAmount, RewardName, RewardAmount);
+	const float AppliedDamage = PreviousHealth - CurrentHealth;
+	const int32 RewardMultiplier = ConsumeRewardIntervals(InstanceIndex, AppliedDamage);
+	const int32 GrantedRewardAmount = RewardMultiplier * RewardAmount;
+
+	GrantReward(InstigatorActor, RewardMultiplier);
+	OnInstanceDamaged.Broadcast(InstanceIndex, InstigatorActor, AppliedDamage, RewardName, GrantedRewardAmount);
 
 	UE_LOG(
 		LogTemp,
@@ -62,10 +75,10 @@ bool UPW_HarvestableResourceClusterComponent::ApplyHarvestDamageToInstance(
 		TEXT("Harvested cluster %s instance %d: Damage=%.2f CurrentHealth=%.2f Reward=%s x%d"),
 		*Owner->GetName(),
 		InstanceIndex,
-		DamageAmount,
+		AppliedDamage,
 		CurrentHealth,
 		*RewardName.ToString(),
-		RewardAmount);
+		GrantedRewardAmount);
 
 	if (CurrentHealth <= 0.0f)
 	{
@@ -94,6 +107,7 @@ void UPW_HarvestableResourceClusterComponent::DepleteInstance(int32 InstanceInde
 	}
 
 	CurrentHealthByInstance[InstanceIndex] = 0.0f;
+	RewardDamageProgressByInstance[InstanceIndex] = 0.f;
 	DepletedInstanceIndices.Add(InstanceIndex);
 	OnInstanceDepleted.Broadcast(InstanceIndex, InstigatorActor);
 
@@ -118,6 +132,7 @@ void UPW_HarvestableResourceClusterComponent::RespawnInstance(int32 InstanceInde
 	}
 
 	CurrentHealthByInstance[InstanceIndex] = MaxHealth;
+	RewardDamageProgressByInstance[InstanceIndex] = 0.f;
 	DepletedInstanceIndices.Remove(InstanceIndex);
 	RespawnTimerHandles.Remove(InstanceIndex);
 
@@ -128,4 +143,45 @@ void UPW_HarvestableResourceClusterComponent::RespawnInstance(int32 InstanceInde
 bool UPW_HarvestableResourceClusterComponent::IsValidInstanceIndex(int32 InstanceIndex) const
 {
 	return CurrentHealthByInstance.IsValidIndex(InstanceIndex);
+}
+
+int32 UPW_HarvestableResourceClusterComponent::ConsumeRewardIntervals(int32 InstanceIndex, float AppliedDamage)
+{
+	if (!RewardDamageProgressByInstance.IsValidIndex(InstanceIndex)
+		|| AppliedDamage <= 0.f
+		|| RewardAmount <= 0
+		|| RewardName.IsNone())
+	{
+		return 0;
+	}
+
+	if (RewardDamageInterval <= 0.f)
+	{
+		return 1;
+	}
+
+	float& RewardDamageProgress = RewardDamageProgressByInstance[InstanceIndex];
+	RewardDamageProgress += AppliedDamage;
+
+	const int32 RewardMultiplier = FMath::FloorToInt(RewardDamageProgress / RewardDamageInterval);
+	if (RewardMultiplier > 0)
+	{
+		RewardDamageProgress = FMath::Fmod(RewardDamageProgress, RewardDamageInterval);
+	}
+
+	return RewardMultiplier;
+}
+
+void UPW_HarvestableResourceClusterComponent::GrantReward(AActor* InstigatorActor, int32 RewardMultiplier) const
+{
+	const int32 GrantedRewardAmount = RewardMultiplier * RewardAmount;
+	if (!InstigatorActor || GrantedRewardAmount <= 0 || RewardName.IsNone())
+	{
+		return;
+	}
+
+	if (InstigatorActor->GetClass()->ImplementsInterface(UPW_ItemReceiver::StaticClass()))
+	{
+		IPW_ItemReceiver::Execute_ReceiveItem(InstigatorActor, RewardName, GrantedRewardAmount);
+	}
 }

@@ -54,59 +54,62 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<APWPlayerCharacter> CachedPlayerCharacter;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ClimbTraceDistance = 95.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ClimbTraceRadius = 24.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb")
+	UPROPERTY(EditDefaultsOnly, Category = "Climb")
 	bool bRequireClimbableSurfaceTag = true;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb")
+	UPROPERTY(EditDefaultsOnly, Category = "Climb")
 	FName ClimbableSurfaceTag = TEXT("Climbable");
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ClimbDesiredDistance = 48.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ClimbDistanceCorrectionSpeed = 720.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ClimbSpeed = 180.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
-	float ClimbStaminaDrainPerSecond = 16.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
+	float ClimbStaminaDrainPerSecond = 8.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
-	float MinClimbStaminaDrainSpeed = 10.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
+	float MinClimbStaminaDrainSpeed = 5.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float MinClimbStartStamina = 5.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ClimbJumpUpStrength = 430.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ClimbJumpAwayStrength = 100.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "45.0", ClampMax = "90.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "45.0", ClampMax = "90.0"))
 	float MinClimbSurfaceAngleDegrees = 70.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ClimbRequestCooldown = 0.2f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb|Mantle", meta = (ClampMin = "0.0"))
-	float ClimbLedgeUpProbe = 110.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Climb|Mantle", meta = (ClampMin = "0.0"))
+	float ClimbLedgeUpProbe = 170.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb|Mantle", meta = (ClampMin = "0.0"))
-	float ClimbLedgeForwardProbe = 70.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Climb|Mantle", meta = (ClampMin = "0.0"))
+	float ClimbLedgeForwardProbe = 120.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb|Mantle", meta = (ClampMin = "0.0"))
-	float ClimbLedgeDownProbe = 170.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Climb|Mantle", meta = (ClampMin = "0.0"))
+	float ClimbLedgeDownProbe = 280.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement|Climb|Mantle", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, Category = "Climb|Mantle", meta = (ClampMin = "0.0"))
 	float ClimbLedgeSnapOffset = 4.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Climb|Mantle", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float MantleInputThreshold = 0.4f;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsClimbing)
 	bool bIsClimbing = false;
@@ -151,6 +154,7 @@ private:
 	bool CanStartClimb() const;
 	bool HasClimbMoveInput() const;
 	bool ShouldDrainClimbStamina() const;
+	bool ShouldTryMantleFromClimb() const;
 	bool FindClimbableWall(FHitResult& OutHit) const;
 	bool IsClimbableSurface(const FHitResult& WallHit) const;
 	bool IsClimbTouchingGround() const;

@@ -10,12 +10,11 @@
 #include "Player/Components/PWPlayerActionComponent.h"
 #include "Player/Components/PWPlayerCaptureComponent.h"
 #include "Player/Components/PWPlayerClimbComponent.h"
-#include "Player/Components/PWPlayerCombatComponent.h"
 #include "Player/Components/PWPlayerEquipmentComponent.h"
-#include "Player/Components/PWPlayerGatherComponent.h"
 #include "Player/Components/PWPlayerInteractionComponent.h"
 #include "Player/Components/PWPlayerInventoryLinkComponent.h"
 #include "Player/Components/PWPlayerMountComponent.h"
+#include "Player/Components/PWPlayerPrimaryActionComponent.h"
 #include "Player/Components/PWPlayerSkillComponent.h"
 #include "Player/Components/PWPlayerStatComponent.h"
 
@@ -49,8 +48,7 @@ APWPlayerCharacter::APWPlayerCharacter()
 
 	ActionComponent = CreateDefaultSubobject<UPWPlayerActionComponent>(TEXT("ActionComponent"));
 	StatComponent = CreateDefaultSubobject<UPWPlayerStatComponent>(TEXT("StatComponent"));
-	CombatComponent = CreateDefaultSubobject<UPWPlayerCombatComponent>(TEXT("CombatComponent"));
-	GatherComponent = CreateDefaultSubobject<UPWPlayerGatherComponent>(TEXT("GatherComponent"));
+	PrimaryActionComponent = CreateDefaultSubobject<UPWPlayerPrimaryActionComponent>(TEXT("PrimaryActionComponent"));
 	EquipmentComponent = CreateDefaultSubobject<UPWPlayerEquipmentComponent>(TEXT("EquipmentComponent"));
 	SkillComponent = CreateDefaultSubobject<UPWPlayerSkillComponent>(TEXT("SkillComponent"));
 	PalCommandComponent = CreateDefaultSubobject<UPWPalCommandComponent>(TEXT("PalCommandComponent"));
@@ -84,6 +82,11 @@ void APWPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 	DOREPLIFETIME(APWPlayerCharacter, bIsSprinting);
 	DOREPLIFETIME(APWPlayerCharacter, bIsAiming);
+}
+
+bool APWPlayerCharacter::ReceiveItem_Implementation(FName ItemId, int32 Count)
+{
+	return InventoryLinkComponent && InventoryLinkComponent->AddItem(ItemId, Count);
 }
 
 // 이 입력들은 CharacterMovement가 클라 예측/서버 보정을 기본으로 처리한다.
@@ -217,9 +220,9 @@ void APWPlayerCharacter::StartPrimaryAction()
 
 	FacePrimaryActionDirection();
 
-	if (GatherComponent)
+	if (PrimaryActionComponent)
 	{
-		GatherComponent->TryGatherFromView();
+		PrimaryActionComponent->TryStartPrimaryAction();
 	}
 }
 

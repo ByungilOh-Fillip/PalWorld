@@ -73,12 +73,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward", meta = (ClampMin = "0"))
 	int32 RewardAmount = 1;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward", meta = (ClampMin = "0.0"))
+	float RewardDamageInterval = 25.f;
+
 	UPROPERTY(ReplicatedUsing = OnRep_DepletedInstanceIndices, Transient)
 	TArray<int32> DepletedInstanceIndices;
 
 private:
 	UPROPERTY(Transient)
 	TArray<float> CurrentHealthByInstance;
+
+	UPROPERTY(Transient)
+	TArray<float> RewardDamageProgressByInstance;
 
 	TMap<int32, FTimerHandle> RespawnTimerHandles;
 
@@ -88,4 +94,6 @@ private:
 	void DepleteInstance(int32 InstanceIndex, AActor* InstigatorActor);
 	void RespawnInstance(int32 InstanceIndex);
 	bool IsValidInstanceIndex(int32 InstanceIndex) const;
+	int32 ConsumeRewardIntervals(int32 InstanceIndex, float AppliedDamage);
+	void GrantReward(AActor* InstigatorActor, int32 RewardMultiplier) const;
 };
