@@ -113,7 +113,7 @@ private:
 	bool IsSlotSelectable(int32 SlotIndex) const;
 	int32 FindSelectableSlotByOffset(int32 StartSlotIndex, int32 Offset) const;
 	void SetSelectedSlotIndex(int32 NewSlotIndex);
-	void SyncSelectedToolToGatherComponent() const;
+	void SyncSelectedToolToPrimaryActionComponent() const;
 
 	void RebuildVisualComponents();
 	void DestroyVisualComponents();

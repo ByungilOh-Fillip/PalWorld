@@ -240,6 +240,11 @@ bool UPWPlayerClimbComponent::ShouldDrainClimbStamina() const
 	return MovementComponent->Velocity.SizeSquared() > FMath::Square(MinClimbStaminaDrainSpeed);
 }
 
+bool UPWPlayerClimbComponent::ShouldTryMantleFromClimb() const
+{
+	return bIsClimbing && ClimbInputY > MantleInputThreshold;
+}
+
 bool UPWPlayerClimbComponent::FindClimbableWall(FHitResult& OutHit) const
 {
 	const APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
@@ -275,10 +280,10 @@ bool UPWPlayerClimbComponent::IsClimbableSurface(const FHitResult& WallHit) cons
 		return true;
 	}
 
-	const UPrimitiveComponent* HitComponent = WallHit.GetComponent();
-	const AActor* HitActor = WallHit.GetActor();
-	return (HitComponent && HitComponent->ComponentHasTag(ClimbableSurfaceTag))
-		|| (HitActor && HitActor->ActorHasTag(ClimbableSurfaceTag));
+	const UPrimitiveComponent* WallComponent = WallHit.GetComponent();
+	const AActor* WallActor = WallHit.GetActor();
+	return (WallComponent && WallComponent->ComponentHasTag(ClimbableSurfaceTag))
+		|| (WallActor && WallActor->ActorHasTag(ClimbableSurfaceTag));
 }
 
 bool UPWPlayerClimbComponent::IsClimbTouchingGround() const
@@ -342,7 +347,7 @@ bool UPWPlayerClimbComponent::TryMantleFromClimb()
 	}
 
 	// 지금은 즉시 올려놓고, 추후 이 함수 안에서 Motion Warping/Root Motion TopOut으로 교체한다.
-	const FVector TargetLocation = LedgeHit.Location + FVector::UpVector * (CapsuleHalfHeight + ClimbLedgeSnapOffset);
+	const FVector TargetLocation = LedgeHit.ImpactPoint + FVector::UpVector * (CapsuleHalfHeight + ClimbLedgeSnapOffset);
 	const FCollisionShape CapsuleShape = FCollisionShape::MakeCapsule(CapsuleRadius, CapsuleHalfHeight);
 	if (World->OverlapBlockingTestByProfile(
 		TargetLocation,
@@ -509,6 +514,11 @@ void UPWPlayerClimbComponent::UpdateClimb(float DeltaSeconds)
 
 	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
 	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
+	{
+		return;
+	}
+
+	if (ShouldTryMantleFromClimb() && TryMantleFromClimb())
 	{
 		return;
 	}

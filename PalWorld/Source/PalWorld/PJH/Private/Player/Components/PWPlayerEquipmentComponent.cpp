@@ -9,7 +9,7 @@
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "Net/UnrealNetwork.h"
-#include "Player/Components/PWPlayerGatherComponent.h"
+#include "Player/Components/PWPlayerPrimaryActionComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
 
 UPWPlayerEquipmentComponent::UPWPlayerEquipmentComponent()
@@ -27,7 +27,7 @@ void UPWPlayerEquipmentComponent::BeginPlay()
 
 	EnsureSlotCount();
 	RebuildVisualComponents();
-	SyncSelectedToolToGatherComponent();
+	SyncSelectedToolToPrimaryActionComponent();
 }
 
 void UPWPlayerEquipmentComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -103,13 +103,13 @@ void UPWPlayerEquipmentComponent::OnRep_EquipmentSlots()
 {
 	EnsureSlotCount();
 	RebuildVisualComponents();
-	SyncSelectedToolToGatherComponent();
+	SyncSelectedToolToPrimaryActionComponent();
 }
 
 void UPWPlayerEquipmentComponent::OnRep_SelectedSlotIndex()
 {
 	UpdateEquipmentVisuals();
-	SyncSelectedToolToGatherComponent();
+	SyncSelectedToolToPrimaryActionComponent();
 }
 
 APWPlayerCharacter* UPWPlayerEquipmentComponent::GetPlayerCharacter() const
@@ -184,10 +184,10 @@ void UPWPlayerEquipmentComponent::SetSelectedSlotIndex(int32 NewSlotIndex)
 
 	SelectedSlotIndex = NewSlotIndex;
 	UpdateEquipmentVisuals();
-	SyncSelectedToolToGatherComponent();
+	SyncSelectedToolToPrimaryActionComponent();
 }
 
-void UPWPlayerEquipmentComponent::SyncSelectedToolToGatherComponent() const
+void UPWPlayerEquipmentComponent::SyncSelectedToolToPrimaryActionComponent() const
 {
 	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
 	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
@@ -195,9 +195,9 @@ void UPWPlayerEquipmentComponent::SyncSelectedToolToGatherComponent() const
 		return;
 	}
 
-	if (UPWPlayerGatherComponent* GatherComponent = PlayerCharacter->GetGatherComponent())
+	if (UPWPlayerPrimaryActionComponent* PrimaryActionComponent = PlayerCharacter->GetPrimaryActionComponent())
 	{
-		GatherComponent->RequestEquipTool(GetSelectedToolType());
+		PrimaryActionComponent->SetToolType(GetSelectedToolType());
 	}
 }
 
