@@ -49,7 +49,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PW|Harvest")
 	int32 GetRewardAmount() const { return RewardAmount; }
 
-	void SetResourceDefaults(FGameplayTag InRequiredWorkTag, FName InRewardName, int32 InRewardAmount);
+	UFUNCTION(BlueprintPure, Category = "PW|Harvest")
+	float GetRewardDamageInterval() const { return RewardDamageInterval; }
+
+	void SetResourceDefaults(FGameplayTag InRequiredWorkTag, FName InRewardName, int32 InRewardAmount, float InRewardDamageInterval = 25.f);
 
 	UPROPERTY(BlueprintAssignable, Category = "PW|Harvest")
 	FPWHarvestedSignature OnHarvested;
@@ -85,8 +88,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest", meta = (ClampMin = "0"))
 	int32 RewardAmount = 1;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest", meta = (ClampMin = "0.0"))
+	float RewardDamageInterval = 25.f;
+
 private:
 	FTimerHandle RespawnTimerHandle;
+
+	UPROPERTY(Transient)
+	float RewardDamageProgress = 0.f;
 
 	UFUNCTION()
 	void OnRep_CurrentHealth();
@@ -97,4 +106,6 @@ private:
 	void DepleteResource(AActor* InstigatorActor);
 	void RespawnResource();
 	void BroadcastDepletedState();
+	int32 ConsumeRewardIntervals(float AppliedDamage);
+	void GrantReward(AActor* InstigatorActor, int32 RewardMultiplier) const;
 };

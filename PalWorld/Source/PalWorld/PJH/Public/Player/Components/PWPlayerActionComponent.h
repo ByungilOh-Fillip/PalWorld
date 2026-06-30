@@ -17,7 +17,7 @@ enum class EPWPlayerActionState : uint8
 	None,
 	Rolling,
 	Interacting,
-	Gathering,
+	PrimaryAction,
 	Attacking,
 	UsingSkill
 };

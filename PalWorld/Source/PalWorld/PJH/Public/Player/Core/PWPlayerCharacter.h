@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/NetSerialization.h"
 #include "GameFramework/Character.h"
+#include "Interfaces/PW_ItemReceiver.h"
 #include "PWPlayerCharacter.generated.h"
 
 class UCameraComponent;
@@ -13,17 +14,16 @@ class UPWPalCommandComponent;
 class UPWPlayerActionComponent;
 class UPWPlayerCaptureComponent;
 class UPWPlayerClimbComponent;
-class UPWPlayerCombatComponent;
 class UPWPlayerEquipmentComponent;
-class UPWPlayerGatherComponent;
 class UPWPlayerInteractionComponent;
 class UPWPlayerInventoryLinkComponent;
 class UPWPlayerMountComponent;
+class UPWPlayerPrimaryActionComponent;
 class UPWPlayerSkillComponent;
 class UPWPlayerStatComponent;
 
 UCLASS()
-class PALWORLD_API APWPlayerCharacter : public ACharacter
+class PALWORLD_API APWPlayerCharacter : public ACharacter, public IPW_ItemReceiver
 {
 	GENERATED_BODY()
 
@@ -50,6 +50,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool ReceiveItem_Implementation(FName ItemId, int32 Count) override;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Player|Movement")
@@ -92,8 +93,9 @@ public:
 
 	UPWPlayerActionComponent* GetActionComponent() const { return ActionComponent; }
 	UPWPlayerStatComponent* GetStatComponent() const { return StatComponent; }
-	UPWPlayerGatherComponent* GetGatherComponent() const { return GatherComponent; }
+	UPWPlayerPrimaryActionComponent* GetPrimaryActionComponent() const { return PrimaryActionComponent; }
 	UPWPlayerEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
+	UPWPlayerInventoryLinkComponent* GetInventoryLinkComponent() const { return InventoryLinkComponent; }
 	UPWPlayerClimbComponent* GetClimbComponent() const { return ClimbComponent; }
 
 private:
@@ -110,10 +112,7 @@ private:
 	TObjectPtr<UPWPlayerStatComponent> StatComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
-	TObjectPtr<UPWPlayerCombatComponent> CombatComponent;
-
-	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
-	TObjectPtr<UPWPlayerGatherComponent> GatherComponent;
+	TObjectPtr<UPWPlayerPrimaryActionComponent> PrimaryActionComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerEquipmentComponent> EquipmentComponent;
