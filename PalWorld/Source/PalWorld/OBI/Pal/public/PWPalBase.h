@@ -24,9 +24,9 @@ public:
 protected:
     // 팰 상태 관리 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|Components")
-    UStatusComponent* StatusComponent;
+    TObjectPtr<UStatusComponent> StatusComponent;
 
     // 팰 스킬 및 적성 관리 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|Components")
-    UPWSkillComponent* SkillComponent;
+    TObjectPtr<UPWSkillComponent> SkillComponent;
 };

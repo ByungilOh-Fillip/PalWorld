@@ -2,6 +2,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "StatusComponent.h"
+#include "PWPalAIController.h"
 
 APWPalCharacter::APWPalCharacter()
 {
@@ -17,8 +18,8 @@ APWPalCharacter::APWPalCharacter()
     // AI 설정: 스폰되거나 맵에 배치될 때 자동으로 AI Controller가 빙의(Possess)하도록 설정
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
     
-    // 추후 AI Controller 클래스가 완성되면 여기서 기본 컨트롤러로 지정합니다.
-    // AIControllerClass = APWPalAIController::StaticClass();
+    // 기본 AI 컨트롤러 클래스를 PWPalAIController로 지정
+    AIControllerClass = APWPalAIController::StaticClass();
 
     // 캐릭터 무브먼트 설정 (팰의 기본 이동 설정)
     if (GetCharacterMovement())
