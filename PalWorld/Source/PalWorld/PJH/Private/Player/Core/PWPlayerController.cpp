@@ -6,6 +6,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
+#include "InputCoreTypes.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "Player/Core/PWPlayerCharacter.h"
@@ -59,6 +60,12 @@ void APWPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
+	if (InputComponent)
+	{
+		// 메뉴 입력은 지금 단계에서 확실히 동작해야 하므로 IMC와 별도로 직접 바인딩한다.
+		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &APWPlayerController::ToggleInventoryMenu);
+	}
+
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
 	if (!EnhancedInputComponent)
 	{
@@ -68,6 +75,8 @@ void APWPlayerController::SetupInputComponent()
 	if (MoveAction)
 	{
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APWPlayerController::HandleMove);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleMoveCompleted);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleMoveCompleted);
 	}
 
 	if (LookAction)
@@ -100,6 +109,31 @@ void APWPlayerController::SetupInputComponent()
 	{
 		EnhancedInputComponent->BindAction(RollAction, ETriggerEvent::Started, this, &APWPlayerController::HandleRollStarted);
 	}
+
+	if (PrimaryAction)
+	{
+		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Started, this, &APWPlayerController::HandlePrimaryActionStarted);
+	}
+
+	if (AimAction)
+	{
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &APWPlayerController::HandleAimStarted);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleAimCompleted);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleAimCompleted);
+	}
+
+	if (EquipmentWheelNextAction)
+	{
+		EnhancedInputComponent->BindAction(EquipmentWheelNextAction, ETriggerEvent::Started, this, &APWPlayerController::HandleEquipmentWheelNextStarted);
+	}
+
+	if (EquipmentWheelPreviousAction)
+	{
+		EnhancedInputComponent->BindAction(EquipmentWheelPreviousAction, ETriggerEvent::Started, this, &APWPlayerController::HandleEquipmentWheelPreviousStarted);
+	}
+
+	// InventoryAction 에셋은 남겨두지만, 현재는 Tab 직접 바인딩을 사용한다.
+	// IA와 직접 바인딩을 동시에 쓰면 한 번 눌렀을 때 열림/닫힘이 동시에 발생할 수 있다.
 }
 
 // 입력 핸들러는 얇게 유지하고, 권한 판단은 캐릭터/컴포넌트에서 처리한다.
@@ -108,6 +142,14 @@ void APWPlayerController::HandleMove(const FInputActionValue& Value)
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->Move(Value.Get<FVector2D>());
+	}
+}
+
+void APWPlayerController::HandleMoveCompleted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->Move(FVector2D::ZeroVector);
 	}
 }
 
@@ -175,6 +217,56 @@ void APWPlayerController::HandleRollStarted(const FInputActionValue& Value)
 	}
 }
 
+void APWPlayerController::HandlePrimaryActionStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StartPrimaryAction();
+	}
+}
+
+void APWPlayerController::HandleAimStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		if (PlayerCharacter->StartAim())
+		{
+			SetCrosshairVisible(true);
+		}
+	}
+}
+
+void APWPlayerController::HandleAimCompleted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StopAim();
+	}
+
+	SetCrosshairVisible(false);
+}
+
+void APWPlayerController::HandleEquipmentWheelNextStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->SelectNextEquipmentSlot();
+	}
+}
+
+void APWPlayerController::HandleEquipmentWheelPreviousStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->SelectPreviousEquipmentSlot();
+	}
+}
+
+void APWPlayerController::HandleInventoryStarted(const FInputActionValue& Value)
+{
+	ToggleInventoryMenu();
+}
+
 APWPlayerCharacter* APWPlayerController::GetPWPlayerCharacter() const
 {
 	return Cast<APWPlayerCharacter>(GetPawn());
@@ -182,8 +274,14 @@ APWPlayerCharacter* APWPlayerController::GetPWPlayerCharacter() const
 
 void APWPlayerController::CreatePlayerHUD()
 {
-	if (!IsLocalController() || PlayerHUDWidget || !PlayerHUDWidgetClass)
+	if (!IsLocalController() || PlayerHUDWidget)
 	{
+		return;
+	}
+
+	if (!PlayerHUDWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWInventory] PlayerHUDWidgetClass is not assigned on %s."), *GetName());
 		return;
 	}
 
@@ -207,4 +305,56 @@ void APWPlayerController::InitializePlayerHUD()
 	{
 		PlayerHUDWidget->InitializeWithPlayerCharacter(GetPWPlayerCharacter());
 	}
+}
+
+void APWPlayerController::SetCrosshairVisible(bool bVisible)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	CreatePlayerHUD();
+
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->SetCrosshairVisible(bVisible);
+	}
+}
+
+void APWPlayerController::ToggleInventoryMenu()
+{
+	CreatePlayerHUD();
+
+	const bool bNewInventoryVisible = PlayerHUDWidget ? !PlayerHUDWidget->IsInventoryVisible() : true;
+	UE_LOG(LogTemp, Log, TEXT("[PWInventory] Toggle inventory. Visible=%s"), bNewInventoryVisible ? TEXT("true") : TEXT("false"));
+	SetInventoryVisible(bNewInventoryVisible);
+}
+
+void APWPlayerController::SetInventoryVisible(bool bVisible)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	CreatePlayerHUD();
+
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->SetInventoryVisible(bVisible);
+	}
+
+	bShowMouseCursor = bVisible;
+
+	if (bVisible)
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+		return;
+	}
+
+	SetInputMode(FInputModeGameOnly());
 }

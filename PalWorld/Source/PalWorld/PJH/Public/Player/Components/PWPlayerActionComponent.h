@@ -17,7 +17,7 @@ enum class EPWPlayerActionState : uint8
 	None,
 	Rolling,
 	Interacting,
-	Gathering,
+	PrimaryAction,
 	Attacking,
 	UsingSkill
 };
@@ -42,6 +42,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Player|Action")
 	bool IsRolling() const { return CurrentActionState == EPWPlayerActionState::Rolling; }
+
+	bool CanStartAction(EPWPlayerActionState RequestedActionState) const;
+	bool TryStartActionAuthority(EPWPlayerActionState RequestedActionState);
+	void FinishActionAuthority(EPWPlayerActionState FinishedActionState);
 
 	void SetRollMontage(UAnimMontage* InRollMontage);
 	void SetRollTuning(float InRollDistance, float InRollMovementDuration, bool bInUseCodeDrivenMovement);
@@ -85,7 +89,6 @@ private:
 
 	// 공통 검증/헬퍼.
 	APWPlayerCharacter* GetPlayerCharacter() const;
-	bool CanStartAction(EPWPlayerActionState RequestedActionState) const;
 	bool CanStartRoll() const;
 	float GetRollDuration() const;
 	FVector GetRollDirection() const;

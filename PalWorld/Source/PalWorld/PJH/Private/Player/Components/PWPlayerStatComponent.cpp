@@ -3,7 +3,6 @@
 #include "Player/Components/PWPlayerStatComponent.h"
 
 #include "Engine/World.h"
-#include "Net/UnrealNetwork.h"
 #include "Player/Core/PWPlayerCharacter.h"
 
 UPWPlayerStatComponent::UPWPlayerStatComponent()
@@ -18,7 +17,7 @@ void UPWPlayerStatComponent::BeginPlay()
 
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
-		SetCurrentStamina(MaxStamina);
+		SetCurrentStamina(MaxSP);
 	}
 
 	BroadcastStaminaChanged();
@@ -34,17 +33,20 @@ void UPWPlayerStatComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		return;
 	}
 
-	if (bIsSprintDrainActive && SprintStaminaDrainPerSecond > 0.f)
+	APWPlayerCharacter* PlayerCharacter = Cast<APWPlayerCharacter>(Owner);
+	const bool bShouldDrainSprintStamina = bIsSprintDrainActive
+		&& SprintStaminaDrainPerSecond > 0.f
+		&& PlayerCharacter
+		&& PlayerCharacter->ShouldDrainSprintStamina();
+
+	if (bShouldDrainSprintStamina)
 	{
-		SetCurrentStamina(CurrentStamina - SprintStaminaDrainPerSecond * DeltaTime);
+		SetCurrentStamina(CurrentSP - SprintStaminaDrainPerSecond * DeltaTime);
 		BlockStaminaRegen();
 
-		if (CurrentStamina <= 0.f)
+		if (CurrentSP <= 0.f)
 		{
-			if (APWPlayerCharacter* PlayerCharacter = Cast<APWPlayerCharacter>(Owner))
-			{
-				PlayerCharacter->StopSprint();
-			}
+			PlayerCharacter->StopSprint();
 		}
 
 		return;
@@ -52,31 +54,23 @@ void UPWPlayerStatComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if (ShouldRegenerateStamina())
 	{
-		SetCurrentStamina(CurrentStamina + StaminaRegenPerSecond * DeltaTime);
+		SetCurrentStamina(CurrentSP + StaminaRegenPerSecond * DeltaTime);
 	}
-}
-
-void UPWPlayerStatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(UPWPlayerStatComponent, MaxStamina);
-	DOREPLIFETIME(UPWPlayerStatComponent, CurrentStamina);
 }
 
 float UPWPlayerStatComponent::GetStaminaRatio() const
 {
-	return MaxStamina > 0.f ? CurrentStamina / MaxStamina : 0.f;
+	return MaxSP > 0.f ? CurrentSP / MaxSP : 0.f;
 }
 
 bool UPWPlayerStatComponent::HasEnoughStamina(float Cost) const
 {
-	return Cost <= 0.f || CurrentStamina >= Cost;
+	return Cost <= 0.f || CurrentSP >= Cost;
 }
 
 bool UPWPlayerStatComponent::CanStartSprint() const
 {
-	return CurrentStamina >= MinSprintStartStamina;
+	return CurrentSP >= MinSprintStartStamina;
 }
 
 bool UPWPlayerStatComponent::TryConsumeStamina(float Cost)
@@ -92,7 +86,7 @@ bool UPWPlayerStatComponent::TryConsumeStamina(float Cost)
 		return false;
 	}
 
-	SetCurrentStamina(CurrentStamina - Cost);
+	SetCurrentStamina(CurrentSP - Cost);
 	BlockStaminaRegen();
 	return true;
 }
@@ -105,34 +99,31 @@ void UPWPlayerStatComponent::SetSprintDrainActive(bool bNewIsSprintDrainActive)
 	}
 
 	bIsSprintDrainActive = bNewIsSprintDrainActive;
-
-	if (bIsSprintDrainActive)
-	{
-		BlockStaminaRegen();
-	}
 }
 
-void UPWPlayerStatComponent::OnRep_CurrentStamina()
+void UPWPlayerStatComponent::HandleCurrentSPChanged()
 {
-	CurrentStamina = FMath::Clamp(CurrentStamina, 0.f, MaxStamina);
+	Super::HandleCurrentSPChanged();
+
+	CurrentSP = FMath::Clamp(CurrentSP, 0.f, MaxSP);
 	BroadcastStaminaChanged();
 }
 
 void UPWPlayerStatComponent::SetCurrentStamina(float NewCurrentStamina)
 {
-	const float ClampedStamina = FMath::Clamp(NewCurrentStamina, 0.f, MaxStamina);
-	if (FMath::IsNearlyEqual(CurrentStamina, ClampedStamina))
+	const float ClampedStamina = FMath::Clamp(NewCurrentStamina, 0.f, MaxSP);
+	if (FMath::IsNearlyEqual(CurrentSP, ClampedStamina))
 	{
 		return;
 	}
 
-	CurrentStamina = ClampedStamina;
+	CurrentSP = ClampedStamina;
 	BroadcastStaminaChanged();
 }
 
 void UPWPlayerStatComponent::BroadcastStaminaChanged()
 {
-	OnStaminaChanged.Broadcast(CurrentStamina, MaxStamina, GetStaminaRatio());
+	OnStaminaChanged.Broadcast(CurrentSP, MaxSP, GetStaminaRatio());
 }
 
 void UPWPlayerStatComponent::BlockStaminaRegen()
@@ -148,7 +139,7 @@ void UPWPlayerStatComponent::BlockStaminaRegen()
 
 bool UPWPlayerStatComponent::ShouldRegenerateStamina() const
 {
-	if (CurrentStamina >= MaxStamina || StaminaRegenPerSecond <= 0.f)
+	if (CurrentSP >= MaxSP || StaminaRegenPerSecond <= 0.f)
 	{
 		return false;
 	}

@@ -97,6 +97,34 @@ bool UPWPlayerActionComponent::CanStartAction(EPWPlayerActionState RequestedActi
 		&& CurrentActionState == EPWPlayerActionState::None;
 }
 
+bool UPWPlayerActionComponent::TryStartActionAuthority(EPWPlayerActionState RequestedActionState)
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority() || !CanStartAction(RequestedActionState))
+	{
+		return false;
+	}
+
+	SetActionStateAuthority(RequestedActionState);
+	return true;
+}
+
+void UPWPlayerActionComponent::FinishActionAuthority(EPWPlayerActionState FinishedActionState)
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
+	{
+		return;
+	}
+
+	if (CurrentActionState != FinishedActionState)
+	{
+		return;
+	}
+
+	SetActionStateAuthority(EPWPlayerActionState::None);
+}
+
 bool UPWPlayerActionComponent::CanStartRoll() const
 {
 	const APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();

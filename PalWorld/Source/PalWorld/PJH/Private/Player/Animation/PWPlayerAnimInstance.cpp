@@ -36,6 +36,15 @@ void UPWPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bIsCrouched = false;
 		bIsSprinting = false;
 		bIsRolling = false;
+		bIsClimbing = false;
+		ClimbInputX = 0.f;
+		ClimbInputY = 0.f;
+		bIsWallClimbing = false;
+		bIsWallClimbTopOut = false;
+		WallClimbVerticalSpeed = 0.f;
+		WallClimbHorizontalSpeed = 0.f;
+		WallClimbHorizontal = 0.f;
+		WallClimbVertical = 0.f;
 		return;
 	}
 
@@ -64,6 +73,15 @@ void UPWPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bIsCrouched = MovementComponent && MovementComponent->IsCrouching();
 	bIsSprinting = OwningCharacter->IsSprinting();
 	bIsRolling = OwningCharacter->IsRolling();
+	bIsClimbing = OwningCharacter->IsClimbing();
+	ClimbInputX = OwningCharacter->GetClimbInputX();
+	ClimbInputY = OwningCharacter->GetClimbInputY();
+	bIsWallClimbing = bIsClimbing;
+	bIsWallClimbTopOut = OwningCharacter->IsWallClimbTopOut();
+	WallClimbVerticalSpeed = OwningCharacter->GetWallClimbVerticalSpeed();
+	WallClimbHorizontalSpeed = OwningCharacter->GetWallClimbHorizontalSpeed();
+	WallClimbHorizontal = ClimbInputX;
+	WallClimbVertical = ClimbInputY;
 }
 
 void UPWPlayerAnimInstance::CacheOwningCharacter()
