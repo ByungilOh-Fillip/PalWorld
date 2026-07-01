@@ -198,12 +198,6 @@ bool UPWPlayerInventoryLinkComponent::AddItemAuthority(FName ItemId, int32 Count
 		return false;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[PWInventory] Added item. Owner=%s Item=%s Count=%d Total=%d"),
-		*OwnerActor->GetName(),
-		*ItemId.ToString(),
-		AddedCount,
-		GetItemCount(ItemId));
-
 	OnInventoryChanged.Broadcast();
 	OwnerActor->ForceNetUpdate();
 	return RemainingCount <= 0;

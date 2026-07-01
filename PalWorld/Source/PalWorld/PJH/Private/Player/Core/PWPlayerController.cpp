@@ -132,8 +132,6 @@ void APWPlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(EquipmentWheelPreviousAction, ETriggerEvent::Started, this, &APWPlayerController::HandleEquipmentWheelPreviousStarted);
 	}
 
-	// InventoryAction 에셋은 남겨두지만, 현재는 Tab 직접 바인딩을 사용한다.
-	// IA와 직접 바인딩을 동시에 쓰면 한 번 눌렀을 때 열림/닫힘이 동시에 발생할 수 있다.
 }
 
 // 입력 핸들러는 얇게 유지하고, 권한 판단은 캐릭터/컴포넌트에서 처리한다.
@@ -262,11 +260,6 @@ void APWPlayerController::HandleEquipmentWheelPreviousStarted(const FInputAction
 	}
 }
 
-void APWPlayerController::HandleInventoryStarted(const FInputActionValue& Value)
-{
-	ToggleInventoryMenu();
-}
-
 APWPlayerCharacter* APWPlayerController::GetPWPlayerCharacter() const
 {
 	return Cast<APWPlayerCharacter>(GetPawn());
@@ -327,7 +320,6 @@ void APWPlayerController::ToggleInventoryMenu()
 	CreatePlayerHUD();
 
 	const bool bNewInventoryVisible = PlayerHUDWidget ? !PlayerHUDWidget->IsInventoryVisible() : true;
-	UE_LOG(LogTemp, Log, TEXT("[PWInventory] Toggle inventory. Visible=%s"), bNewInventoryVisible ? TEXT("true") : TEXT("false"));
 	SetInventoryVisible(bNewInventoryVisible);
 }
 

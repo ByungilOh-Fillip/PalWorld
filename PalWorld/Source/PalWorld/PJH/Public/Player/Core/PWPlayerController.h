@@ -64,9 +64,6 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Equipment")
 	TObjectPtr<UInputAction> EquipmentWheelPreviousAction;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input|UI")
-	TObjectPtr<UInputAction> InventoryAction;
-
 	UPROPERTY(EditDefaultsOnly, Category = "Player|UI")
 	TSubclassOf<UPWPlayerHUDWidget> PlayerHUDWidgetClass;
 
@@ -88,7 +85,6 @@ private:
 	void HandleAimCompleted(const FInputActionValue& Value);
 	void HandleEquipmentWheelNextStarted(const FInputActionValue& Value);
 	void HandleEquipmentWheelPreviousStarted(const FInputActionValue& Value);
-	void HandleInventoryStarted(const FInputActionValue& Value);
 
 	APWPlayerCharacter* GetPWPlayerCharacter() const;
 	void CreatePlayerHUD();
