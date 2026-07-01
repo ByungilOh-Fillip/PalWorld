@@ -11,18 +11,17 @@ public class PalWorld : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
-			"Core", 
+			"Core",
 			"CoreUObject",
-			"Engine", 
-			"InputCore", 
-			"EnhancedInput", 
-			"UMG", 
-			"Slate", 
+			"Engine",
+			"InputCore",
+			"EnhancedInput",
+			"UMG",
+			"Slate",
 			"SlateCore",
 			"GameplayTags",
 			"AIModule",
 			"NavigationSystem",
-			"Kismet",
 		});
 		
 		// 팀원 ROLE에 따라 나뉜 파트를 한번에 빌드할 때 사용
