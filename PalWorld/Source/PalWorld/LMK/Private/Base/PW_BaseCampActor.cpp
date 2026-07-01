@@ -9,11 +9,13 @@
 #include "Base/PW_BaseWorkTargetRegistryComponent.h"
 #include "Components/SceneComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "NavigationInvokerComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PWInteractableTargetComponent.h"
 
 APW_BaseCampActor::APW_BaseCampActor()
 {
@@ -32,6 +34,10 @@ APW_BaseCampActor::APW_BaseCampActor()
 	WorkSimulationComponent = CreateDefaultSubobject<UPW_BaseWorkSimulationComponent>(TEXT("WorkSimulationComponent"));
 	BaseNavigationComponent = CreateDefaultSubobject<UPW_BaseNavigationComponent>(TEXT("BaseNavigationComponent"));
 	NavigationInvokerComponent = CreateDefaultSubobject<UNavigationInvokerComponent>(TEXT("NavigationInvokerComponent"));
+	InteractableTargetComponent = CreateDefaultSubobject<UPWInteractableTargetComponent>(TEXT("InteractableTargetComponent"));
+	InteractableTargetComponent->SetInteractionRadius(350.0f);
+	InteractableTargetComponent->SetPromptText(NSLOCTEXT("PWInteraction", "BaseCampPrompt", "Open Base Camp"));
+	InteractableTargetComponent->SetPriority(50);
 }
 
 void APW_BaseCampActor::BeginPlay()
@@ -100,6 +106,44 @@ void APW_BaseCampActor::SetBaseOwnerId(const FPW_BaseOwnerId& NewOwnerId)
 		OwnerId = NewOwnerId;
 		ForceNetUpdate();
 	}
+}
+
+bool APW_BaseCampActor::CanInteract_Implementation(AActor* Interactor) const
+{
+	return Interactor != nullptr && InteractableTargetComponent != nullptr && InteractableTargetComponent->IsInteractionEnabled();
+}
+
+bool APW_BaseCampActor::Interact_Implementation(AActor* Interactor)
+{
+	if (!CanInteract_Implementation(Interactor))
+	{
+		return false;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[PWInteraction] Base camp interacted. Base=%s Interactor=%s"),
+		*GetName(),
+		*GetNameSafe(Interactor));
+
+	if (GEngine != nullptr)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			2.0f,
+			FColor::Green,
+			FString::Printf(TEXT("[Interaction] BaseCamp: %s"), *GetName()));
+	}
+
+	return true;
+}
+
+FText APW_BaseCampActor::GetInteractionPrompt_Implementation() const
+{
+	return InteractableTargetComponent ? InteractableTargetComponent->GetPromptText() : NSLOCTEXT("PWInteraction", "BaseCampPromptFallback", "Open Base Camp");
+}
+
+int32 APW_BaseCampActor::GetInteractionPriority_Implementation() const
+{
+	return InteractableTargetComponent ? InteractableTargetComponent->GetPriority() : 50;
 }
 
 bool APW_BaseCampActor::ContainsLocation(const FVector& Location) const

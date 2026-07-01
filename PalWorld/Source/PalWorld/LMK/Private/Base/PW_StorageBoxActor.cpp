@@ -5,8 +5,10 @@
 #include "Base/PW_BaseInventoryAggregatorComponent.h"
 #include "Base/PW_InventoryComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
+#include "PWInteractableTargetComponent.h"
 
 APW_StorageBoxActor::APW_StorageBoxActor()
 {
@@ -21,6 +23,10 @@ APW_StorageBoxActor::APW_StorageBoxActor()
 	StorageMesh->SetCanEverAffectNavigation(true);
 
 	InventoryComponent = CreateDefaultSubobject<UPW_InventoryComponent>(TEXT("InventoryComponent"));
+	InteractableTargetComponent = CreateDefaultSubobject<UPWInteractableTargetComponent>(TEXT("InteractableTargetComponent"));
+	InteractableTargetComponent->SetInteractionRadius(250.0f);
+	InteractableTargetComponent->SetPromptText(NSLOCTEXT("PWInteraction", "StorageBoxPrompt", "Open Storage Box"));
+	InteractableTargetComponent->SetPriority(100);
 }
 
 void APW_StorageBoxActor::BeginPlay()
@@ -48,6 +54,44 @@ void APW_StorageBoxActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(APW_StorageBoxActor, OwningBaseCamp);
+}
+
+bool APW_StorageBoxActor::CanInteract_Implementation(AActor* Interactor) const
+{
+	return Interactor != nullptr && InteractableTargetComponent != nullptr && InteractableTargetComponent->IsInteractionEnabled();
+}
+
+bool APW_StorageBoxActor::Interact_Implementation(AActor* Interactor)
+{
+	if (!CanInteract_Implementation(Interactor))
+	{
+		return false;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[PWInteraction] Storage box interacted. Storage=%s Interactor=%s"),
+		*GetName(),
+		*GetNameSafe(Interactor));
+
+	if (GEngine != nullptr)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			2.0f,
+			FColor::Green,
+			FString::Printf(TEXT("[Interaction] StorageBox: %s"), *GetName()));
+	}
+
+	return true;
+}
+
+FText APW_StorageBoxActor::GetInteractionPrompt_Implementation() const
+{
+	return InteractableTargetComponent ? InteractableTargetComponent->GetPromptText() : NSLOCTEXT("PWInteraction", "StorageBoxPromptFallback", "Open Storage Box");
+}
+
+int32 APW_StorageBoxActor::GetInteractionPriority_Implementation() const
+{
+	return InteractableTargetComponent ? InteractableTargetComponent->GetPriority() : 100;
 }
 
 void APW_StorageBoxActor::RegisterWithBaseCamp()

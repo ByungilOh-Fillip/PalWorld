@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Base/PW_BaseTypes.h"
 #include "GameFramework/Actor.h"
+#include "PWInteractable.h"
 #include "PW_BaseCampActor.generated.h"
 
 class UPW_BaseInventoryAggregatorComponent;
@@ -11,11 +12,12 @@ class UPW_BaseOwnershipComponent;
 class UPW_BasePalAssignmentComponent;
 class UPW_BaseWorkSimulationComponent;
 class UPW_BaseWorkTargetRegistryComponent;
+class UPWInteractableTargetComponent;
 class UNavigationInvokerComponent;
 class USceneComponent;
 
 UCLASS(Blueprintable)
-class PALWORLD_API APW_BaseCampActor : public AActor
+class PALWORLD_API APW_BaseCampActor : public AActor, public IPWInteractable
 {
 	GENERATED_BODY()
 
@@ -26,6 +28,10 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
+	virtual bool Interact_Implementation(AActor* Interactor) override;
+	virtual FText GetInteractionPrompt_Implementation() const override;
+	virtual int32 GetInteractionPriority_Implementation() const override;
 
 	UFUNCTION(BlueprintPure, Category = "PW|Base")
 	FPW_BaseCampId GetBaseCampId() const { return BaseCampId; }
@@ -78,6 +84,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Base|Navigation")
 	TObjectPtr<UNavigationInvokerComponent> NavigationInvokerComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Base|Interaction")
+	TObjectPtr<UPWInteractableTargetComponent> InteractableTargetComponent;
 
 	UPROPERTY(Replicated, EditInstanceOnly, BlueprintReadOnly, Category = "PW|Base")
 	FPW_BaseCampId BaseCampId;
