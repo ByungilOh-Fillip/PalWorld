@@ -8,7 +8,6 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
-#include "Components/PanelWidget.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
@@ -102,7 +101,6 @@ void UPWInventoryPanelWidget::BuildDefaultLayout()
 
 	UCanvasPanel* RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("InventoryRoot"));
 	WidgetTree->RootWidget = RootCanvas;
-	UE_LOG(LogTemp, Log, TEXT("[PWInventory] Built default inventory panel layout."));
 
 	UBorder* Backdrop = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("InventoryBackdrop"));
 	Backdrop->SetBrushColor(FLinearColor(0.01f, 0.035f, 0.04f, 0.92f));
