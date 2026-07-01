@@ -100,7 +100,6 @@ UPWInventoryPanelWidget* UPWPlayerHUDWidget::GetOrCreateInventoryPanel()
 		CreatedInventoryPanel = CreateWidget<UPWInventoryPanelWidget>(GetOwningPlayer(), PanelClass);
 		if (CreatedInventoryPanel)
 		{
-			UE_LOG(LogTemp, Log, TEXT("[PWInventory] Created inventory panel. Class=%s"), *GetNameSafe(PanelClass.Get()));
 			CreatedInventoryPanel->AddToViewport(500);
 			CreatedInventoryPanel->SetVisibility(ESlateVisibility::Collapsed);
 		}

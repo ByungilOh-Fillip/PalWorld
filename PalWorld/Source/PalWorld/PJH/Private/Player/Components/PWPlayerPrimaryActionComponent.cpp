@@ -420,12 +420,6 @@ void UPWPlayerPrimaryActionComponent::StartAuthority(const FHitResult& HitResult
 		World->GetTimerManager().SetTimer(ActionTimerHandle, this, &UPWPlayerPrimaryActionComponent::FinishAction, GetActionDuration(), false);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[PWPrimaryAction] Damage applied. Player=%s Target=%s Tool=%s Damage=%.1f StaminaCost=%.1f"),
-		*PlayerCharacter->GetName(),
-		*TargetActor->GetName(),
-		*UEnum::GetValueAsString(ToolType),
-		AppliedDamage,
-		ActionStaminaCost);
 }
 
 void UPWPlayerPrimaryActionComponent::FinishAction()
