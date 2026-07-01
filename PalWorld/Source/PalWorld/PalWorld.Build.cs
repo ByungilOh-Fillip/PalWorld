@@ -6,9 +6,23 @@ public class PalWorld : ModuleRules
 {
 	public PalWorld(ReadOnlyTargetRules Target) : base(Target)
 	{
+		PrivateDependencyModuleNames.AddRange(new string[] { "AnimGraphRuntime" });
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "Slate", "SlateCore", "GameplayTags", "NavigationSystem" });
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core",
+			"CoreUObject",
+			"Engine",
+			"InputCore",
+			"EnhancedInput",
+			"UMG",
+			"Slate",
+			"SlateCore",
+			"GameplayTags",
+			"AIModule",
+			"NavigationSystem",
+		});
 		
 		// 팀원 ROLE에 따라 나뉜 파트를 한번에 빌드할 때 사용
 		PublicIncludePaths.AddRange(
