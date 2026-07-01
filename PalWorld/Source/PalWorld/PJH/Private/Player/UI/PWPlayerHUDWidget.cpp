@@ -18,7 +18,7 @@ void UPWPlayerHUDWidget::InitializeWithPlayerCharacter(APWPlayerCharacter* InPla
 
 	if (UPWInventoryPanelWidget* ActiveInventoryPanel = GetOrCreateInventoryPanel())
 	{
-		ActiveInventoryPanel->InitializeWithInventoryComponent(InPlayerCharacter ? InPlayerCharacter->GetInventoryLinkComponent() : nullptr);
+		ActiveInventoryPanel->InitializeWithPlayerCharacter(InPlayerCharacter);
 	}
 
 	SetCrosshairVisible(InPlayerCharacter && InPlayerCharacter->IsAiming());

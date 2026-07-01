@@ -7,6 +7,7 @@
 #include "PWPlayerInventoryLinkComponent.generated.h"
 
 class UPWItemDataAsset;
+class UPWPlayerEquipmentComponent;
 
 USTRUCT(BlueprintType)
 struct FPWInventoryItemStack
@@ -44,6 +45,18 @@ struct FPWInventorySlotView
 	TObjectPtr<UPWItemDataAsset> ItemData = nullptr;
 };
 
+USTRUCT(BlueprintType)
+struct FPWInventoryStarterItem
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Inventory")
+	TObjectPtr<UPWItemDataAsset> ItemData = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Inventory", meta = (ClampMin = "1"))
+	int32 Count = 1;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPWInventoryChangedSignature);
 
 UCLASS(ClassGroup = (Player), meta = (BlueprintSpawnableComponent))
@@ -54,10 +67,20 @@ class PALWORLD_API UPWPlayerInventoryLinkComponent : public UActorComponent
 public:
 	UPWPlayerInventoryLinkComponent();
 
+	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
 	bool AddItem(FName ItemId, int32 Count);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
+	bool MoveItemSlot(int32 FromSlotIndex, int32 ToSlotIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
+	bool DropItemFromSlot(int32 SlotIndex, int32 Count);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
+	bool DestroyItemFromSlot(int32 SlotIndex, int32 Count);
 
 	UFUNCTION(BlueprintPure, Category = "Player|Inventory")
 	int32 GetItemCount(FName ItemId) const;
@@ -99,16 +122,40 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Inventory|Data", meta = (TitleProperty = "ItemId"))
 	TArray<TObjectPtr<UPWItemDataAsset>> ItemDefinitions;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Inventory|Data", meta = (TitleProperty = "ItemData"))
+	TArray<FPWInventoryStarterItem> StarterItems;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Inventory|Debug")
+	bool bAutoRegisterDefaultItemDefinitions = true;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Inventory|Debug")
+	bool bGrantDefaultStarterItems = true;
+
 	UPROPERTY(ReplicatedUsing = OnRep_Items, VisibleInstanceOnly, Category = "Player|Inventory")
 	TArray<FPWInventoryItemStack> Items;
 
 	UFUNCTION(Server, Reliable)
 	void ServerAddItem(FName ItemId, int32 Count);
 
+	UFUNCTION(Server, Reliable)
+	void ServerMoveItemSlot(int32 FromSlotIndex, int32 ToSlotIndex);
+
+	UFUNCTION(Server, Reliable)
+	void ServerDropItemFromSlot(int32 SlotIndex, int32 Count);
+
+	UFUNCTION(Server, Reliable)
+	void ServerDestroyItemFromSlot(int32 SlotIndex, int32 Count);
+
 	UFUNCTION()
 	void OnRep_Items();
 
+	friend class UPWPlayerEquipmentComponent;
+
 	bool AddItemAuthority(FName ItemId, int32 Count);
+	bool MoveItemSlotAuthority(int32 FromSlotIndex, int32 ToSlotIndex);
+	bool RemoveItemFromSlotAuthority(int32 SlotIndex, int32 Count, FPWInventoryItemStack* OutRemovedStack = nullptr);
+	void EnsureDefaultItemDefinitions();
+	void GrantStarterItemsAuthority();
 	FPWInventoryItemStack* FindStack(FName ItemId);
 	const FPWInventoryItemStack* FindStack(FName ItemId) const;
 	FPWInventoryItemStack* FindStackBySlot(int32 SlotIndex);
