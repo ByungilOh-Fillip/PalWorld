@@ -82,11 +82,8 @@ palworld/SourceArt/**/*.tga
 .agents/
 .codex/
 .cursor/
-.mcp/
 docs/
 PalWorld/.gemini/
-PalWorld/.mcp.json
-PalWorld/Plugins/UnrealMCP/
 
 
 # -------------------------------------------------------------
