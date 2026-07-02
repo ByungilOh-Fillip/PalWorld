@@ -23,6 +23,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PW|Base|Work")
 	bool FindWorkTargetByTag(FGameplayTag RequiredWorkTag, FPW_WorkTargetEntry& OutEntry) const;
 
+	UFUNCTION(BlueprintCallable, Category = "PW|Base|Work")
+	void GetWorkTargetsByTag(FGameplayTag RequiredWorkTag, TArray<FPW_WorkTargetEntry>& OutEntries) const;
+
+	UFUNCTION(BlueprintCallable, Category = "PW|Base|Work")
+	void GetAllWorkTargets(TArray<FPW_WorkTargetEntry>& OutEntries) const;
+
 private:
 	UPROPERTY()
 	TArray<FPW_WorkTargetEntry> WorkTargets;

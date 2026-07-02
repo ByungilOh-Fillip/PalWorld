@@ -82,7 +82,6 @@ palworld/SourceArt/**/*.tga
 .agents/
 .codex/
 .cursor/
-docs/
 PalWorld/.gemini/
 
 
