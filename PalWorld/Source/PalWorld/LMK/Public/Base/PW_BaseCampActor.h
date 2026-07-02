@@ -55,10 +55,16 @@ public:
 	UPW_BaseInventoryAggregatorComponent* GetInventoryAggregatorComponent() const { return InventoryAggregatorComponent; }
 
 	UFUNCTION(BlueprintPure, Category = "PW|Base")
+	UPW_BasePalAssignmentComponent* GetPalAssignmentComponent() const { return PalAssignmentComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "PW|Base")
 	UPW_BaseWorkTargetRegistryComponent* GetWorkTargetRegistryComponent() const { return WorkTargetRegistryComponent; }
 
 	UFUNCTION(BlueprintPure, Category = "PW|Base")
 	UPW_BaseNavigationComponent* GetBaseNavigationComponent() const { return BaseNavigationComponent; }
+
+	UFUNCTION(BlueprintCallable, Category = "PW|Base|Work")
+	bool TryAssignIdlePalToWorkTargetByTag(FGameplayTag RequiredWorkTag, FPW_AssignedPalSlot& OutAssignedSlot, FPW_WorkTargetEntry& OutWorkTarget);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Base")

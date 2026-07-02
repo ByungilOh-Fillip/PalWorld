@@ -30,6 +30,12 @@ protected:
 public:    
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+    UFUNCTION(BlueprintPure, Category = "Pal|Work")
+    bool CanWork(FGameplayTag WorkTag) const;
+
+    UFUNCTION(BlueprintPure, Category = "Pal|Work")
+    bool FindWorkAttitude(FGameplayTag WorkTag, FWorkAttitude& OutWorkAttitude) const;
+
     // 파트너 스킬
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pal|Skill")
     FPalPartnerSkill PartnerSkill;

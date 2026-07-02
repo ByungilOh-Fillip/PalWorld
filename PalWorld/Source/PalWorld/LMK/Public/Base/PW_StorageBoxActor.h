@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "TimerManager.h"
 #include "PWInteractable.h"
 #include "PW_StorageBoxActor.generated.h"
 
@@ -46,6 +47,9 @@ protected:
 	TObjectPtr<APW_BaseCampActor> OwningBaseCamp;
 
 private:
+	FTimerHandle BaseCampRegistrationRetryTimerHandle;
+
 	void RegisterWithBaseCamp();
+	void ScheduleBaseCampRegistrationRetry();
 	void UnregisterFromBaseCamp();
 };

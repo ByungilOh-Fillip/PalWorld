@@ -1,7 +1,9 @@
 #include "PWInteractionScannerComponent.h"
 
+#include "PWHoldInteractable.h"
 #include "PWInteractable.h"
 #include "PWInteractableTargetComponent.h"
+#include "PWLocalInteractable.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
@@ -67,9 +69,71 @@ bool UPWInteractionScannerComponent::TryInteract()
 	return false;
 }
 
+bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr)
+	{
+		return false;
+	}
+
+	AActor* InteractableActor = Owner->HasAuthority() ? FindBestInteractable() : CurrentInteractableActor.Get();
+	if (InteractableActor == nullptr)
+	{
+		return false;
+	}
+
+	const bool bCanBeginHold = InteractableActor->GetClass()->ImplementsInterface(UPWHoldInteractable::StaticClass())
+		&& IPWHoldInteractable::Execute_CanBeginHoldInteraction(InteractableActor, Owner);
+	if (Owner->HasAuthority())
+	{
+		if (bCanBeginHold)
+		{
+			return ExecuteBeginHoldInteraction(InteractableActor);
+		}
+
+		return ExecuteLocalInteraction(InteractableActor) || ExecuteInteraction(InteractableActor);
+	}
+
+	if (bCanBeginHold)
+	{
+		ServerTryBeginHoldInteraction();
+		return true;
+	}
+
+	return ExecuteLocalInteraction(InteractableActor) || TryInteract();
+}
+
+void UPWInteractionScannerComponent::EndHoldInteraction()
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr)
+	{
+		return;
+	}
+
+	if (Owner->HasAuthority())
+	{
+		ExecuteEndHoldInteraction(CurrentHoldInteractableActor.Get());
+		return;
+	}
+
+	ServerEndHoldInteraction();
+}
+
 void UPWInteractionScannerComponent::ServerTryInteract_Implementation()
 {
 	ExecuteInteraction(FindBestInteractable());
+}
+
+void UPWInteractionScannerComponent::ServerTryBeginHoldInteraction_Implementation()
+{
+	ExecuteBeginHoldInteraction(FindBestInteractable());
+}
+
+void UPWInteractionScannerComponent::ServerEndHoldInteraction_Implementation()
+{
+	ExecuteEndHoldInteraction(CurrentHoldInteractableActor.Get());
 }
 
 void UPWInteractionScannerComponent::ScanForInteractables()
@@ -197,6 +261,69 @@ bool UPWInteractionScannerComponent::ExecuteInteraction(AActor* InteractableActo
 	}
 
 	return IPWInteractable::Execute_Interact(InteractableActor, Owner);
+}
+
+bool UPWInteractionScannerComponent::ExecuteLocalInteraction(AActor* InteractableActor) const
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || InteractableActor == nullptr || !InteractableActor->GetClass()->ImplementsInterface(UPWLocalInteractable::StaticClass()))
+	{
+		return false;
+	}
+
+	const UPWInteractableTargetComponent* TargetComponent = InteractableActor->FindComponentByClass<UPWInteractableTargetComponent>();
+	if (TargetComponent == nullptr || !TargetComponent->IsInteractionEnabled() || !IsInteractableInRange(InteractableActor, TargetComponent))
+	{
+		return false;
+	}
+
+	if (!IPWLocalInteractable::Execute_CanLocalInteract(InteractableActor, Owner))
+	{
+		return false;
+	}
+
+	return IPWLocalInteractable::Execute_LocalInteract(InteractableActor, Owner);
+}
+
+bool UPWInteractionScannerComponent::ExecuteBeginHoldInteraction(AActor* InteractableActor)
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || InteractableActor == nullptr || !InteractableActor->GetClass()->ImplementsInterface(UPWHoldInteractable::StaticClass()))
+	{
+		return false;
+	}
+
+	const UPWInteractableTargetComponent* TargetComponent = InteractableActor->FindComponentByClass<UPWInteractableTargetComponent>();
+	if (TargetComponent == nullptr || !TargetComponent->IsInteractionEnabled() || !IsInteractableInRange(InteractableActor, TargetComponent))
+	{
+		return false;
+	}
+
+	if (!IPWHoldInteractable::Execute_CanBeginHoldInteraction(InteractableActor, Owner))
+	{
+		return false;
+	}
+
+	if (!IPWHoldInteractable::Execute_BeginHoldInteraction(InteractableActor, Owner))
+	{
+		return false;
+	}
+
+	CurrentHoldInteractableActor = InteractableActor;
+	return true;
+}
+
+void UPWInteractionScannerComponent::ExecuteEndHoldInteraction(AActor* InteractableActor)
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || InteractableActor == nullptr || !InteractableActor->GetClass()->ImplementsInterface(UPWHoldInteractable::StaticClass()))
+	{
+		CurrentHoldInteractableActor.Reset();
+		return;
+	}
+
+	IPWHoldInteractable::Execute_EndHoldInteraction(InteractableActor, Owner);
+	CurrentHoldInteractableActor.Reset();
 }
 
 FVector UPWInteractionScannerComponent::GetScanOrigin() const
