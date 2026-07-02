@@ -39,6 +39,8 @@ public:
 	UPWItemDataAsset* GetItemData() const { return ItemData; }
 
 protected:
+	virtual void NativePreConstruct() override;
+	virtual FReply NativeOnPreviewMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
@@ -78,6 +80,8 @@ protected:
 	TObjectPtr<UWidget> Panel_ItemRoot = nullptr;
 
 private:
+	FReply HandleSlotMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent);
+	UWidget* CreateDefaultDragVisual() const;
 	void RefreshBoundWidgets();
 
 	UPROPERTY(Transient)

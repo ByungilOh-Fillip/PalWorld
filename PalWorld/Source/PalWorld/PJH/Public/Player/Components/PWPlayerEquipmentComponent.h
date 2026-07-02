@@ -15,6 +15,8 @@ class UStaticMesh;
 class UPWItemDataAsset;
 class UPWPlayerInventoryLinkComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPWEquipmentChangedSignature);
+
 USTRUCT(BlueprintType)
 struct FPWEquipmentSlotData
 {
@@ -53,6 +55,8 @@ struct FPWEquipmentSlotData
 	EPWEquipmentSlotType GetEquipmentSlotType() const;
 	UStaticMesh* GetEquipmentStaticMesh() const;
 	USkeletalMesh* GetEquipmentSkeletalMesh() const;
+	FTransform GetHandAttachTransform() const;
+	FTransform GetBackAttachTransform() const;
 };
 
 UCLASS(ClassGroup = (Player), meta = (BlueprintSpawnableComponent))
@@ -119,10 +123,16 @@ public:
 	bool UnequipToInventory(int32 EquipmentSlotIndex);
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Equipment")
+	bool UnequipToInventorySlot(int32 EquipmentSlotIndex, int32 InventorySlotIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Equipment")
 	bool DropEquipmentSlot(int32 EquipmentSlotIndex);
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Equipment")
 	bool DestroyEquipmentSlot(int32 EquipmentSlotIndex);
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Equipment")
+	FPWEquipmentChangedSignature OnEquipmentChanged;
 
 	static constexpr int32 WeaponSlotCount = 4;
 	static constexpr int32 HeadSlotIndex = 4;
@@ -177,6 +187,9 @@ private:
 	void ServerUnequipToInventory(int32 EquipmentSlotIndex);
 
 	UFUNCTION(Server, Reliable)
+	void ServerUnequipToInventorySlot(int32 EquipmentSlotIndex, int32 InventorySlotIndex);
+
+	UFUNCTION(Server, Reliable)
 	void ServerDropEquipmentSlot(int32 EquipmentSlotIndex);
 
 	UFUNCTION(Server, Reliable)
@@ -207,6 +220,7 @@ private:
 	bool EquipFromInventorySlotAuthority(int32 InventorySlotIndex, int32 EquipmentSlotIndex);
 	bool EquipFromInventorySlotToFirstAvailableAuthority(int32 InventorySlotIndex);
 	bool UnequipToInventoryAuthority(int32 EquipmentSlotIndex);
+	bool UnequipToInventorySlotAuthority(int32 EquipmentSlotIndex, int32 InventorySlotIndex);
 	int32 FindFirstCompatibleEquipmentSlotIndex(UPWItemDataAsset* ItemData) const;
 	void NotifyEquipmentChanged();
 
