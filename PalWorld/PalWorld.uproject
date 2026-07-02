@@ -22,24 +22,12 @@
 			]
 		},
 		{
-			"Name": "ModelContextProtocol",
-			"Enabled": true
-		},
-		{
-			"Name": "MCPClientToolset",
-			"Enabled": true
-		},
-		{
-			"Name": "AllToolsets",
-			"Enabled": true
-		},
-		{
 			"Name": "AIModuleToolset",
 			"Enabled": true
 		},
 		{
 			"Name": "UnrealMCP",
-			"Enabled": true
+			"Enabled": false
 		},
 		{
 			"Name": "IKRig",
@@ -47,6 +35,14 @@
 		},
 		{
 			"Name": "RelativeIKOp",
+			"Enabled": true
+		},
+		{
+			"Name": "MCPClientToolset",
+			"Enabled": true
+		},
+		{
+			"Name": "ModelContextProtocol",
 			"Enabled": true
 		}
 	]

@@ -7,14 +7,18 @@
 #include "Base/PW_BasePalAssignmentComponent.h"
 #include "Base/PW_BaseWorkSimulationComponent.h"
 #include "Base/PW_BaseWorkTargetRegistryComponent.h"
+#include "Base/PW_WorkBuildingComponent.h"
 #include "Components/SceneComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "NavigationInvokerComponent.h"
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
+#include "PWInteractableTargetComponent.h"
+#include "PWSkillComponent.h"
 
 APW_BaseCampActor::APW_BaseCampActor()
 {
@@ -33,6 +37,10 @@ APW_BaseCampActor::APW_BaseCampActor()
 	WorkSimulationComponent = CreateDefaultSubobject<UPW_BaseWorkSimulationComponent>(TEXT("WorkSimulationComponent"));
 	BaseNavigationComponent = CreateDefaultSubobject<UPW_BaseNavigationComponent>(TEXT("BaseNavigationComponent"));
 	NavigationInvokerComponent = CreateDefaultSubobject<UNavigationInvokerComponent>(TEXT("NavigationInvokerComponent"));
+	InteractableTargetComponent = CreateDefaultSubobject<UPWInteractableTargetComponent>(TEXT("InteractableTargetComponent"));
+	InteractableTargetComponent->SetInteractionRadius(350.0f);
+	InteractableTargetComponent->SetPromptText(NSLOCTEXT("PWInteraction", "BaseCampPrompt", "Open Base Camp"));
+	InteractableTargetComponent->SetPriority(50);
 }
 
 void APW_BaseCampActor::BeginPlay()
@@ -103,9 +111,94 @@ void APW_BaseCampActor::SetBaseOwnerId(const FPW_BaseOwnerId& NewOwnerId)
 	}
 }
 
+bool APW_BaseCampActor::CanInteract_Implementation(AActor* Interactor) const
+{
+	return Interactor != nullptr && InteractableTargetComponent != nullptr && InteractableTargetComponent->IsInteractionEnabled();
+}
+
+bool APW_BaseCampActor::Interact_Implementation(AActor* Interactor)
+{
+	if (!CanInteract_Implementation(Interactor))
+	{
+		return false;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[PWInteraction] Base camp interacted. Base=%s Interactor=%s"),
+		*GetName(),
+		*GetNameSafe(Interactor));
+
+	if (GEngine != nullptr)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			2.0f,
+			FColor::Green,
+			FString::Printf(TEXT("[Interaction] BaseCamp: %s"), *GetName()));
+	}
+
+	return true;
+}
+
+FText APW_BaseCampActor::GetInteractionPrompt_Implementation() const
+{
+	return InteractableTargetComponent ? InteractableTargetComponent->GetPromptText() : NSLOCTEXT("PWInteraction", "BaseCampPromptFallback", "Open Base Camp");
+}
+
+int32 APW_BaseCampActor::GetInteractionPriority_Implementation() const
+{
+	return InteractableTargetComponent ? InteractableTargetComponent->GetPriority() : 50;
+}
+
 bool APW_BaseCampActor::ContainsLocation(const FVector& Location) const
 {
 	return FVector::DistSquared2D(GetActorLocation(), Location) <= FMath::Square(CampRadius);
+}
+
+bool APW_BaseCampActor::TryAssignIdlePalToWorkTargetByTag(FGameplayTag RequiredWorkTag, FPW_AssignedPalSlot& OutAssignedSlot, FPW_WorkTargetEntry& OutWorkTarget)
+{
+	if (!HasAuthority() || PalAssignmentComponent == nullptr || WorkTargetRegistryComponent == nullptr || !RequiredWorkTag.IsValid())
+	{
+		return false;
+	}
+
+	TArray<FPW_WorkTargetEntry> CandidateTargets;
+	WorkTargetRegistryComponent->GetWorkTargetsByTag(RequiredWorkTag, CandidateTargets);
+	if (CandidateTargets.Num() <= 0)
+	{
+		return false;
+	}
+
+	for (const FPW_AssignedPalSlot& Slot : PalAssignmentComponent->GetAssignedPalSlots())
+	{
+		AActor* PalActor = Slot.SpawnedPalActor.Get();
+		const UPWSkillComponent* SkillComponent = PalActor != nullptr ? PalActor->FindComponentByClass<UPWSkillComponent>() : nullptr;
+		if (Slot.AssignedState != TEXT("Idle") || !Slot.CurrentWorkTargetId.IsNone() || SkillComponent == nullptr || !SkillComponent->CanWork(RequiredWorkTag))
+		{
+			continue;
+		}
+
+		for (const FPW_WorkTargetEntry& CandidateTarget : CandidateTargets)
+		{
+			const AActor* TargetActor = CandidateTarget.TargetActor.Get();
+			const UPW_WorkBuildingComponent* WorkBuildingComponent = TargetActor != nullptr ? TargetActor->FindComponentByClass<UPW_WorkBuildingComponent>() : nullptr;
+			if (WorkBuildingComponent == nullptr || !WorkBuildingComponent->IsWorkAvailable())
+			{
+				continue;
+			}
+
+			if (PalAssignmentComponent->TryAssignPalToWorkTarget(Slot.SlotIndex, CandidateTarget.WorkTargetId))
+			{
+				OutAssignedSlot = Slot;
+				OutAssignedSlot.CurrentWorkTargetId = CandidateTarget.WorkTargetId;
+				OutAssignedSlot.AssignedState = TEXT("MovingToWork");
+				OutWorkTarget = CandidateTarget;
+				ForceNetUpdate();
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 void APW_BaseCampActor::RegisterWithSubsystem()

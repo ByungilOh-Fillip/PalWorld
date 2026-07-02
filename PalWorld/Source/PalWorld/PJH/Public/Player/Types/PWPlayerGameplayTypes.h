@@ -14,6 +14,35 @@ enum class EPWToolType : uint8
 };
 
 UENUM(BlueprintType)
+enum class EPWItemType : uint8
+{
+	Misc,
+	Resource,
+	Tool,
+	Weapon,
+	Armor,
+	Shield,
+	Glider,
+	Accessory,
+	Consumable,
+	Sphere
+};
+
+UENUM(BlueprintType)
+enum class EPWEquipmentSlotType : uint8
+{
+	None,
+	Weapon,
+	Head,
+	Body,
+	Shield,
+	Glider,
+	SphereModule,
+	Accessory,
+	Food
+};
+
+UENUM(BlueprintType)
 enum class EPWResourceType : uint8
 {
 	Tree,
