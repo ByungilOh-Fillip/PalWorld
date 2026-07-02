@@ -114,7 +114,7 @@ public:
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Inventory", meta = (ClampMin = "1"))
-	int32 InventorySlotCount = 40;
+	int32 InventorySlotCount = 42;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Inventory", meta = (ClampMin = "0.0"))
 	float MaxCarryWeight = 1000.f;
@@ -152,6 +152,7 @@ private:
 	friend class UPWPlayerEquipmentComponent;
 
 	bool AddItemAuthority(FName ItemId, int32 Count);
+	bool AddItemToSlotAuthority(FName ItemId, int32 Count, int32 TargetSlotIndex);
 	bool MoveItemSlotAuthority(int32 FromSlotIndex, int32 ToSlotIndex);
 	bool RemoveItemFromSlotAuthority(int32 SlotIndex, int32 Count, FPWInventoryItemStack* OutRemovedStack = nullptr);
 	void EnsureDefaultItemDefinitions();

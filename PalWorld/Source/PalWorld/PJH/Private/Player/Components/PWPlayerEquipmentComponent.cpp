@@ -40,6 +40,20 @@ EPWEquipmentSlotType FPWEquipmentSlotData::GetEquipmentSlotType() const
 	return SlotType;
 }
 
+FTransform FPWEquipmentSlotData::GetHandAttachTransform() const
+{
+	return ItemData && ItemData->IsEquippable() && ItemData->ShouldOverrideHandAttachTransform()
+		? ItemData->GetHandAttachTransform()
+		: HandAttachTransform;
+}
+
+FTransform FPWEquipmentSlotData::GetBackAttachTransform() const
+{
+	return ItemData && ItemData->IsEquippable() && ItemData->ShouldOverrideBackAttachTransform()
+		? ItemData->GetBackAttachTransform()
+		: BackAttachTransform;
+}
+
 UPWPlayerEquipmentComponent::UPWPlayerEquipmentComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -209,6 +223,18 @@ bool UPWPlayerEquipmentComponent::UnequipToInventory(int32 EquipmentSlotIndex)
 	return UnequipToInventoryAuthority(EquipmentSlotIndex);
 }
 
+bool UPWPlayerEquipmentComponent::UnequipToInventorySlot(int32 EquipmentSlotIndex, int32 InventorySlotIndex)
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
+	{
+		ServerUnequipToInventorySlot(EquipmentSlotIndex, InventorySlotIndex);
+		return true;
+	}
+
+	return UnequipToInventorySlotAuthority(EquipmentSlotIndex, InventorySlotIndex);
+}
+
 bool UPWPlayerEquipmentComponent::DropEquipmentSlot(int32 EquipmentSlotIndex)
 {
 	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
@@ -273,6 +299,11 @@ void UPWPlayerEquipmentComponent::ServerUnequipToInventory_Implementation(int32 
 	UnequipToInventoryAuthority(EquipmentSlotIndex);
 }
 
+void UPWPlayerEquipmentComponent::ServerUnequipToInventorySlot_Implementation(int32 EquipmentSlotIndex, int32 InventorySlotIndex)
+{
+	UnequipToInventorySlotAuthority(EquipmentSlotIndex, InventorySlotIndex);
+}
+
 void UPWPlayerEquipmentComponent::ServerDropEquipmentSlot_Implementation(int32 EquipmentSlotIndex)
 {
 	ClearEquipmentSlotAuthority(EquipmentSlotIndex);
@@ -288,12 +319,14 @@ void UPWPlayerEquipmentComponent::OnRep_EquipmentSlots()
 	EnsureSlotCount();
 	RebuildVisualComponents();
 	SyncSelectedToolToPrimaryActionComponent();
+	OnEquipmentChanged.Broadcast();
 }
 
 void UPWPlayerEquipmentComponent::OnRep_SelectedSlotIndex()
 {
 	UpdateEquipmentVisuals();
 	SyncSelectedToolToPrimaryActionComponent();
+	OnEquipmentChanged.Broadcast();
 }
 
 APWPlayerCharacter* UPWPlayerEquipmentComponent::GetPlayerCharacter() const
@@ -452,6 +485,7 @@ void UPWPlayerEquipmentComponent::SetSelectedSlotIndex(int32 NewSlotIndex)
 	SelectedSlotIndex = NewSlotIndex;
 	UpdateEquipmentVisuals();
 	SyncSelectedToolToPrimaryActionComponent();
+	OnEquipmentChanged.Broadcast();
 }
 
 void UPWPlayerEquipmentComponent::SyncSelectedToolToPrimaryActionComponent() const
@@ -551,7 +585,9 @@ bool UPWPlayerEquipmentComponent::EquipFromInventorySlotAuthority(int32 Inventor
 	}
 
 	UPWItemDataAsset* PreviousItemData = TargetSlot.ItemData;
-	if (PreviousItemData && !InventoryComponent->AddItemAuthority(PreviousItemData->GetItemId(), 1))
+	if (PreviousItemData
+		&& !InventoryComponent->AddItemToSlotAuthority(PreviousItemData->GetItemId(), 1, InventorySlotIndex)
+		&& !InventoryComponent->AddItemAuthority(PreviousItemData->GetItemId(), 1))
 	{
 		InventoryComponent->AddItemAuthority(RemovedStack.ItemId, RemovedStack.Count);
 		return false;
@@ -607,6 +643,70 @@ bool UPWPlayerEquipmentComponent::UnequipToInventoryAuthority(int32 EquipmentSlo
 	return ClearEquipmentSlotAuthority(EquipmentSlotIndex);
 }
 
+bool UPWPlayerEquipmentComponent::UnequipToInventorySlotAuthority(int32 EquipmentSlotIndex, int32 InventorySlotIndex)
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	UPWPlayerInventoryLinkComponent* InventoryComponent = GetInventoryComponent();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority()
+		|| !InventoryComponent
+		|| !IsValidSlotIndex(EquipmentSlotIndex))
+	{
+		return false;
+	}
+
+	UPWItemDataAsset* EquipmentItemData = EquipmentSlots[EquipmentSlotIndex].ItemData;
+	if (!EquipmentItemData)
+	{
+		return false;
+	}
+
+	const FPWInventoryItemStack* TargetStack = InventoryComponent->FindStackBySlot(InventorySlotIndex);
+	if (!TargetStack)
+	{
+		if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), 1, InventorySlotIndex))
+		{
+			return false;
+		}
+
+		return ClearEquipmentSlotAuthority(EquipmentSlotIndex);
+	}
+
+	if (TargetStack->ItemId == EquipmentItemData->GetItemId())
+	{
+		if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), 1, InventorySlotIndex))
+		{
+			return false;
+		}
+
+		return ClearEquipmentSlotAuthority(EquipmentSlotIndex);
+	}
+
+	if (TargetStack->Count != 1)
+	{
+		return false;
+	}
+
+	UPWItemDataAsset* InventoryItemData = InventoryComponent->GetItemDefinition(TargetStack->ItemId);
+	if (!IsItemCompatibleWithSlot(InventoryItemData, EquipmentSlotIndex))
+	{
+		return false;
+	}
+
+	FPWInventoryItemStack RemovedStack;
+	if (!InventoryComponent->RemoveItemFromSlotAuthority(InventorySlotIndex, TargetStack->Count, &RemovedStack))
+	{
+		return false;
+	}
+
+	if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), 1, InventorySlotIndex))
+	{
+		InventoryComponent->AddItemToSlotAuthority(RemovedStack.ItemId, RemovedStack.Count, InventorySlotIndex);
+		return false;
+	}
+
+	return SetEquipmentItemAuthority(EquipmentSlotIndex, InventoryItemData);
+}
+
 int32 UPWPlayerEquipmentComponent::FindFirstCompatibleEquipmentSlotIndex(UPWItemDataAsset* ItemData) const
 {
 	for (int32 SlotIndex = 0; SlotIndex < EquipmentSlotCount; ++SlotIndex)
@@ -627,6 +727,7 @@ void UPWPlayerEquipmentComponent::NotifyEquipmentChanged()
 	EnsureSlotCount();
 	RebuildVisualComponents();
 	SyncSelectedToolToPrimaryActionComponent();
+	OnEquipmentChanged.Broadcast();
 
 	if (AActor* OwnerActor = GetOwner())
 	{
@@ -730,13 +831,13 @@ void UPWPlayerEquipmentComponent::UpdateEquipmentVisuals()
 
 		if (SlotIndex == SelectedSlotIndex)
 		{
-			AttachSlotVisual(SlotIndex, HandSocketName, EquipmentSlots[SlotIndex].HandAttachTransform);
+			AttachSlotVisual(SlotIndex, HandSocketName, EquipmentSlots[SlotIndex].GetHandAttachTransform());
 			continue;
 		}
 
 		if (ShouldShowSlotOnBack(SlotIndex))
 		{
-			AttachSlotVisual(SlotIndex, GetBackSocketNameForSlot(SlotIndex), EquipmentSlots[SlotIndex].BackAttachTransform);
+			AttachSlotVisual(SlotIndex, GetBackSocketNameForSlot(SlotIndex), EquipmentSlots[SlotIndex].GetBackAttachTransform());
 			continue;
 		}
 

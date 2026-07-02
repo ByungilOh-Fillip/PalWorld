@@ -18,12 +18,15 @@ void UPWPlayerInventoryLinkComponent::BeginPlay()
 	EnsureDefaultItemDefinitions();
 
 	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor || !OwnerActor->HasAuthority() || Items.Num() > 0)
+	if (!OwnerActor || !OwnerActor->HasAuthority())
 	{
 		return;
 	}
 
-	GrantStarterItemsAuthority();
+	if (Items.Num() <= 0)
+	{
+		GrantStarterItemsAuthority();
+	}
 }
 
 void UPWPlayerInventoryLinkComponent::EnsureDefaultItemDefinitions()
@@ -80,7 +83,7 @@ void UPWPlayerInventoryLinkComponent::GrantStarterItemsAuthority()
 		}
 	}
 
-	if (!bGrantDefaultStarterItems || StarterItems.Num() > 0)
+	if (!bGrantDefaultStarterItems)
 	{
 		return;
 	}
@@ -348,16 +351,61 @@ bool UPWPlayerInventoryLinkComponent::AddItemAuthority(FName ItemId, int32 Count
 	const int32 AddedCount = Count - RemainingCount;
 	if (AddedCount <= 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PWInventory] Inventory is full. Owner=%s Item=%s Count=%d"),
-			*OwnerActor->GetName(),
-			*ItemId.ToString(),
-			Count);
 		return false;
 	}
 
 	OnInventoryChanged.Broadcast();
 	OwnerActor->ForceNetUpdate();
 	return RemainingCount <= 0;
+}
+
+bool UPWPlayerInventoryLinkComponent::AddItemToSlotAuthority(FName ItemId, int32 Count, int32 TargetSlotIndex)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority()
+		|| ItemId.IsNone()
+		|| Count <= 0
+		|| TargetSlotIndex < 0
+		|| TargetSlotIndex >= InventorySlotCount)
+	{
+		return false;
+	}
+
+	FPWInventoryItemStack* TargetStack = FindStackBySlot(TargetSlotIndex);
+	if (!TargetStack)
+	{
+		const int32 MaxStack = GetMaxStackForItem(ItemId);
+		if (Count > MaxStack)
+		{
+			return false;
+		}
+
+		FPWInventoryItemStack NewStack;
+		NewStack.SlotIndex = TargetSlotIndex;
+		NewStack.ItemId = ItemId;
+		NewStack.Count = Count;
+		Items.Add(NewStack);
+
+		OnInventoryChanged.Broadcast();
+		OwnerActor->ForceNetUpdate();
+		return true;
+	}
+
+	if (TargetStack->ItemId != ItemId)
+	{
+		return false;
+	}
+
+	const int32 MaxStack = GetMaxStackForItem(ItemId);
+	if (TargetStack->Count + Count > MaxStack)
+	{
+		return false;
+	}
+
+	TargetStack->Count += Count;
+	OnInventoryChanged.Broadcast();
+	OwnerActor->ForceNetUpdate();
+	return true;
 }
 
 bool UPWPlayerInventoryLinkComponent::MoveItemSlotAuthority(int32 FromSlotIndex, int32 ToSlotIndex)
