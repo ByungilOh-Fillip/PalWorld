@@ -16,3 +16,28 @@ void UPWSkillComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
+
+bool UPWSkillComponent::CanWork(FGameplayTag WorkTag) const
+{
+    FWorkAttitude WorkAttitude;
+    return FindWorkAttitude(WorkTag, WorkAttitude);
+}
+
+bool UPWSkillComponent::FindWorkAttitude(FGameplayTag WorkTag, FWorkAttitude& OutWorkAttitude) const
+{
+    if (!WorkTag.IsValid())
+    {
+        return false;
+    }
+
+    for (const FWorkAttitude& WorkAttitude : WorkAttitudes)
+    {
+        if (WorkAttitude.WorkTypeTag.MatchesTagExact(WorkTag))
+        {
+            OutWorkAttitude = WorkAttitude;
+            return true;
+        }
+    }
+
+    return false;
+}

@@ -44,3 +44,29 @@ bool UPW_BaseWorkTargetRegistryComponent::FindWorkTargetByTag(FGameplayTag Requi
 
 	return false;
 }
+
+void UPW_BaseWorkTargetRegistryComponent::GetWorkTargetsByTag(FGameplayTag RequiredWorkTag, TArray<FPW_WorkTargetEntry>& OutEntries) const
+{
+	OutEntries.Reset();
+
+	for (const FPW_WorkTargetEntry& Entry : WorkTargets)
+	{
+		if (IsValid(Entry.TargetActor) && Entry.RequiredWorkTag == RequiredWorkTag)
+		{
+			OutEntries.Add(Entry);
+		}
+	}
+}
+
+void UPW_BaseWorkTargetRegistryComponent::GetAllWorkTargets(TArray<FPW_WorkTargetEntry>& OutEntries) const
+{
+	OutEntries.Reset();
+
+	for (const FPW_WorkTargetEntry& Entry : WorkTargets)
+	{
+		if (IsValid(Entry.TargetActor))
+		{
+			OutEntries.Add(Entry);
+		}
+	}
+}
