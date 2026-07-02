@@ -13,6 +13,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "NavigationInvokerComponent.h"
+#include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 
 APW_BaseCampActor::APW_BaseCampActor()
