@@ -12,6 +12,7 @@
 class APWLocalDamageFloatActor;
 class APWPlayerCharacter;
 class UPWPrimaryActionDataAsset;
+class UAnimMontage;
 
 UCLASS(ClassGroup = (Player), meta = (BlueprintSpawnableComponent, DisplayName = "PW Player Primary Action Component"))
 class PALWORLD_API UPWPlayerPrimaryActionComponent : public UActorComponent
@@ -25,6 +26,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player|PrimaryAction")
 	void TryStartPrimaryAction();
+
+	UFUNCTION(BlueprintCallable, Category = "Player|PrimaryAction")
+	void TryStopPrimaryAction();
+
+	UFUNCTION(BlueprintCallable, Category = "Player|PrimaryAction")
+	void HandlePrimaryActionHitNotify();
 
 	UFUNCTION(BlueprintCallable, Category = "Player|PrimaryAction")
 	void SetToolType(EPWToolType NewToolType);
@@ -54,9 +61,13 @@ private:
 	EPWToolType CurrentToolType = EPWToolType::Hand;
 
 	FTimerHandle ActionTimerHandle;
+	TArray<FTimerHandle> ScheduledHitTimerHandles;
 
 	UFUNCTION(Server, Reliable)
 	void ServerRequestPrimaryAction(FVector_NetQuantize ViewLocation, FVector_NetQuantizeNormal ViewDirection);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRequestStopPrimaryAction();
 
 	UFUNCTION(Server, Reliable)
 	void ServerSetToolType(EPWToolType NewToolType);
@@ -64,8 +75,18 @@ private:
 	UFUNCTION(Client, Unreliable)
 	void ClientShowDamage(float AppliedDamage, FVector_NetQuantize WorldLocation, EPWToolType ToolType, EPWResourceType ResourceType);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayPrimaryActionAnimation(EPWToolType ToolType);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastStopPrimaryActionAnimation(EPWToolType ToolType);
+
 	UFUNCTION()
 	void OnRep_CurrentToolType();
+
+	bool bPrimaryActionHeld = false;
+	bool bPrimaryActionFacingLocked = false;
+	float LastPrimaryActionHitTime = -FLT_MAX;
 
 	APWPlayerCharacter* GetPlayerCharacter() const;
 	const UPWPrimaryActionDataAsset* GetActionData() const;
@@ -74,6 +95,7 @@ private:
 	float GetStaminaCost() const;
 	float GetActionDuration() const;
 	float GetDamageVarianceRatio() const;
+	float GetMinHarvestHitInterval() const;
 	bool GetView(FVector& OutLocation, FVector& OutDirection) const;
 	bool FindTargetFromView(FHitResult& OutHitResult) const;
 	bool FindTargetFromViewData(const FVector& ViewLocation, const FVector& ViewDirection, FHitResult& OutHitResult) const;
@@ -86,7 +108,18 @@ private:
 	float ResolveDamage(EPWResourceType ResourceType) const;
 	float ApplyDamageVariance(float BaseDamage) const;
 	bool ApplyDamageToTarget(const FHitResult& HitResult, float DamageAmount, float& OutAppliedDamage) const;
+	bool ApplyPrimaryActionHitAuthority(const FVector& ViewLocation, const FVector& ViewDirection);
+	void ScheduleHarvestHitTimers();
+	void ClearScheduledHitTimers();
+	void PerformScheduledPrimaryActionHit();
 	void StartAuthority(const FHitResult& HitResult, const FVector& ActionDirection);
+	void StopAuthority();
 	void FinishAction();
+	bool ShouldPlayPrimaryActionAnimation(EPWToolType ToolType) const;
+	bool IsHarvestHitNotifyName(FName NotifyName) const;
+	TArray<float> GetPrimaryActionHitTimes(const UAnimMontage* Montage) const;
+	float GetActionRepeatDuration(EPWToolType ToolType) const;
+	void PlayPrimaryActionAnimation(EPWToolType ToolType);
+	void StopPrimaryActionAnimation(EPWToolType ToolType);
 	void ShowDamageLocal(float AppliedDamage, const FVector& WorldLocation, EPWToolType ToolType, EPWResourceType ResourceType);
 };

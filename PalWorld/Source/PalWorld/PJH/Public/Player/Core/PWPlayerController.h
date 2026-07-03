@@ -81,6 +81,7 @@ private:
 	void HandleCrouchCompleted(const FInputActionValue& Value);
 	void HandleRollStarted(const FInputActionValue& Value);
 	void HandlePrimaryActionStarted(const FInputActionValue& Value);
+	void HandlePrimaryActionCompleted(const FInputActionValue& Value);
 	void HandleAimStarted(const FInputActionValue& Value);
 	void HandleAimCompleted(const FInputActionValue& Value);
 	void HandleEquipmentWheelNextStarted(const FInputActionValue& Value);

@@ -124,6 +124,7 @@ void UPWPlayerInventoryLinkComponent::GetLifetimeReplicatedProps(TArray<FLifetim
 
 bool UPWPlayerInventoryLinkComponent::AddItem(FName ItemId, int32 Count)
 {
+	ItemId = NormalizeItemId(ItemId);
 	if (ItemId.IsNone() || Count <= 0)
 	{
 		return false;
@@ -280,6 +281,7 @@ bool UPWPlayerInventoryLinkComponent::IsInventoryFull() const
 
 void UPWPlayerInventoryLinkComponent::ServerAddItem_Implementation(FName ItemId, int32 Count)
 {
+	ItemId = NormalizeItemId(ItemId);
 	AddItemAuthority(ItemId, Count);
 }
 
@@ -305,6 +307,7 @@ void UPWPlayerInventoryLinkComponent::OnRep_Items()
 
 bool UPWPlayerInventoryLinkComponent::AddItemAuthority(FName ItemId, int32 Count)
 {
+	ItemId = NormalizeItemId(ItemId);
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor || !OwnerActor->HasAuthority() || ItemId.IsNone() || Count <= 0)
 	{
@@ -361,6 +364,7 @@ bool UPWPlayerInventoryLinkComponent::AddItemAuthority(FName ItemId, int32 Count
 
 bool UPWPlayerInventoryLinkComponent::AddItemToSlotAuthority(FName ItemId, int32 Count, int32 TargetSlotIndex)
 {
+	ItemId = NormalizeItemId(ItemId);
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor || !OwnerActor->HasAuthority()
 		|| ItemId.IsNone()
@@ -557,6 +561,23 @@ int32 UPWPlayerInventoryLinkComponent::FindFirstEmptySlotIndex() const
 
 int32 UPWPlayerInventoryLinkComponent::GetMaxStackForItem(FName ItemId) const
 {
+	ItemId = NormalizeItemId(ItemId);
 	const UPWItemDataAsset* ItemDefinition = GetItemDefinition(ItemId);
 	return ItemDefinition ? FMath::Max(1, ItemDefinition->GetMaxStack()) : 999;
+}
+
+FName UPWPlayerInventoryLinkComponent::NormalizeItemId(FName ItemId) const
+{
+	if (ItemId.IsNone())
+	{
+		return NAME_None;
+	}
+
+	const FString ItemIdString = ItemId.ToString();
+	if (ItemIdString.Contains(TEXT("Rock")) || ItemIdString.Contains(TEXT("Ore")))
+	{
+		return TEXT("Stone");
+	}
+
+	return ItemId;
 }
