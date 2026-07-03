@@ -1,0 +1,471 @@
+#include "UI/PW_WorldMapWidget.h"
+
+#include "Components/Border.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/Image.h"
+#include "Components/PanelWidget.h"
+#include "Engine/World.h"
+#include "Input/Events.h"
+#include "InputCoreTypes.h"
+#include "Map/PW_MapSubsystem.h"
+#include "TimerManager.h"
+
+void UPW_WorldMapWidget::ConfigureMapWidget(
+	const FString& InPlayerId,
+	AActor* InTrackedMapActor)
+{
+	PlayerId = InPlayerId.IsEmpty() ? TEXT("LocalPlayer") : InPlayerId;
+	TrackedMapActor = InTrackedMapActor;
+
+	ApplyMapSettingsToSubsystem();
+}
+
+void UPW_WorldMapWidget::RefreshMapData()
+{
+	UWorld* World = GetWorld();
+	UPW_MapSubsystem* MapSubsystem = World != nullptr ? World->GetSubsystem<UPW_MapSubsystem>() : nullptr;
+	if (MapSubsystem == nullptr)
+	{
+		return;
+	}
+
+	ApplyMapSettingsToSubsystem();
+
+	TArray<FPW_MapMarker> Markers;
+	MapSubsystem->GetMapMarkers(Markers);
+
+	TArray<int32> VisitedCellIndices;
+	MapSubsystem->GetVisitedCellIndices(PlayerId, VisitedCellIndices);
+
+	FVector2D PlayerMapUV = FVector2D::ZeroVector;
+	if (TrackedMapActor.IsValid())
+	{
+		const FVector ActorLocation = TrackedMapActor->GetActorLocation();
+		MapSubsystem->RevealAroundLocation(PlayerId, ActorLocation);
+		MapSubsystem->GetVisitedCellIndices(PlayerId, VisitedCellIndices);
+		PlayerMapUV = MapSubsystem->WorldLocationToMapUV(ActorLocation);
+	}
+	else
+	{
+		MapSubsystem->GetLocalPlayerMapUV(PlayerMapUV);
+	}
+
+	RefreshBuiltInMapVisuals(VisitedCellIndices, PlayerMapUV, MapSubsystem->GetRevealRadiusUV());
+
+	BP_OnMapDataRefreshed(
+		Markers,
+		VisitedCellIndices,
+		PlayerMapUV,
+		MapSubsystem->GetRevealRadiusUV(),
+		GridWidth,
+		GridHeight);
+}
+
+void UPW_WorldMapWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	RefreshMapBackgroundImage();
+	ApplyMapZoom();
+	ApplyMapSettingsToSubsystem();
+	SetInitialMapCoverVisible(true);
+	SetInitialVisualWidgetsVisible(false);
+
+	if (UWorld* World = GetWorld())
+	{
+		if (InitialRefreshDelaySeconds > 0.0f)
+		{
+			World->GetTimerManager().SetTimer(
+				DeferredInitialRefreshTimerHandle,
+				this,
+				&UPW_WorldMapWidget::RefreshMapDataAfterLayout,
+				InitialRefreshDelaySeconds,
+				false);
+		}
+		else
+		{
+			DeferredInitialRefreshTimerHandle = World->GetTimerManager().SetTimerForNextTick(this, &UPW_WorldMapWidget::RefreshMapDataAfterLayout);
+		}
+	}
+	else
+	{
+		RefreshMapData();
+	}
+
+	if (bAutoRefresh)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(
+				RefreshTimerHandle,
+				this,
+				&UPW_WorldMapWidget::RefreshMapData,
+				RefreshIntervalSeconds,
+				true);
+		}
+	}
+}
+
+void UPW_WorldMapWidget::NativeDestruct()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(RefreshTimerHandle);
+		World->GetTimerManager().ClearTimer(DeferredInitialRefreshTimerHandle);
+	}
+
+	Super::NativeDestruct();
+}
+
+FReply UPW_WorldMapWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (InMouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+	{
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
+
+	bIsDraggingMap = true;
+	LastDragScreenPosition = InMouseEvent.GetScreenSpacePosition();
+	return FReply::Handled().CaptureMouse(TakeWidget());
+}
+
+FReply UPW_WorldMapWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (InMouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+	{
+		return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
+	}
+
+	bIsDraggingMap = false;
+	return FReply::Handled().ReleaseMouseCapture();
+}
+
+FReply UPW_WorldMapWidget::NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (!bIsDraggingMap)
+	{
+		return Super::NativeOnMouseMove(InGeometry, InMouseEvent);
+	}
+
+	const FVector2D CurrentScreenPosition = InMouseEvent.GetScreenSpacePosition();
+	CurrentMapPanOffset += CurrentScreenPosition - LastDragScreenPosition;
+	LastDragScreenPosition = CurrentScreenPosition;
+	ApplyMapTransform();
+	return FReply::Handled();
+}
+
+FReply UPW_WorldMapWidget::NativeOnMouseWheel(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseWheel(InGeometry, InMouseEvent);
+
+	const float WheelDelta = InMouseEvent.GetWheelDelta();
+	if (FMath::IsNearlyZero(WheelDelta))
+	{
+		return FReply::Unhandled();
+	}
+
+	SetMapZoom(CurrentMapZoom + WheelDelta * MouseWheelZoomStep);
+	return FReply::Handled();
+}
+
+void UPW_WorldMapWidget::SetMapZoom(float NewMapZoom)
+{
+	CurrentMapZoom = FMath::Clamp(NewMapZoom, MinMapZoom, MaxMapZoom);
+	ApplyMapTransform();
+}
+
+void UPW_WorldMapWidget::ApplyMapSettingsToSubsystem()
+{
+	UWorld* World = GetWorld();
+	UPW_MapSubsystem* MapSubsystem = World != nullptr ? World->GetSubsystem<UPW_MapSubsystem>() : nullptr;
+	if (MapSubsystem == nullptr)
+	{
+		return;
+	}
+
+	MapSubsystem->SetMapBounds(WorldMin, WorldMax);
+	MapSubsystem->SetExplorationGridSize(GridWidth, GridHeight);
+	MapSubsystem->SetRevealRadius(RevealRadius);
+}
+
+void UPW_WorldMapWidget::RefreshMapBackgroundImage()
+{
+	if (MapBackgroundImage == nullptr)
+	{
+		return;
+	}
+
+	if (WorldMapMaterial != nullptr)
+	{
+		MapBackgroundImage->SetBrushFromMaterial(WorldMapMaterial);
+		return;
+	}
+
+	if (WorldMapTexture != nullptr)
+	{
+		MapBackgroundImage->SetBrushFromTexture(WorldMapTexture, true);
+	}
+}
+
+void UPW_WorldMapWidget::ApplyMapZoom()
+{
+	ApplyMapTransform();
+}
+
+void UPW_WorldMapWidget::ApplyMapTransform()
+{
+	if (MapZoomRoot != nullptr)
+	{
+		MapZoomRoot->SetRenderScale(FVector2D(CurrentMapZoom, CurrentMapZoom));
+		MapZoomRoot->SetRenderTranslation(CurrentMapPanOffset);
+	}
+}
+
+void UPW_WorldMapWidget::RefreshBuiltInMapVisuals(const TArray<int32>& VisitedCellIndices, FVector2D PlayerMapUV, float RevealRadiusUV)
+{
+	SyncMapOverlaySlotsToBackground();
+
+	const FVector2D MapSize = GetMapVisualSize();
+
+	if (VisitedDarkOverlayImage != nullptr)
+	{
+		VisitedDarkOverlayImage->SetColorAndOpacity(VisitedDarkOverlayColor);
+	}
+
+	RefreshUnvisitedCells(VisitedCellIndices, MapSize);
+	PositionWidgetAtMapUV(PlayerMarkerWidget, PlayerMapUV, MapSize);
+	PositionWidgetAtMapUV(CurrentAreaHighlightWidget, PlayerMapUV, MapSize);
+
+	if (CurrentAreaHighlightWidget != nullptr)
+	{
+		const float HighlightDiameter = FMath::Max(MapSize.X, MapSize.Y) * RevealRadiusUV * 2.0f;
+		if (UCanvasPanelSlot* HighlightSlot = Cast<UCanvasPanelSlot>(CurrentAreaHighlightWidget->Slot))
+		{
+			HighlightSlot->SetSize(FVector2D(HighlightDiameter, HighlightDiameter));
+			HighlightSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+		}
+	}
+
+	if (!bHasCompletedInitialVisualRefresh)
+	{
+		bHasCompletedInitialVisualRefresh = true;
+		SetInitialVisualWidgetsVisible(true);
+		SetInitialMapCoverVisible(false);
+	}
+}
+
+void UPW_WorldMapWidget::RefreshMapDataAfterLayout()
+{
+	RefreshMapData();
+}
+
+void UPW_WorldMapWidget::SetInitialMapCoverVisible(bool bVisible)
+{
+	if (InitialMapCoverImage != nullptr)
+	{
+		SyncCanvasSlotToBackground(InitialMapCoverImage, true);
+		InitialMapCoverImage->SetColorAndOpacity(UnvisitedCellColor);
+		InitialMapCoverImage->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
+}
+
+void UPW_WorldMapWidget::SetInitialVisualWidgetsVisible(bool bVisible)
+{
+	const ESlateVisibility NewVisibility = bVisible ? ESlateVisibility::Visible : ESlateVisibility::Hidden;
+
+	if (UnvisitedCellCanvas != nullptr)
+	{
+		UnvisitedCellCanvas->SetVisibility(NewVisibility);
+	}
+
+	if (VisitedDarkOverlayImage != nullptr)
+	{
+		VisitedDarkOverlayImage->SetVisibility(NewVisibility);
+	}
+
+	if (PlayerMarkerWidget != nullptr)
+	{
+		PlayerMarkerWidget->SetVisibility(NewVisibility);
+	}
+
+	if (CurrentAreaHighlightWidget != nullptr)
+	{
+		CurrentAreaHighlightWidget->SetVisibility(NewVisibility);
+	}
+}
+
+void UPW_WorldMapWidget::SyncMapOverlaySlotsToBackground()
+{
+	SyncCanvasSlotToBackground(UnvisitedCellCanvas, true);
+	SyncCanvasSlotToBackground(VisitedDarkOverlayImage, true);
+	SyncCanvasSlotToBackground(InitialMapCoverImage, true);
+}
+
+void UPW_WorldMapWidget::SyncCanvasSlotToBackground(UWidget* Widget, bool bMatchSize) const
+{
+	if (Widget == nullptr || MapBackgroundImage == nullptr || Widget == MapBackgroundImage)
+	{
+		return;
+	}
+
+	const UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(MapBackgroundImage->Slot);
+	UCanvasPanelSlot* TargetSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
+	if (BackgroundSlot == nullptr || TargetSlot == nullptr)
+	{
+		return;
+	}
+
+	TargetSlot->SetAnchors(BackgroundSlot->GetAnchors());
+	TargetSlot->SetAlignment(BackgroundSlot->GetAlignment());
+	TargetSlot->SetPosition(BackgroundSlot->GetPosition());
+	if (bMatchSize)
+	{
+		TargetSlot->SetSize(GetMapVisualSize());
+	}
+}
+
+void UPW_WorldMapWidget::RefreshUnvisitedCells(const TArray<int32>& VisitedCellIndices, const FVector2D& MapSize)
+{
+	if (UnvisitedCellCanvas == nullptr || ExplorationRenderGridWidth <= 0 || ExplorationRenderGridHeight <= 0)
+	{
+		return;
+	}
+
+	TSet<int32> VisitedCells;
+	for (const int32 CellIndex : VisitedCellIndices)
+	{
+		VisitedCells.Add(CellIndex);
+	}
+
+	UnvisitedCellCanvas->ClearChildren();
+
+	const FVector2D CellSize(
+		MapSize.X / ExplorationRenderGridWidth,
+		MapSize.Y / ExplorationRenderGridHeight);
+
+	for (int32 CellY = 0; CellY < ExplorationRenderGridHeight; ++CellY)
+	{
+		for (int32 CellX = 0; CellX < ExplorationRenderGridWidth; ++CellX)
+		{
+			if (IsRenderCellVisited(CellX, CellY, VisitedCells))
+			{
+				continue;
+			}
+
+			UBorder* CellBorder = NewObject<UBorder>(UnvisitedCellCanvas);
+			if (CellBorder == nullptr)
+			{
+				continue;
+			}
+
+			CellBorder->SetBrushColor(UnvisitedCellColor);
+			UCanvasPanelSlot* CellSlot = UnvisitedCellCanvas->AddChildToCanvas(CellBorder);
+			if (CellSlot != nullptr)
+			{
+				CellSlot->SetAutoSize(false);
+				CellSlot->SetPosition(FVector2D(CellX * CellSize.X, CellY * CellSize.Y));
+				CellSlot->SetSize(CellSize + FVector2D(1.0f, 1.0f));
+			}
+		}
+	}
+}
+
+void UPW_WorldMapWidget::PositionWidgetAtMapUV(UWidget* Widget, FVector2D MapUV, const FVector2D& MapSize) const
+{
+	if (Widget == nullptr)
+	{
+		return;
+	}
+
+	FVector2D Position = GetMapVisualOrigin() + FVector2D(MapUV.X * MapSize.X, MapUV.Y * MapSize.Y);
+	if (MapBackgroundImage != nullptr && Widget->GetParent() != nullptr)
+	{
+		const FGeometry& BackgroundGeometry = MapBackgroundImage->GetCachedGeometry();
+		const FGeometry& ParentGeometry = Widget->GetParent()->GetCachedGeometry();
+		const FVector2D BackgroundSize = BackgroundGeometry.GetLocalSize();
+		if (BackgroundSize.X > 1.0f && BackgroundSize.Y > 1.0f)
+		{
+			const FVector2D BackgroundLocalPosition(MapUV.X * BackgroundSize.X, MapUV.Y * BackgroundSize.Y);
+			Position = ParentGeometry.AbsoluteToLocal(BackgroundGeometry.LocalToAbsolute(BackgroundLocalPosition));
+		}
+	}
+
+	if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot))
+	{
+		CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f));
+		CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+		CanvasSlot->SetPosition(Position);
+		return;
+	}
+
+	Widget->SetRenderTranslation(Position);
+}
+
+FVector2D UPW_WorldMapWidget::GetMapVisualOrigin() const
+{
+	if (MapBackgroundImage != nullptr)
+	{
+		if (const UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(MapBackgroundImage->Slot))
+		{
+			const FVector2D SlotSize = GetMapVisualSize();
+			return BackgroundSlot->GetPosition() - BackgroundSlot->GetAlignment() * SlotSize;
+		}
+	}
+
+	return FVector2D::ZeroVector;
+}
+
+FVector2D UPW_WorldMapWidget::GetMapVisualSize() const
+{
+	if (MapBackgroundImage != nullptr)
+	{
+		if (const UCanvasPanelSlot* BackgroundSlot = Cast<UCanvasPanelSlot>(MapBackgroundImage->Slot))
+		{
+			const FVector2D SlotSize = BackgroundSlot->GetSize();
+			if (SlotSize.X > 1.0f && SlotSize.Y > 1.0f)
+			{
+				return SlotSize;
+			}
+		}
+
+		const FVector2D LocalSize = MapBackgroundImage->GetCachedGeometry().GetLocalSize();
+		if (LocalSize.X > 1.0f && LocalSize.Y > 1.0f)
+		{
+			return LocalSize;
+		}
+	}
+
+	if (MapZoomRoot != nullptr)
+	{
+		const FVector2D LocalSize = MapZoomRoot->GetCachedGeometry().GetLocalSize();
+		if (LocalSize.X > 1.0f && LocalSize.Y > 1.0f)
+		{
+			return LocalSize;
+		}
+	}
+
+	return FallbackMapWidgetSize;
+}
+
+bool UPW_WorldMapWidget::IsRenderCellVisited(int32 RenderCellX, int32 RenderCellY, const TSet<int32>& VisitedCells) const
+{
+	const int32 StartCellX = FMath::FloorToInt(static_cast<float>(RenderCellX) * GridWidth / ExplorationRenderGridWidth);
+	const int32 EndCellX = FMath::CeilToInt(static_cast<float>(RenderCellX + 1) * GridWidth / ExplorationRenderGridWidth);
+	const int32 StartCellY = FMath::FloorToInt(static_cast<float>(RenderCellY) * GridHeight / ExplorationRenderGridHeight);
+	const int32 EndCellY = FMath::CeilToInt(static_cast<float>(RenderCellY + 1) * GridHeight / ExplorationRenderGridHeight);
+
+	for (int32 CellY = StartCellY; CellY < EndCellY; ++CellY)
+	{
+		for (int32 CellX = StartCellX; CellX < EndCellX; ++CellX)
+		{
+			const int32 CellIndex = CellY * GridWidth + CellX;
+			if (VisitedCells.Contains(CellIndex))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
