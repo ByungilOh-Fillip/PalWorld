@@ -1,6 +1,7 @@
 #include "Resource/PW_HarvestableResourceClusterComponent.h"
 
 #include "Engine/World.h"
+#include "GameplayTags/PW_GameplayTags.h"
 #include "Interfaces/PW_ItemReceiver.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
@@ -65,9 +66,10 @@ bool UPW_HarvestableResourceClusterComponent::ApplyHarvestDamageToInstance(
 	const float AppliedDamage = PreviousHealth - CurrentHealth;
 	const int32 RewardMultiplier = ConsumeRewardIntervals(InstanceIndex, AppliedDamage);
 	const int32 GrantedRewardAmount = RewardMultiplier * RewardAmount;
+	const FName GrantedRewardName = ResolveRewardName();
 
 	GrantReward(InstigatorActor, RewardMultiplier);
-	OnInstanceDamaged.Broadcast(InstanceIndex, InstigatorActor, AppliedDamage, RewardName, GrantedRewardAmount);
+	OnInstanceDamaged.Broadcast(InstanceIndex, InstigatorActor, AppliedDamage, GrantedRewardName, GrantedRewardAmount);
 
 	UE_LOG(
 		LogTemp,
@@ -77,7 +79,7 @@ bool UPW_HarvestableResourceClusterComponent::ApplyHarvestDamageToInstance(
 		InstanceIndex,
 		AppliedDamage,
 		CurrentHealth,
-		*RewardName.ToString(),
+		*GrantedRewardName.ToString(),
 		GrantedRewardAmount);
 
 	if (CurrentHealth <= 0.0f)
@@ -145,12 +147,39 @@ bool UPW_HarvestableResourceClusterComponent::IsValidInstanceIndex(int32 Instanc
 	return CurrentHealthByInstance.IsValidIndex(InstanceIndex);
 }
 
+FName UPW_HarvestableResourceClusterComponent::ResolveRewardName() const
+{
+	if (!RewardName.IsNone())
+	{
+		const FString RewardString = RewardName.ToString();
+		if (RewardString.Contains(TEXT("Rock")) || RewardString.Contains(TEXT("Ore")))
+		{
+			return TEXT("Stone");
+		}
+
+		return RewardName;
+	}
+
+	if (RequiredWorkTag.MatchesTagExact(PW_GameplayTags::Work_Mining))
+	{
+		return TEXT("Stone");
+	}
+
+	if (RequiredWorkTag.MatchesTagExact(PW_GameplayTags::Work_Lumbering))
+	{
+		return TEXT("Wood");
+	}
+
+	return NAME_None;
+}
+
 int32 UPW_HarvestableResourceClusterComponent::ConsumeRewardIntervals(int32 InstanceIndex, float AppliedDamage)
 {
+	const FName GrantedRewardName = ResolveRewardName();
 	if (!RewardDamageProgressByInstance.IsValidIndex(InstanceIndex)
 		|| AppliedDamage <= 0.f
 		|| RewardAmount <= 0
-		|| RewardName.IsNone())
+		|| GrantedRewardName.IsNone())
 	{
 		return 0;
 	}
@@ -175,13 +204,14 @@ int32 UPW_HarvestableResourceClusterComponent::ConsumeRewardIntervals(int32 Inst
 void UPW_HarvestableResourceClusterComponent::GrantReward(AActor* InstigatorActor, int32 RewardMultiplier) const
 {
 	const int32 GrantedRewardAmount = RewardMultiplier * RewardAmount;
-	if (!InstigatorActor || GrantedRewardAmount <= 0 || RewardName.IsNone())
+	const FName GrantedRewardName = ResolveRewardName();
+	if (!InstigatorActor || GrantedRewardAmount <= 0 || GrantedRewardName.IsNone())
 	{
 		return;
 	}
 
 	if (InstigatorActor->GetClass()->ImplementsInterface(UPW_ItemReceiver::StaticClass()))
 	{
-		IPW_ItemReceiver::Execute_ReceiveItem(InstigatorActor, RewardName, GrantedRewardAmount);
+		IPW_ItemReceiver::Execute_ReceiveItem(InstigatorActor, GrantedRewardName, GrantedRewardAmount);
 	}
 }

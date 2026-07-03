@@ -2,12 +2,15 @@
 
 #include "Player/Components/PWPlayerPrimaryActionComponent.h"
 
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayTags/PW_GameplayTags.h"
 #include "Interfaces/PW_HarvestDamageTarget.h"
 #include "Interfaces/PW_HarvestInstanceDamageTarget.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/Animation/PWAnimNotify_PrimaryActionHit.h"
 #include "Player/Components/PWPlayerActionComponent.h"
 #include "Player/Components/PWPlayerEquipmentComponent.h"
 #include "Player/Components/PWPlayerStatComponent.h"
@@ -42,11 +45,7 @@ void UPWPlayerPrimaryActionComponent::TryStartPrimaryAction()
 	}
 
 	FHitResult HitResult;
-	if (!FindTargetFromView(HitResult))
-	{
-		BP_OnPrimaryActionFailed();
-		return;
-	}
+	FindTargetFromView(HitResult);
 
 	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
 	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
@@ -56,6 +55,25 @@ void UPWPlayerPrimaryActionComponent::TryStartPrimaryAction()
 	}
 
 	StartAuthority(HitResult, ViewDirection);
+}
+
+void UPWPlayerPrimaryActionComponent::TryStopPrimaryAction()
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
+	{
+		ServerRequestStopPrimaryAction();
+		return;
+	}
+
+	StopAuthority();
+}
+
+void UPWPlayerPrimaryActionComponent::HandlePrimaryActionHitNotify()
+{
+	// 노티파이 자체는 타이밍 마커로만 사용한다.
+	// 실제 판정은 서버가 몽타주의 노티파이 시간을 읽어 예약한 타이머에서 처리한다.
+	UE_LOG(LogTemp, Verbose, TEXT("[PWPrimaryAction] PrimaryActionHit notify received. Server scheduled timer handles damage."));
 }
 
 void UPWPlayerPrimaryActionComponent::SetToolType(EPWToolType NewToolType)
@@ -84,13 +102,14 @@ void UPWPlayerPrimaryActionComponent::ServerRequestPrimaryAction_Implementation(
 	}
 
 	FHitResult HitResult;
-	if (!FindTargetFromViewData(ViewLocation, ViewDirection, HitResult))
-	{
-		BP_OnPrimaryActionFailed();
-		return;
-	}
+	FindTargetFromViewData(ViewLocation, ViewDirection, HitResult);
 
 	StartAuthority(HitResult, ViewDirection);
+}
+
+void UPWPlayerPrimaryActionComponent::ServerRequestStopPrimaryAction_Implementation()
+{
+	StopAuthority();
 }
 
 void UPWPlayerPrimaryActionComponent::ServerSetToolType_Implementation(EPWToolType NewToolType)
@@ -101,6 +120,16 @@ void UPWPlayerPrimaryActionComponent::ServerSetToolType_Implementation(EPWToolTy
 void UPWPlayerPrimaryActionComponent::ClientShowDamage_Implementation(float AppliedDamage, FVector_NetQuantize WorldLocation, EPWToolType ToolType, EPWResourceType ResourceType)
 {
 	ShowDamageLocal(AppliedDamage, WorldLocation, ToolType, ResourceType);
+}
+
+void UPWPlayerPrimaryActionComponent::MulticastPlayPrimaryActionAnimation_Implementation(EPWToolType ToolType)
+{
+	PlayPrimaryActionAnimation(ToolType);
+}
+
+void UPWPlayerPrimaryActionComponent::MulticastStopPrimaryActionAnimation_Implementation(EPWToolType ToolType)
+{
+	StopPrimaryActionAnimation(ToolType);
 }
 
 void UPWPlayerPrimaryActionComponent::OnRep_CurrentToolType()
@@ -140,6 +169,11 @@ float UPWPlayerPrimaryActionComponent::GetActionDuration() const
 float UPWPlayerPrimaryActionComponent::GetDamageVarianceRatio() const
 {
 	return GetActionData()->GetDamageVarianceRatio();
+}
+
+float UPWPlayerPrimaryActionComponent::GetMinHarvestHitInterval() const
+{
+	return GetActionData()->GetMinHarvestHitInterval();
 }
 
 bool UPWPlayerPrimaryActionComponent::GetView(FVector& OutLocation, FVector& OutDirection) const
@@ -224,12 +258,6 @@ bool UPWPlayerPrimaryActionComponent::CanDamageTarget(const FHitResult& HitResul
 	}
 	else if (!TargetActor->GetClass()->ImplementsInterface(UPW_HarvestDamageTarget::StaticClass())
 		&& !TargetActor->GetClass()->ImplementsInterface(UPW_HarvestInstanceDamageTarget::StaticClass()))
-	{
-		return false;
-	}
-
-	const UPWPlayerActionComponent* ActionComponent = PlayerCharacter->GetActionComponent();
-	if (ActionComponent && !ActionComponent->CanStartAction(EPWPlayerActionState::PrimaryAction))
 	{
 		return false;
 	}
@@ -344,61 +372,44 @@ bool UPWPlayerPrimaryActionComponent::ApplyDamageToTarget(const FHitResult& HitR
 	return false;
 }
 
-void UPWPlayerPrimaryActionComponent::StartAuthority(const FHitResult& HitResult, const FVector& ActionDirection)
+bool UPWPlayerPrimaryActionComponent::ApplyPrimaryActionHitAuthority(const FVector& ViewLocation, const FVector& ViewDirection)
 {
 	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority() || !bPrimaryActionHeld)
+	{
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	const float CurrentTime = World ? World->GetTimeSeconds() : 0.f;
+	if (CurrentTime - LastPrimaryActionHitTime < GetMinHarvestHitInterval())
+	{
+		return false;
+	}
+
+	if (!IsViewLocationAllowed(ViewLocation))
+	{
+		return false;
+	}
+
+	LastPrimaryActionHitTime = CurrentTime;
+
+	FHitResult HitResult;
+	if (!FindTargetFromViewData(ViewLocation, ViewDirection, HitResult) || !CanDamageTarget(HitResult))
+	{
+		return true;
+	}
+
 	AActor* TargetActor = HitResult.GetActor();
-	if (!PlayerCharacter || !PlayerCharacter->HasAuthority() || !CanDamageTarget(HitResult))
-	{
-		BP_OnPrimaryActionFailed();
-		return;
-	}
-
-	UPWPlayerActionComponent* ActionComponent = PlayerCharacter->GetActionComponent();
-	if (ActionComponent && !ActionComponent->TryStartActionAuthority(EPWPlayerActionState::PrimaryAction))
-	{
-		BP_OnPrimaryActionFailed();
-		return;
-	}
-
-	auto FinishPrimaryActionState = [ActionComponent]()
-	{
-		if (ActionComponent)
-		{
-			ActionComponent->FinishActionAuthority(EPWPlayerActionState::PrimaryAction);
-		}
-	};
-
-	FVector FlatDirection = ActionDirection;
-	FlatDirection.Z = 0.f;
-	if (!FlatDirection.IsNearlyZero())
-	{
-		// 서버도 액션 방향을 확정해 다른 클라이언트가 보는 캐릭터 방향을 맞춘다.
-		PlayerCharacter->SetActorRotation(FRotator(0.f, FlatDirection.Rotation().Yaw, 0.f));
-	}
-
-	UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent();
-	const float ActionStaminaCost = GetStaminaCost();
-	if (StatComponent && !StatComponent->TryConsumeStamina(ActionStaminaCost))
-	{
-		FinishPrimaryActionState();
-		BP_OnPrimaryActionFailed();
-		return;
-	}
-
 	const EPWToolType ToolType = ResolveCurrentToolType();
 	const EPWResourceType ResourceType = ResolveResourceType(HitResult);
 	const float DamageAmount = ApplyDamageVariance(ResolveDamage(ResourceType));
 
 	float AppliedDamage = 0.f;
-	if (!ApplyDamageToTarget(HitResult, DamageAmount, AppliedDamage))
+	if (!ApplyDamageToTarget(HitResult, DamageAmount, AppliedDamage) || AppliedDamage <= 0.f || !TargetActor)
 	{
-		FinishPrimaryActionState();
-		BP_OnPrimaryActionFailed();
-		return;
+		return false;
 	}
-
-	BP_OnPrimaryActionStarted(TargetActor, ToolType);
 
 	const FVector DamageLocation = HitResult.ImpactPoint.IsNearlyZero()
 		? TargetActor->GetActorLocation() + FVector(0.f, 0.f, 120.f)
@@ -414,12 +425,193 @@ void UPWPlayerPrimaryActionComponent::StartAuthority(const FHitResult& HitResult
 		ClientShowDamage(AppliedDamage, FVector_NetQuantize(DamageLocation), ToolType, ResourceType);
 	}
 
+	return true;
+}
+
+void UPWPlayerPrimaryActionComponent::ScheduleHarvestHitTimers()
+{
+	ClearScheduledHitTimers();
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const EPWToolType ToolType = ResolveCurrentToolType();
+	const UAnimMontage* ActionMontage = GetActionData()->GetPrimaryActionMontage(ToolType);
+	TArray<float> HitTimes = GetPrimaryActionHitTimes(ActionMontage);
+	if (HitTimes.IsEmpty())
+	{
+		const float FallbackHitTime = GetActionData()->GetFallbackHitTime(ToolType);
+		if (ActionMontage && FallbackHitTime > 0.f)
+		{
+			HitTimes.Add(FMath::Min(FallbackHitTime, ActionMontage->GetPlayLength()));
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("[PWPrimaryAction] Primary action montage has no PrimaryActionHit/Attack1/Attack2 notify. Use fallback hit time %.3fs."),
+				HitTimes[0]);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Primary action montage has no hit notify and no fallback hit time. Damage will not be applied for this swing."));
+			return;
+		}
+	}
+
+	const float PlayRate = FMath::Max(GetActionData()->GetAnimationPlayRate(ToolType), KINDA_SMALL_NUMBER);
+	ScheduledHitTimerHandles.Reserve(HitTimes.Num());
+
+	for (const float HitTime : HitTimes)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[PWPrimaryAction] Schedule primary action hit at %.3fs."), HitTime);
+
+		FTimerHandle HitTimerHandle;
+		World->GetTimerManager().SetTimer(
+			HitTimerHandle,
+			this,
+			&UPWPlayerPrimaryActionComponent::PerformScheduledPrimaryActionHit,
+			FMath::Max(HitTime / PlayRate, 0.01f),
+			false);
+		ScheduledHitTimerHandles.Add(HitTimerHandle);
+	}
+}
+
+void UPWPlayerPrimaryActionComponent::ClearScheduledHitTimers()
+{
+	if (UWorld* World = GetWorld())
+	{
+		for (FTimerHandle& HitTimerHandle : ScheduledHitTimerHandles)
+		{
+			World->GetTimerManager().ClearTimer(HitTimerHandle);
+		}
+	}
+
+	ScheduledHitTimerHandles.Reset();
+}
+
+void UPWPlayerPrimaryActionComponent::PerformScheduledPrimaryActionHit()
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority() || !bPrimaryActionHeld)
+	{
+		return;
+	}
+
+	FVector ViewLocation = FVector::ZeroVector;
+	FVector ViewDirection = FVector::ZeroVector;
+	if (!GetView(ViewLocation, ViewDirection))
+	{
+		FRotator EyeRotation = FRotator::ZeroRotator;
+		PlayerCharacter->GetActorEyesViewPoint(ViewLocation, EyeRotation);
+		ViewDirection = EyeRotation.Vector();
+	}
+
+	ApplyPrimaryActionHitAuthority(ViewLocation, ViewDirection);
+}
+
+void UPWPlayerPrimaryActionComponent::StartAuthority(const FHitResult& HitResult, const FVector& ActionDirection)
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	AActor* TargetActor = HitResult.GetActor();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
+	{
+		BP_OnPrimaryActionFailed();
+		return;
+	}
+
+	UPWPlayerActionComponent* ActionComponent = PlayerCharacter->GetActionComponent();
+	if (ActionComponent && !ActionComponent->TryStartActionAuthority(EPWPlayerActionState::PrimaryAction))
+	{
+		bPrimaryActionHeld = false;
+		bPrimaryActionFacingLocked = false;
+		BP_OnPrimaryActionFailed();
+		return;
+	}
+
+	if (UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent())
+	{
+		const float ActionStaminaCost = GetStaminaCost();
+		if (ActionStaminaCost > 0.f && !StatComponent->TryConsumeStamina(ActionStaminaCost))
+		{
+			if (ActionComponent)
+			{
+				ActionComponent->FinishActionAuthority(EPWPlayerActionState::PrimaryAction);
+			}
+
+			bPrimaryActionHeld = false;
+			bPrimaryActionFacingLocked = false;
+			BP_OnPrimaryActionFailed();
+			return;
+		}
+	}
+
+	if (!bPrimaryActionFacingLocked)
+	{
+		FVector FlatDirection = ActionDirection;
+		FlatDirection.Z = 0.f;
+		if (!FlatDirection.IsNearlyZero())
+		{
+			// 좌클릭 유지 중에는 첫 타격에서만 몸 방향을 고정해 반복 루프의 화면 튐을 막는다.
+			PlayerCharacter->SetActorRotation(FRotator(0.f, FlatDirection.Rotation().Yaw, 0.f));
+		}
+
+		bPrimaryActionFacingLocked = true;
+	}
+
+	bPrimaryActionHeld = true;
+	LastPrimaryActionHitTime = -FLT_MAX;
+
+	const EPWToolType ToolType = ResolveCurrentToolType();
+	BP_OnPrimaryActionStarted(TargetActor, ToolType);
+	if (ShouldPlayPrimaryActionAnimation(ToolType))
+	{
+		MulticastPlayPrimaryActionAnimation(ToolType);
+		ScheduleHarvestHitTimers();
+	}
+	else
+	{
+		ApplyPrimaryActionHitAuthority(PlayerCharacter->GetActorLocation(), ActionDirection);
+	}
+
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(ActionTimerHandle);
-		World->GetTimerManager().SetTimer(ActionTimerHandle, this, &UPWPlayerPrimaryActionComponent::FinishAction, GetActionDuration(), false);
+		World->GetTimerManager().SetTimer(
+			ActionTimerHandle,
+			this,
+			&UPWPlayerPrimaryActionComponent::FinishAction,
+			GetActionRepeatDuration(ToolType),
+			false);
 	}
 
+}
+
+void UPWPlayerPrimaryActionComponent::StopAuthority()
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
+	{
+		return;
+	}
+
+	bPrimaryActionHeld = false;
+	bPrimaryActionFacingLocked = false;
+	LastPrimaryActionHitTime = -FLT_MAX;
+	ClearScheduledHitTimers();
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ActionTimerHandle);
+	}
+
+	if (UPWPlayerActionComponent* ActionComponent = PlayerCharacter->GetActionComponent())
+	{
+		ActionComponent->FinishActionAuthority(EPWPlayerActionState::PrimaryAction);
+	}
+
+	MulticastStopPrimaryActionAnimation(ResolveCurrentToolType());
 }
 
 void UPWPlayerPrimaryActionComponent::FinishAction()
@@ -434,6 +626,166 @@ void UPWPlayerPrimaryActionComponent::FinishAction()
 	{
 		ActionComponent->FinishActionAuthority(EPWPlayerActionState::PrimaryAction);
 	}
+
+	if (!bPrimaryActionHeld)
+	{
+		bPrimaryActionFacingLocked = false;
+		ClearScheduledHitTimers();
+		return;
+	}
+
+	ClearScheduledHitTimers();
+
+	FVector ViewLocation = FVector::ZeroVector;
+	FVector ViewDirection = FVector::ZeroVector;
+	if (!GetView(ViewLocation, ViewDirection))
+	{
+		StopAuthority();
+		return;
+	}
+
+	FHitResult HitResult;
+	FindTargetFromView(HitResult);
+	StartAuthority(HitResult, ViewDirection);
+}
+
+bool UPWPlayerPrimaryActionComponent::ShouldPlayPrimaryActionAnimation(EPWToolType ToolType) const
+{
+	const UPWPrimaryActionDataAsset* ActionData = GetActionData();
+	return ActionData && ActionData->GetPrimaryActionMontage(ToolType);
+}
+
+bool UPWPlayerPrimaryActionComponent::IsHarvestHitNotifyName(FName NotifyName) const
+{
+	static const FName Attack1Name(TEXT("Attack1"));
+	static const FName Attack2Name(TEXT("Attack2"));
+	static const FName PrimaryActionHitName(TEXT("PrimaryActionHit"));
+
+	return NotifyName == Attack1Name
+		|| NotifyName == Attack2Name
+		|| NotifyName == PrimaryActionHitName;
+}
+
+TArray<float> UPWPlayerPrimaryActionComponent::GetPrimaryActionHitTimes(const UAnimMontage* Montage) const
+{
+	TArray<float> HitTimes;
+	if (!Montage)
+	{
+		return HitTimes;
+	}
+
+	for (const FAnimNotifyEvent& NotifyEvent : Montage->Notifies)
+	{
+		const bool bNamedHitNotify = IsHarvestHitNotifyName(NotifyEvent.NotifyName);
+		const bool bClassHitNotify = NotifyEvent.Notify && NotifyEvent.Notify->IsA<UPWAnimNotify_PrimaryActionHit>();
+		if (!bNamedHitNotify && !bClassHitNotify)
+		{
+			continue;
+		}
+
+		const float HitTime = NotifyEvent.GetTriggerTime();
+		if (HitTime >= 0.f && HitTime < Montage->GetPlayLength())
+		{
+			HitTimes.Add(HitTime);
+		}
+	}
+
+	HitTimes.Sort();
+	return HitTimes;
+}
+
+float UPWPlayerPrimaryActionComponent::GetActionRepeatDuration(EPWToolType ToolType) const
+{
+	const UPWPrimaryActionDataAsset* ActionData = GetActionData();
+	if (!ActionData)
+	{
+		return GetActionDuration();
+	}
+
+	float RepeatDuration = ActionData->GetActionDurationForTool(ToolType);
+	if (const UAnimMontage* ActionMontage = ActionData->GetPrimaryActionMontage(ToolType))
+	{
+		const float PlayRate = FMath::Max(ActionData->GetAnimationPlayRate(ToolType), KINDA_SMALL_NUMBER);
+		const TArray<float> HitTimes = GetPrimaryActionHitTimes(ActionMontage);
+		if (!HitTimes.IsEmpty())
+		{
+			// 반복 주기가 타격 노티파이보다 짧으면 데미지 타이머가 지워지므로, 마지막 타격 직후까지만 보장한다.
+			RepeatDuration = FMath::Max(RepeatDuration, HitTimes.Last() / PlayRate + 0.05f);
+		}
+		else
+		{
+			RepeatDuration = FMath::Max(RepeatDuration, ActionData->GetFallbackHitTime(ToolType) / PlayRate + 0.05f);
+		}
+	}
+
+	return FMath::Max(RepeatDuration, 0.05f);
+}
+
+void UPWPlayerPrimaryActionComponent::PlayPrimaryActionAnimation(EPWToolType ToolType)
+{
+	const UPWPrimaryActionDataAsset* ActionData = GetActionData();
+	if (!ActionData || !ShouldPlayPrimaryActionAnimation(ToolType))
+	{
+		return;
+	}
+
+	UAnimMontage* ActionMontage = ActionData->GetPrimaryActionMontage(ToolType);
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	USkeletalMeshComponent* CharacterMesh = PlayerCharacter ? PlayerCharacter->GetMesh() : nullptr;
+	UAnimInstance* AnimInstance = CharacterMesh ? CharacterMesh->GetAnimInstance() : nullptr;
+	if (!ActionMontage || !AnimInstance)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[PWPrimaryAction] Cannot play primary action montage. Montage=%s AnimInstance=%s"),
+			ActionMontage ? *ActionMontage->GetName() : TEXT("None"),
+			AnimInstance ? *AnimInstance->GetName() : TEXT("None"));
+		return;
+	}
+
+	const FName SlotName = ActionMontage->SlotAnimTracks.IsEmpty()
+		? NAME_None
+		: ActionMontage->SlotAnimTracks[0].SlotName;
+	const float PlayedDuration = AnimInstance->Montage_Play(ActionMontage, ActionData->GetAnimationPlayRate(ToolType));
+	if (PlayedDuration <= 0.f)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[PWPrimaryAction] Montage_Play failed. Montage=%s Slot=%s. Check the character skeleton and ABP Slot node."),
+			*ActionMontage->GetName(),
+			*SlotName.ToString());
+		return;
+	}
+
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[PWPrimaryAction] Play primary action montage. Montage=%s Slot=%s Duration=%.3f"),
+		*ActionMontage->GetName(),
+		*SlotName.ToString(),
+		PlayedDuration);
+}
+
+void UPWPlayerPrimaryActionComponent::StopPrimaryActionAnimation(EPWToolType ToolType)
+{
+	const UPWPrimaryActionDataAsset* ActionData = GetActionData();
+	if (!ActionData || !ShouldPlayPrimaryActionAnimation(ToolType))
+	{
+		return;
+	}
+
+	UAnimMontage* ActionMontage = ActionData->GetPrimaryActionMontage(ToolType);
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	USkeletalMeshComponent* CharacterMesh = PlayerCharacter ? PlayerCharacter->GetMesh() : nullptr;
+	UAnimInstance* AnimInstance = CharacterMesh ? CharacterMesh->GetAnimInstance() : nullptr;
+	if (!ActionMontage || !AnimInstance)
+	{
+		return;
+	}
+
+	AnimInstance->Montage_Stop(ActionData->GetHarvestAnimationBlendOutTime(), ActionMontage);
 }
 
 void UPWPlayerPrimaryActionComponent::ShowDamageLocal(float AppliedDamage, const FVector& WorldLocation, EPWToolType ToolType, EPWResourceType ResourceType)

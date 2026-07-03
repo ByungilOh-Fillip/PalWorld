@@ -226,6 +226,14 @@ void APWPlayerCharacter::StartPrimaryAction()
 	}
 }
 
+void APWPlayerCharacter::StopPrimaryAction()
+{
+	if (PrimaryActionComponent)
+	{
+		PrimaryActionComponent->TryStopPrimaryAction();
+	}
+}
+
 bool APWPlayerCharacter::StartAim()
 {
 	if (!CanStartAim())

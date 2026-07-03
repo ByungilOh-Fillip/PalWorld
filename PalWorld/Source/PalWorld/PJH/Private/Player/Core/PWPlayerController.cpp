@@ -113,6 +113,8 @@ void APWPlayerController::SetupInputComponent()
 	if (PrimaryAction)
 	{
 		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Started, this, &APWPlayerController::HandlePrimaryActionStarted);
+		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Completed, this, &APWPlayerController::HandlePrimaryActionCompleted);
+		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandlePrimaryActionCompleted);
 	}
 
 	if (AimAction)
@@ -220,6 +222,14 @@ void APWPlayerController::HandlePrimaryActionStarted(const FInputActionValue& Va
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->StartPrimaryAction();
+	}
+}
+
+void APWPlayerController::HandlePrimaryActionCompleted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StopPrimaryAction();
 	}
 }
 
