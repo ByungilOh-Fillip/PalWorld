@@ -94,6 +94,7 @@ private:
 	void DepleteInstance(int32 InstanceIndex, AActor* InstigatorActor);
 	void RespawnInstance(int32 InstanceIndex);
 	bool IsValidInstanceIndex(int32 InstanceIndex) const;
+	FName ResolveRewardName() const;
 	int32 ConsumeRewardIntervals(int32 InstanceIndex, float AppliedDamage);
 	void GrantReward(AActor* InstigatorActor, int32 RewardMultiplier) const;
 };

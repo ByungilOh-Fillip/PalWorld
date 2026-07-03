@@ -41,6 +41,7 @@ public:
 	void StopCrouch();
 	void StartRoll();
 	void StartPrimaryAction();
+	void StopPrimaryAction();
 	bool StartAim();
 	void StopAim();
 	void SelectNextEquipmentSlot();

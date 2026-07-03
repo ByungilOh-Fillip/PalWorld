@@ -157,6 +157,7 @@ private:
 	bool RemoveItemFromSlotAuthority(int32 SlotIndex, int32 Count, FPWInventoryItemStack* OutRemovedStack = nullptr);
 	void EnsureDefaultItemDefinitions();
 	void GrantStarterItemsAuthority();
+	FName NormalizeItemId(FName ItemId) const;
 	FPWInventoryItemStack* FindStack(FName ItemId);
 	const FPWInventoryItemStack* FindStack(FName ItemId) const;
 	FPWInventoryItemStack* FindStackBySlot(int32 SlotIndex);
