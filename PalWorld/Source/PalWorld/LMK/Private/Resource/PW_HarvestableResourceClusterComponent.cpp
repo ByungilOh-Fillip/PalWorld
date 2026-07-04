@@ -1,7 +1,7 @@
 #include "Resource/PW_HarvestableResourceClusterComponent.h"
 
 #include "Engine/World.h"
-#include "GameplayTags/PW_GameplayTags.h"
+#include "PW_GameplayTags.h"
 #include "Interfaces/PW_ItemReceiver.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
