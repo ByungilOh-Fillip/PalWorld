@@ -21,6 +21,24 @@ void UPW_WorldMapWidget::ConfigureMapWidget(
 	ApplyMapSettingsToSubsystem();
 }
 
+void UPW_WorldMapWidget::ConfigureMapWidgetWithSettings(
+	const FString& InPlayerId,
+	AActor* InTrackedMapActor,
+	const FVector2D& InWorldMin,
+	const FVector2D& InWorldMax,
+	int32 InGridWidth,
+	int32 InGridHeight,
+	float InRevealRadius)
+{
+	WorldMin = InWorldMin;
+	WorldMax = InWorldMax;
+	GridWidth = FMath::Max(1, InGridWidth);
+	GridHeight = FMath::Max(1, InGridHeight);
+	RevealRadius = FMath::Max(0.0f, InRevealRadius);
+
+	ConfigureMapWidget(InPlayerId, InTrackedMapActor);
+}
+
 void UPW_WorldMapWidget::RefreshMapData()
 {
 	UWorld* World = GetWorld();

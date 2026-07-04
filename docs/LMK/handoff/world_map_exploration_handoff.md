@@ -29,20 +29,21 @@
 | 위치 | 책임 |
 |---|---|
 | `UPW_MapSubsystem` | 월드 좌표와 지도 UV 변환, 방문 셀 기록, 지도 마커 수집, 탐험 저장 DTO 제공 |
-| `UPW_MapExplorerComponent` | 플레이어 Actor에 붙여 Owner 위치 방문 처리, PlayerId 관리, 저장/로드 DTO 접근 |
+| `UPW_MapExplorerComponent` | 레거시/선택 컴포넌트. 플레이어 외 Actor가 직접 탐험을 밝히는 경우에만 사용 |
 | `APW_TeleportPointActor` | 레벨 배치용 텔레포트 포인트, 발견 여부와 지도 표시 정보 보유 |
 | `UPW_WorldMapWidget` | Blueprint 위젯에 지도 데이터 전달 |
-| `UPW_WorldMapControllerComponent` | PlayerController에 붙여 월드맵 WBP 생성/제거, 마우스 커서와 InputMode 처리 |
+| `UPW_WorldMapControllerComponent` | PlayerController에 붙여 탐험 갱신, 월드맵 WBP 생성/제거, 마우스 커서와 InputMode 처리 |
 | `WBP_WorldMap` | 배경 이미지, 검정 마스크, 방문 셀, 현재 위치 밝기, 마커 표시 |
 
 ## Behavior
 
 - `UPW_MapSubsystem`은 Dedicated Server가 아닌 월드에서 로컬 플레이어 위치를 주기적으로 샘플링한다.
 - 플레이어 위치 기준 `RevealRadius` 안에 들어온 셀은 방문 처리된다.
-- 플레이어 BP에 `UPW_MapExplorerComponent`를 붙이면 Owner 위치 기준으로 방문 처리를 수행하고, SaveGame 연동용 데이터를 컴포넌트에서 바로 가져올 수 있다.
+- 기본 경로는 PlayerController BP에 `UPW_WorldMapControllerComponent`만 붙이는 방식이다.
+- `UPW_WorldMapControllerComponent`는 현재 Possess 중인 Pawn 위치 기준으로 방문 처리를 수행하고, SaveGame 연동용 데이터를 컴포넌트에서 바로 가져올 수 있다.
 - PlayerController BP에 `UPW_WorldMapControllerComponent`를 붙이면 `M` 입력에서 `ToggleWorldMap()`만 호출해 월드맵 표시/미표시를 제어할 수 있다.
-- `UPW_WorldMapControllerComponent`는 `PlayerId`와 현재 Possess 중인 Pawn만 `WBP_WorldMap`에 넘긴다. WBP의 `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius` 값은 덮어쓰지 않는다.
-- `WBP_WorldMap`은 전달받은 Pawn 위치와 WBP 자체 맵 설정으로 플레이어 마커와 현재 밝힘 위치를 계산한다.
+- `UPW_WorldMapControllerComponent`는 `PlayerId`, 현재 Possess 중인 Pawn, `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius` 값을 `WBP_WorldMap`에 넘긴다.
+- `WBP_WorldMap`은 전달받은 Pawn 위치와 Controller 컴포넌트가 주입한 맵 설정으로 플레이어 마커와 현재 밝힘 위치를 계산한다.
 - `GetVisitedCellIndices()`는 방문한 셀 인덱스만 정렬해서 반환한다.
 - `GetMapMarkers()`는 발견된 `APW_TeleportPointActor`와 현재 월드의 `APW_BaseCampActor`를 마커로 반환한다.
 - `UPW_WorldMapWidget::RefreshMapData()`는 마커, 방문 셀, 플레이어 UV, 밝기 반경 UV를 `BP_OnMapDataRefreshed` 이벤트로 넘긴다.
@@ -83,20 +84,19 @@ SaveGame에서 FPW_MapExplorationSaveData 읽기
 ## BP Setup
 
 1. 에디터에서 `Palworld.umap`을 탑다운으로 캡처해 Texture2D로 임포트한다.
-2. 플레이어 BP에 `PW_MapExplorerComponent`를 추가한다.
-   - `PlayerId`: 저장 데이터를 구분할 플레이어 ID. 싱글 플레이는 기본 `LocalPlayer`로 충분하다.
-   - `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius`: 자동 방문 처리를 쓸 때 월드맵 위젯과 같은 값으로 맞춘다.
-   - `bAutoReveal`: 켜두면 Owner 위치를 주기적으로 방문 처리한다.
-   - `RevealUpdateIntervalSeconds`: 방문 처리 주기. 기본값은 `0.5`다.
-3. PlayerController BP에 `PW_WorldMapControllerComponent`를 추가한다.
+2. PlayerController BP에 `PW_WorldMapControllerComponent`를 추가한다.
    - `WorldMapWidgetClass`: `WBP_WorldMap`을 지정한다.
    - `WorldMapZOrder`: 기본값 `100`을 사용한다.
    - `bApplyGameAndUIInputMode`: 월드맵 열 때 마우스 입력을 같이 받으려면 켠다.
    - `bRestoreGameOnlyInputModeOnHide`: 월드맵 닫을 때 게임 입력으로 복구하려면 켠다.
-4. PlayerController BP에서 `M` 키 입력에 `PW_WorldMapControllerComponent.ToggleWorldMap()`을 연결한다.
-5. `UPW_WorldMapWidget`을 상속한 `WBP_WorldMap`을 만든다.
-6. `WBP_WorldMap`에 `MapBackgroundImage` 이름의 Image 위젯을 만들면 C++이 지도 배경을 자동으로 Brush에 넣는다.
-7. 확대/축소할 지도 컨테이너 위젯 이름을 `MapZoomRoot`로 만든다.
+   - `PlayerId`: 저장 데이터를 구분할 플레이어 ID. 싱글 플레이는 기본 `LocalPlayer`로 충분하다.
+   - `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius`: 지도 좌표 변환과 탐험 밝힘 기준이다.
+   - `bAutoReveal`: 켜두면 현재 Pawn 위치를 주기적으로 방문 처리한다.
+   - `RevealUpdateIntervalSeconds`: 방문 처리 주기. 기본값은 `0.5`다.
+3. PlayerController BP에서 `M` 키 입력에 `PW_WorldMapControllerComponent.ToggleWorldMap()`을 연결한다.
+4. `UPW_WorldMapWidget`을 상속한 `WBP_WorldMap`을 만든다.
+5. `WBP_WorldMap`에 `MapBackgroundImage` 이름의 Image 위젯을 만들면 C++이 지도 배경을 자동으로 Brush에 넣는다.
+6. 확대/축소할 지도 컨테이너 위젯 이름을 `MapZoomRoot`로 만든다.
    - 아래 위젯들을 `MapZoomRoot` 아래에 넣으면 휠 확대/축소와 좌클릭 드래그 이동이 같이 적용된다.
    - `MapZoomRoot`는 Canvas Panel로 두고, 아래 위젯들은 같은 부모의 직접 자식으로 둔다.
    - `MapBackgroundImage`: 지도 배경 Image.
@@ -106,25 +106,24 @@ SaveGame에서 FPW_MapExplorationSaveData 읽기
    - `CurrentAreaHighlightWidget`: 현재 위치 주변 밝기 표시용 위젯.
    - `PlayerMarkerWidget`: 플레이어 현재 위치 아이콘 위젯.
    - `PlayerMarkerWidget`과 `CurrentAreaHighlightWidget`은 같은 `PlayerMapUV`로 배치되므로 반드시 같은 부모 좌표계 아래에 둔다.
-8. `WBP_WorldMap`에서 `WorldMapTexture`, `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius`를 설정한다.
-   - `PlayerId`와 추적 Pawn은 PlayerController 컴포넌트가 주입한다.
-   - `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius`는 WBP 값이 기준이다.
+7. `WBP_WorldMap`에서 `WorldMapTexture`를 설정한다.
+   - `PlayerId`, 추적 Pawn, `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius`는 PlayerController 컴포넌트가 주입한다.
    - Texture 알파 때문에 UMG에서 투명하게 보이면 `WorldMapMaterial`에 UI 머티리얼을 지정한다.
    - `WorldMapMaterial`이 있으면 Texture보다 우선 적용된다.
    - 방문 지역이 너무 밝거나 어두우면 `VisitedDarkOverlayColor`의 Alpha를 조정한다. 기본값은 `0.7`이다.
    - 지도 오픈 직후 위치가 한 프레임 틀어지면 `InitialRefreshDelaySeconds`를 `0.05~0.1` 사이에서 조정한다.
-9. `BP_OnMapDataRefreshed`에서:
+8. `BP_OnMapDataRefreshed`에서:
    - `VisitedCellIndices`에 없는 셀은 검정 오버레이로 표시한다.
    - 방문 셀은 오버레이를 숨기거나 낮은 투명도로 둔다.
    - `PlayerMapUV` 주변 `RevealRadiusUV` 영역은 밝게 표시한다.
    - `Markers` 배열을 순회해 거점/텔레포트 아이콘을 배치한다.
-10. 지도 열림 상태의 마우스 커서와 `GameAndUI`, 닫을 때 `GameOnly` 복구는 `PW_WorldMapControllerComponent`가 처리한다.
+9. 지도 열림 상태의 마우스 커서와 `GameAndUI`, 닫을 때 `GameOnly` 복구는 `PW_WorldMapControllerComponent`가 처리한다.
 
 ## Test Plan
 
 - 사용자가 언리얼 컴파일을 수행한다.
-- Player BP에 `PW_MapExplorerComponent`를 붙이고 PIE 시작 시 방문 셀이 증가하는지 확인한다.
-- PlayerController BP에 `PW_WorldMapControllerComponent`를 붙이고 `M` 입력으로 `ToggleWorldMap()`이 호출되는지 확인한다.
+- PlayerController BP에 `PW_WorldMapControllerComponent`를 붙이고 PIE 시작 시 방문 셀이 증가하는지 확인한다.
+- `M` 입력으로 `ToggleWorldMap()`이 호출되는지 확인한다.
 - PIE에서 `WBP_WorldMap` 생성 시 `BP_OnMapDataRefreshed`가 호출되는지 확인한다.
 - 마우스 휠 입력 시 `MapZoomRoot`가 `MinMapZoom`과 `MaxMapZoom` 사이에서 확대/축소되는지 확인한다.
 - 좌클릭 드래그 시 확대된 `MapZoomRoot`가 이동하는지 확인한다.

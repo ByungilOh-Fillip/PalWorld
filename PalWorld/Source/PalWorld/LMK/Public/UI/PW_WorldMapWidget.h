@@ -25,6 +25,16 @@ public:
 		AActor* InTrackedMapActor);
 
 	UFUNCTION(BlueprintCallable, Category = "PW|Map")
+	void ConfigureMapWidgetWithSettings(
+		const FString& InPlayerId,
+		AActor* InTrackedMapActor,
+		const FVector2D& InWorldMin,
+		const FVector2D& InWorldMax,
+		int32 InGridWidth,
+		int32 InGridHeight,
+		float InRevealRadius);
+
+	UFUNCTION(BlueprintCallable, Category = "PW|Map")
 	void RefreshMapData();
 
 	UFUNCTION(BlueprintPure, Category = "PW|Map")
