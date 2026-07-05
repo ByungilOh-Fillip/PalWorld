@@ -17,10 +17,15 @@ void UPWPlayerStatComponent::BeginPlay()
 
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
+		SetCurrentHealth(MaxHP);
 		SetCurrentStamina(MaxSP);
+		SetCurrentHunger(MaxHunger);
 	}
 
+	BroadcastHealthChanged();
 	BroadcastStaminaChanged();
+	BroadcastHungerChanged();
+	BroadcastSurvivalStatsChanged();
 }
 
 void UPWPlayerStatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -48,19 +53,99 @@ void UPWPlayerStatComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		{
 			PlayerCharacter->StopSprint();
 		}
-
-		return;
 	}
-
-	if (ShouldRegenerateStamina())
+	else if (ShouldRegenerateStamina())
 	{
 		SetCurrentStamina(CurrentSP + StaminaRegenPerSecond * DeltaTime);
 	}
+
+	if (bEnableHungerDrain && HungerDrainPerSecond > 0.f)
+	{
+		SetCurrentHunger(CurrentHunger - HungerDrainPerSecond * DeltaTime);
+	}
+}
+
+float UPWPlayerStatComponent::GetHealthRatio() const
+{
+	return MaxHP > 0.f ? CurrentHP / MaxHP : 0.f;
 }
 
 float UPWPlayerStatComponent::GetStaminaRatio() const
 {
 	return MaxSP > 0.f ? CurrentSP / MaxSP : 0.f;
+}
+
+float UPWPlayerStatComponent::GetHungerRatio() const
+{
+	return MaxHunger > 0.f ? CurrentHunger / MaxHunger : 0.f;
+}
+
+bool UPWPlayerStatComponent::ApplyHealthDamage(float DamageAmount)
+{
+	if (DamageAmount <= 0.f)
+	{
+		return false;
+	}
+
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return false;
+	}
+
+	SetCurrentHealth(CurrentHP - DamageAmount);
+	return true;
+}
+
+bool UPWPlayerStatComponent::RestoreHealth(float RestoreAmount)
+{
+	if (RestoreAmount <= 0.f)
+	{
+		return false;
+	}
+
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return false;
+	}
+
+	SetCurrentHealth(CurrentHP + RestoreAmount);
+	return true;
+}
+
+bool UPWPlayerStatComponent::ConsumeHunger(float HungerAmount)
+{
+	if (HungerAmount <= 0.f)
+	{
+		return false;
+	}
+
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return false;
+	}
+
+	SetCurrentHunger(CurrentHunger - HungerAmount);
+	return true;
+}
+
+bool UPWPlayerStatComponent::RestoreHunger(float RestoreAmount)
+{
+	if (RestoreAmount <= 0.f)
+	{
+		return false;
+	}
+
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return false;
+	}
+
+	SetCurrentHunger(CurrentHunger + RestoreAmount);
+	return true;
 }
 
 bool UPWPlayerStatComponent::HasEnoughStamina(float Cost) const
@@ -101,12 +186,40 @@ void UPWPlayerStatComponent::SetSprintDrainActive(bool bNewIsSprintDrainActive)
 	bIsSprintDrainActive = bNewIsSprintDrainActive;
 }
 
+void UPWPlayerStatComponent::HandleCurrentHPChanged()
+{
+	Super::HandleCurrentHPChanged();
+
+	CurrentHP = FMath::Clamp(CurrentHP, 0.f, MaxHP);
+	BroadcastHealthChanged();
+}
+
 void UPWPlayerStatComponent::HandleCurrentSPChanged()
 {
 	Super::HandleCurrentSPChanged();
 
 	CurrentSP = FMath::Clamp(CurrentSP, 0.f, MaxSP);
 	BroadcastStaminaChanged();
+}
+
+void UPWPlayerStatComponent::HandleCurrentHungerChanged()
+{
+	Super::HandleCurrentHungerChanged();
+
+	CurrentHunger = FMath::Clamp(CurrentHunger, 0.f, MaxHunger);
+	BroadcastHungerChanged();
+}
+
+void UPWPlayerStatComponent::SetCurrentHealth(float NewCurrentHealth)
+{
+	const float ClampedHealth = FMath::Clamp(NewCurrentHealth, 0.f, MaxHP);
+	if (FMath::IsNearlyEqual(CurrentHP, ClampedHealth))
+	{
+		return;
+	}
+
+	CurrentHP = ClampedHealth;
+	BroadcastHealthChanged();
 }
 
 void UPWPlayerStatComponent::SetCurrentStamina(float NewCurrentStamina)
@@ -121,9 +234,39 @@ void UPWPlayerStatComponent::SetCurrentStamina(float NewCurrentStamina)
 	BroadcastStaminaChanged();
 }
 
+void UPWPlayerStatComponent::SetCurrentHunger(float NewCurrentHunger)
+{
+	const float ClampedHunger = FMath::Clamp(NewCurrentHunger, 0.f, MaxHunger);
+	if (FMath::IsNearlyEqual(CurrentHunger, ClampedHunger))
+	{
+		return;
+	}
+
+	CurrentHunger = ClampedHunger;
+	BroadcastHungerChanged();
+}
+
+void UPWPlayerStatComponent::BroadcastHealthChanged()
+{
+	OnHealthChanged.Broadcast(CurrentHP, MaxHP, GetHealthRatio());
+	BroadcastSurvivalStatsChanged();
+}
+
 void UPWPlayerStatComponent::BroadcastStaminaChanged()
 {
 	OnStaminaChanged.Broadcast(CurrentSP, MaxSP, GetStaminaRatio());
+	BroadcastSurvivalStatsChanged();
+}
+
+void UPWPlayerStatComponent::BroadcastHungerChanged()
+{
+	OnHungerChanged.Broadcast(CurrentHunger, MaxHunger, GetHungerRatio());
+	BroadcastSurvivalStatsChanged();
+}
+
+void UPWPlayerStatComponent::BroadcastSurvivalStatsChanged()
+{
+	OnSurvivalStatsChanged.Broadcast();
 }
 
 void UPWPlayerStatComponent::BlockStaminaRegen()

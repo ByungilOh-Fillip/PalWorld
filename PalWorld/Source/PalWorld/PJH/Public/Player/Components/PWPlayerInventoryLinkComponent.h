@@ -155,6 +155,7 @@ private:
 	bool AddItemToSlotAuthority(FName ItemId, int32 Count, int32 TargetSlotIndex);
 	bool MoveItemSlotAuthority(int32 FromSlotIndex, int32 ToSlotIndex);
 	bool RemoveItemFromSlotAuthority(int32 SlotIndex, int32 Count, FPWInventoryItemStack* OutRemovedStack = nullptr);
+	bool DropItemStackToWorldAuthority(const FPWInventoryItemStack& ItemStack);
 	void EnsureDefaultItemDefinitions();
 	void GrantStarterItemsAuthority();
 	FName NormalizeItemId(FName ItemId) const;

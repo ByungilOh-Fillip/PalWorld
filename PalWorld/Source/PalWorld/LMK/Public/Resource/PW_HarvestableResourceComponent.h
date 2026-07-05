@@ -91,6 +91,33 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest", meta = (ClampMin = "0.0"))
 	float RewardDamageInterval = 25.f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Auto Collect", meta = (ClampMin = "0.0"))
+	float AutoCollectMinDelay = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Auto Collect", meta = (ClampMin = "0.0"))
+	float AutoCollectMaxDelay = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Auto Collect", meta = (ClampMin = "0.0"))
+	float AutoCollectRadius = 900.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Drop")
+	bool bSpawnWorldDrop = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Drop", meta = (EditCondition = "bSpawnWorldDrop"))
+	TSubclassOf<class APWWorldItemActor> WorldItemActorClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Drop", meta = (ClampMin = "0.0", EditCondition = "bSpawnWorldDrop"))
+	float DropScatterRadius = 60.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Drop", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "bSpawnWorldDrop"))
+	float DropTowardInstigatorMinAlpha = 0.55f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Drop", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "bSpawnWorldDrop"))
+	float DropTowardInstigatorMaxAlpha = 0.85f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW|Harvest|Drop", meta = (EditCondition = "bSpawnWorldDrop"))
+	FVector DropLocationOffset = FVector(0.f, 0.f, 30.f);
+
 private:
 	FTimerHandle RespawnTimerHandle;
 
@@ -107,5 +134,8 @@ private:
 	void RespawnResource();
 	void BroadcastDepletedState();
 	int32 ConsumeRewardIntervals(float AppliedDamage);
-	void GrantReward(AActor* InstigatorActor, int32 RewardMultiplier) const;
+	AActor* ResolveRewardReceiver(AActor* InstigatorActor) const;
+	class UPWItemDataAsset* ResolveRewardItemData(AActor* RewardReceiver, FName GrantedRewardName) const;
+	void GrantRewardDirectDelayed(AActor* RewardReceiver, FName GrantedRewardName, int32 GrantedRewardAmount);
+	void GrantReward(AActor* InstigatorActor, int32 RewardMultiplier);
 };

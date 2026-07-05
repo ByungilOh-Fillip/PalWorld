@@ -3,9 +3,11 @@
 #include "Player/UI/PWInventoryPanelWidget.h"
 
 #include "Components/TextBlock.h"
+#include "Components/ProgressBar.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
 #include "Player/Components/PWPlayerEquipmentComponent.h"
+#include "Player/Components/PWPlayerStatComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
 #include "Player/Data/PWItemDataAsset.h"
 #include "Player/UI/PWEquipmentSlotWidget.h"
@@ -38,6 +40,13 @@ void UPWInventoryPanelWidget::InitializeWithPlayerCharacter(APWPlayerCharacter* 
 	if (BoundEquipmentComponent)
 	{
 		BoundEquipmentComponent->OnEquipmentChanged.AddUniqueDynamic(this, &UPWInventoryPanelWidget::HandleEquipmentChanged);
+	}
+
+	UnbindStatComponent();
+	BoundStatComponent = InPlayerCharacter ? InPlayerCharacter->GetStatComponent() : nullptr;
+	if (BoundStatComponent)
+	{
+		BoundStatComponent->OnSurvivalStatsChanged.AddUniqueDynamic(this, &UPWInventoryPanelWidget::HandleSurvivalStatsChanged);
 	}
 
 	InitializeWithInventoryComponent(InPlayerCharacter ? InPlayerCharacter->GetInventoryLinkComponent() : nullptr);
@@ -74,6 +83,7 @@ void UPWInventoryPanelWidget::NativeDestruct()
 {
 	UnbindInventoryComponent();
 	UnbindEquipmentComponent();
+	UnbindStatComponent();
 	Super::NativeDestruct();
 }
 
@@ -83,6 +93,7 @@ void UPWInventoryPanelWidget::HandleInventoryChanged()
 	RebuildInventorySlots();
 	RebuildEquipmentSlots();
 	RefreshWeightText();
+	RefreshStatsText();
 	BP_OnInventoryChanged();
 }
 
@@ -91,6 +102,13 @@ void UPWInventoryPanelWidget::HandleEquipmentChanged()
 	RebuildInventorySlots();
 	RebuildEquipmentSlots();
 	RefreshWeightText();
+	RefreshStatsText();
+	BP_OnInventoryChanged();
+}
+
+void UPWInventoryPanelWidget::HandleSurvivalStatsChanged()
+{
+	RefreshStatsText();
 	BP_OnInventoryChanged();
 }
 
@@ -109,6 +127,15 @@ void UPWInventoryPanelWidget::UnbindEquipmentComponent()
 	{
 		BoundEquipmentComponent->OnEquipmentChanged.RemoveDynamic(this, &UPWInventoryPanelWidget::HandleEquipmentChanged);
 		BoundEquipmentComponent = nullptr;
+	}
+}
+
+void UPWInventoryPanelWidget::UnbindStatComponent()
+{
+	if (BoundStatComponent)
+	{
+		BoundStatComponent->OnSurvivalStatsChanged.RemoveDynamic(this, &UPWInventoryPanelWidget::HandleSurvivalStatsChanged);
+		BoundStatComponent = nullptr;
 	}
 }
 
@@ -190,6 +217,69 @@ void UPWInventoryPanelWidget::RefreshWeightText()
 		NSLOCTEXT("PWInventory", "WeightFormat", "{0} / {1}"),
 		FText::AsNumber(GetCurrentWeight()),
 		FText::AsNumber(GetMaxCarryWeight())));
+}
+
+void UPWInventoryPanelWidget::RefreshStatsText()
+{
+	if (Progress_HP)
+	{
+		Progress_HP->SetPercent(BoundStatComponent ? BoundStatComponent->GetHealthRatio() : 1.f);
+	}
+
+	if (Progress_Stamina)
+	{
+		Progress_Stamina->SetPercent(BoundStatComponent ? BoundStatComponent->GetStaminaRatio() : 1.f);
+	}
+
+	if (Progress_Hunger)
+	{
+		Progress_Hunger->SetPercent(BoundStatComponent ? BoundStatComponent->GetHungerRatio() : 1.f);
+	}
+
+	if (Text_HP)
+	{
+		Text_HP->SetText(BoundStatComponent
+			? FText::Format(
+				NSLOCTEXT("PWInventory", "HPFormat", "{0} / {1}"),
+				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetCurrentHealth())),
+				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetMaxHealth())))
+			: FText::GetEmpty());
+	}
+
+	if (Text_Stamina)
+	{
+		Text_Stamina->SetText(BoundStatComponent
+			? FText::Format(
+				NSLOCTEXT("PWInventory", "StaminaFormat", "{0} / {1}"),
+				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetCurrentStamina())),
+				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetMaxStamina())))
+			: FText::GetEmpty());
+	}
+
+	if (Text_Hunger)
+	{
+		Text_Hunger->SetText(BoundStatComponent
+			? FText::Format(
+				NSLOCTEXT("PWInventory", "HungerFormat", "{0} / {1}"),
+				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetCurrentHunger())),
+				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetMaxHunger())))
+			: FText::GetEmpty());
+	}
+
+	if (Text_Attack)
+	{
+		Text_Attack->SetText(BoundStatComponent ? FText::AsNumber(FMath::RoundToInt(BoundStatComponent->Attack)) : FText::GetEmpty());
+	}
+
+	if (Text_Defense)
+	{
+		Text_Defense->SetText(BoundStatComponent ? FText::AsNumber(FMath::RoundToInt(BoundStatComponent->Defense)) : FText::GetEmpty());
+	}
+
+	if (Text_WorkSpeed)
+	{
+		Text_WorkSpeed->SetText(BoundStatComponent ? FText::AsNumber(FMath::RoundToInt(BoundStatComponent->WorkSpeed)) : FText::GetEmpty());
+	}
 }
 
 void UPWInventoryPanelWidget::InitializeFixedEquipmentSlot(UPWEquipmentSlotWidget* SlotWidget, int32 SlotIndex)

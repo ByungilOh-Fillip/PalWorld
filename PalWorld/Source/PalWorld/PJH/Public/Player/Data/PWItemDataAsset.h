@@ -38,6 +38,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Item|Visual")
 	UStaticMesh* GetWorldMesh() const { return WorldMesh; }
 
+	UFUNCTION(BlueprintPure, Category = "Player|Item|Visual")
+	FTransform GetWorldDropTransform() const { return WorldDropTransform; }
+
 	UFUNCTION(BlueprintPure, Category = "Player|Item|Equipment")
 	bool IsEquippable() const { return bEquippable; }
 
@@ -86,6 +89,9 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Item|Visual", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStaticMesh> WorldMesh = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Item|Visual", meta = (AllowPrivateAccess = "true"))
+	FTransform WorldDropTransform = FTransform::Identity;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Item|Equipment", meta = (AllowPrivateAccess = "true"))
 	bool bEquippable = false;

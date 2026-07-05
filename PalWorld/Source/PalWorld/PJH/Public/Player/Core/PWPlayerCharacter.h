@@ -42,6 +42,7 @@ public:
 	void StartRoll();
 	void StartPrimaryAction();
 	void StopPrimaryAction();
+	void Interact();
 	bool StartAim();
 	void StopAim();
 	void SelectNextEquipmentSlot();

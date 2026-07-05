@@ -64,6 +64,7 @@ void APWPlayerController::SetupInputComponent()
 	{
 		// 메뉴 입력은 지금 단계에서 확실히 동작해야 하므로 IMC와 별도로 직접 바인딩한다.
 		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &APWPlayerController::ToggleInventoryMenu);
+		InputComponent->BindKey(EKeys::F, IE_Pressed, this, &APWPlayerController::HandleInteractPressed);
 	}
 
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
@@ -230,6 +231,14 @@ void APWPlayerController::HandlePrimaryActionCompleted(const FInputActionValue& 
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->StopPrimaryAction();
+	}
+}
+
+void APWPlayerController::HandleInteractPressed()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->Interact();
 	}
 }
 

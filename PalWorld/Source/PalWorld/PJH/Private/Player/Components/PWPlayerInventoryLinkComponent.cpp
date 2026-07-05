@@ -4,6 +4,7 @@
 
 #include "Net/UnrealNetwork.h"
 #include "Player/Data/PWItemDataAsset.h"
+#include "World/PWWorldItemDropLibrary.h"
 
 UPWPlayerInventoryLinkComponent::UPWPlayerInventoryLinkComponent()
 {
@@ -41,14 +42,7 @@ void UPWPlayerInventoryLinkComponent::EnsureDefaultItemDefinitions()
 		TEXT("/Game/PJH/Data/Items/DA_Item_Stone.DA_Item_Stone"),
 		TEXT("/Game/PJH/Data/Items/DA_Item_Pickaxe.DA_Item_Pickaxe"),
 		TEXT("/Game/PJH/Data/Items/DA_Item_Axe.DA_Item_Axe"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_PalSphere.DA_Item_PalSphere"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestHelmet.DA_Item_TestHelmet"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestArmor.DA_Item_TestArmor"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestShield.DA_Item_TestShield"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestGlider.DA_Item_TestGlider"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestSphereModule.DA_Item_TestSphereModule"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestAccessory.DA_Item_TestAccessory"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestFood.DA_Item_TestFood")
+		TEXT("/Game/PJH/Data/Items/DA_Item_PalSphere.DA_Item_PalSphere")
 	};
 
 	for (const TCHAR* DefaultItemPath : DefaultItemPaths)
@@ -99,14 +93,7 @@ void UPWPlayerInventoryLinkComponent::GrantStarterItemsAuthority()
 		{ TEXT("Stone"), 50 },
 		{ TEXT("Pickaxe"), 1 },
 		{ TEXT("Axe"), 1 },
-		{ TEXT("PalSphere"), 10 },
-		{ TEXT("TestHelmet"), 1 },
-		{ TEXT("TestArmor"), 1 },
-		{ TEXT("TestShield"), 1 },
-		{ TEXT("TestGlider"), 1 },
-		{ TEXT("TestSphereModule"), 1 },
-		{ TEXT("TestAccessory"), 1 },
-		{ TEXT("TestFood"), 10 }
+		{ TEXT("PalSphere"), 10 }
 	};
 
 	for (const FDefaultStarterItem& DefaultStarterItem : DefaultStarterItems)
@@ -166,7 +153,40 @@ bool UPWPlayerInventoryLinkComponent::DropItemFromSlot(int32 SlotIndex, int32 Co
 		return true;
 	}
 
-	return RemoveItemFromSlotAuthority(SlotIndex, Count);
+	const FPWInventoryItemStack* SourceStack = FindStackBySlot(SlotIndex);
+	if (!SourceStack || SourceStack->ItemId.IsNone() || SourceStack->Count <= 0)
+	{
+		return false;
+	}
+
+	const int32 DropCount = Count <= 0 ? SourceStack->Count : FMath::Min(Count, SourceStack->Count);
+	UPWItemDataAsset* ItemData = GetItemDefinition(SourceStack->ItemId);
+	if (!UPWWorldItemDropLibrary::CanSpawnWorldItem(ItemData))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWInventory] Drop rejected. Item has no world mesh. Slot=%d Item=%s ItemData=%s"),
+			SlotIndex,
+			*SourceStack->ItemId.ToString(),
+			*GetNameSafe(ItemData));
+		return false;
+	}
+
+	FPWInventoryItemStack RemovedStack;
+	if (!RemoveItemFromSlotAuthority(SlotIndex, DropCount, &RemovedStack))
+	{
+		return false;
+	}
+
+	if (DropItemStackToWorldAuthority(RemovedStack))
+	{
+		return true;
+	}
+
+	// 월드 스폰에 실패하면 아이템이 증발하지 않도록 원래 슬롯 복구를 먼저 시도한다.
+	if (!AddItemToSlotAuthority(RemovedStack.ItemId, RemovedStack.Count, RemovedStack.SlotIndex))
+	{
+		AddItemAuthority(RemovedStack.ItemId, RemovedStack.Count);
+	}
+	return false;
 }
 
 bool UPWPlayerInventoryLinkComponent::DestroyItemFromSlot(int32 SlotIndex, int32 Count)
@@ -183,6 +203,8 @@ bool UPWPlayerInventoryLinkComponent::DestroyItemFromSlot(int32 SlotIndex, int32
 
 int32 UPWPlayerInventoryLinkComponent::GetItemCount(FName ItemId) const
 {
+	ItemId = NormalizeItemId(ItemId);
+
 	int32 TotalCount = 0;
 	for (const FPWInventoryItemStack& Stack : Items)
 	{
@@ -228,6 +250,7 @@ TArray<FPWInventorySlotView> UPWPlayerInventoryLinkComponent::GetSlotViews() con
 
 UPWItemDataAsset* UPWPlayerInventoryLinkComponent::GetItemDefinition(FName ItemId) const
 {
+	ItemId = NormalizeItemId(ItemId);
 	if (ItemId.IsNone())
 	{
 		return nullptr;
@@ -292,7 +315,7 @@ void UPWPlayerInventoryLinkComponent::ServerMoveItemSlot_Implementation(int32 Fr
 
 void UPWPlayerInventoryLinkComponent::ServerDropItemFromSlot_Implementation(int32 SlotIndex, int32 Count)
 {
-	RemoveItemFromSlotAuthority(SlotIndex, Count);
+	DropItemFromSlot(SlotIndex, Count);
 }
 
 void UPWPlayerInventoryLinkComponent::ServerDestroyItemFromSlot_Implementation(int32 SlotIndex, int32 Count)
@@ -508,6 +531,41 @@ bool UPWPlayerInventoryLinkComponent::RemoveItemFromSlotAuthority(int32 SlotInde
 	OnInventoryChanged.Broadcast();
 	OwnerActor->ForceNetUpdate();
 	return true;
+}
+
+bool UPWPlayerInventoryLinkComponent::DropItemStackToWorldAuthority(const FPWInventoryItemStack& ItemStack)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority() || ItemStack.ItemId.IsNone() || ItemStack.Count <= 0)
+	{
+		return false;
+	}
+
+	UPWItemDataAsset* ItemData = GetItemDefinition(ItemStack.ItemId);
+	if (!UPWWorldItemDropLibrary::CanSpawnWorldItem(ItemData))
+	{
+		return false;
+	}
+
+	const FVector Forward = OwnerActor->GetActorForwardVector();
+	FPWWorldItemDropRequest DropRequest;
+	DropRequest.ItemData = ItemData;
+	DropRequest.ItemId = ItemStack.ItemId;
+	DropRequest.Count = ItemStack.Count;
+	DropRequest.SourceActor = OwnerActor;
+	DropRequest.SourceLocation = OwnerActor->GetActorLocation() + Forward * 120.f + FVector(0.f, 0.f, 45.f);
+	DropRequest.TargetLocation = OwnerActor->GetActorLocation() + Forward * 260.f;
+	DropRequest.TowardTargetMinAlpha = 0.75f;
+	DropRequest.TowardTargetMaxAlpha = 1.f;
+	DropRequest.ScatterRadius = 35.f;
+	DropRequest.bIgnoreSourceActorInGroundTrace = true;
+	DropRequest.MinHorizontalImpulse = 90.f;
+	DropRequest.MaxHorizontalImpulse = 160.f;
+	DropRequest.MinUpwardImpulse = 140.f;
+	DropRequest.MaxUpwardImpulse = 230.f;
+	DropRequest.bStartAutoCollect = false;
+
+	return UPWWorldItemDropLibrary::SpawnWorldItemDrop(this, DropRequest) != nullptr;
 }
 
 FPWInventoryItemStack* UPWPlayerInventoryLinkComponent::FindStack(FName ItemId)

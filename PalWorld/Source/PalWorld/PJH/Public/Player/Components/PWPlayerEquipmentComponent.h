@@ -221,6 +221,7 @@ private:
 	bool EquipFromInventorySlotToFirstAvailableAuthority(int32 InventorySlotIndex);
 	bool UnequipToInventoryAuthority(int32 EquipmentSlotIndex);
 	bool UnequipToInventorySlotAuthority(int32 EquipmentSlotIndex, int32 InventorySlotIndex);
+	bool DropEquipmentSlotAuthority(int32 EquipmentSlotIndex);
 	int32 FindFirstCompatibleEquipmentSlotIndex(UPWItemDataAsset* ItemData) const;
 	void NotifyEquipmentChanged();
 

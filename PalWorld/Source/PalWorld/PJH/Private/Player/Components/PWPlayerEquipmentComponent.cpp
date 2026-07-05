@@ -13,6 +13,7 @@
 #include "Player/Components/PWPlayerPrimaryActionComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
 #include "Player/Data/PWItemDataAsset.h"
+#include "World/PWWorldItemDropLibrary.h"
 
 EPWToolType FPWEquipmentSlotData::GetToolType() const
 {
@@ -244,7 +245,7 @@ bool UPWPlayerEquipmentComponent::DropEquipmentSlot(int32 EquipmentSlotIndex)
 		return true;
 	}
 
-	return ClearEquipmentSlotAuthority(EquipmentSlotIndex);
+	return DropEquipmentSlotAuthority(EquipmentSlotIndex);
 }
 
 bool UPWPlayerEquipmentComponent::DestroyEquipmentSlot(int32 EquipmentSlotIndex)
@@ -306,7 +307,7 @@ void UPWPlayerEquipmentComponent::ServerUnequipToInventorySlot_Implementation(in
 
 void UPWPlayerEquipmentComponent::ServerDropEquipmentSlot_Implementation(int32 EquipmentSlotIndex)
 {
-	ClearEquipmentSlotAuthority(EquipmentSlotIndex);
+	DropEquipmentSlotAuthority(EquipmentSlotIndex);
 }
 
 void UPWPlayerEquipmentComponent::ServerDestroyEquipmentSlot_Implementation(int32 EquipmentSlotIndex)
@@ -705,6 +706,49 @@ bool UPWPlayerEquipmentComponent::UnequipToInventorySlotAuthority(int32 Equipmen
 	}
 
 	return SetEquipmentItemAuthority(EquipmentSlotIndex, InventoryItemData);
+}
+
+bool UPWPlayerEquipmentComponent::DropEquipmentSlotAuthority(int32 EquipmentSlotIndex)
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority() || !IsValidSlotIndex(EquipmentSlotIndex))
+	{
+		return false;
+	}
+
+	UPWItemDataAsset* ItemData = EquipmentSlots[EquipmentSlotIndex].ItemData;
+	if (!UPWWorldItemDropLibrary::CanSpawnWorldItem(ItemData))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWEquipment] Drop rejected. Slot=%d ItemData=%s"),
+			EquipmentSlotIndex,
+			*GetNameSafe(ItemData));
+		return false;
+	}
+
+	const FVector Forward = PlayerCharacter->GetActorForwardVector();
+	FPWWorldItemDropRequest DropRequest;
+	DropRequest.ItemData = ItemData;
+	DropRequest.ItemId = ItemData->GetItemId();
+	DropRequest.Count = 1;
+	DropRequest.SourceActor = PlayerCharacter;
+	DropRequest.SourceLocation = PlayerCharacter->GetActorLocation() + Forward * 120.f + FVector(0.f, 0.f, 45.f);
+	DropRequest.TargetLocation = PlayerCharacter->GetActorLocation() + Forward * 260.f;
+	DropRequest.TowardTargetMinAlpha = 0.75f;
+	DropRequest.TowardTargetMaxAlpha = 1.f;
+	DropRequest.ScatterRadius = 35.f;
+	DropRequest.bIgnoreSourceActorInGroundTrace = true;
+	DropRequest.MinHorizontalImpulse = 90.f;
+	DropRequest.MaxHorizontalImpulse = 160.f;
+	DropRequest.MinUpwardImpulse = 140.f;
+	DropRequest.MaxUpwardImpulse = 230.f;
+	DropRequest.bStartAutoCollect = false;
+
+	if (!UPWWorldItemDropLibrary::SpawnWorldItemDrop(this, DropRequest))
+	{
+		return false;
+	}
+
+	return ClearEquipmentSlotAuthority(EquipmentSlotIndex);
 }
 
 int32 UPWPlayerEquipmentComponent::FindFirstCompatibleEquipmentSlotIndex(UPWItemDataAsset* ItemData) const
