@@ -6,7 +6,7 @@
 #include "Animation/AnimMontage.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
-#include "GameplayTags/PW_GameplayTags.h"
+#include "PW_GameplayTags.h"
 #include "Interfaces/PW_HarvestDamageTarget.h"
 #include "Interfaces/PW_HarvestInstanceDamageTarget.h"
 #include "Net/UnrealNetwork.h"
