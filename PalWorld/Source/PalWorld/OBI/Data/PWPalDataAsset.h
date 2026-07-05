@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
-#include "OBI/Data/PWPalDataTypes.h"
+#include "PWPalDataTypes.h"
 #include "PWPalDataAsset.generated.h"
 
 // 특정 레벨에 배우는 스킬을 매핑하기 위한 구조체
@@ -17,7 +17,7 @@ struct FPWPalLearnableSkill
 
     // 실제 스킬의 데이터나 클래스 (추후 UPalSkillBase 등 추가 시 태그나 클래스로 확장)
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Categories = "Skill"))
-    FGameplayTag SkillTag; 
+    FGameplayTag SkillTag;
 
     FPWPalLearnableSkill()
         : RequiredLevel(1)
@@ -82,7 +82,7 @@ public:
 
     // 배고픔을 느끼는 기준 (예: MaxHunger의 30% 이하일 때 배고픔 상태로 전이)
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Work & Life", meta=(ClampMin="0.0", ClampMax="1.0"))
-    float HungryThresholdRatio = 0.3f; 
+    float HungryThresholdRatio = 0.3f;
 
     /* ========================================
      * Tags (Work & Skills)
@@ -116,7 +116,7 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
     class UAnimMontage* KitingMontage; // 백점프 등 카이팅 모션
-    
+
     // 전투 시 적과 거리 유지를 위한 기본 카이팅 거리 설정
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat AI")
     float KitingDistance = 200.0f;
