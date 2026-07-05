@@ -52,11 +52,10 @@ namespace PW_GameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Status_Explo_Encumbered1, "Status.Explo.Encumbered1");
 	UE_DEFINE_GAMEPLAY_TAG(Status_Explo_Encumbered2, "Status.Explo.Encumbered2");
 
-	// State
-	UE_DEFINE_GAMEPLAY_TAG(State_Idle, "State.Idle");
-	UE_DEFINE_GAMEPLAY_TAG(State_Wander, "State.Wander");
-	UE_DEFINE_GAMEPLAY_TAG(State_Combat, "State.Combat");
-	UE_DEFINE_GAMEPLAY_TAG(State_Working, "State.Working");
-	UE_DEFINE_GAMEPLAY_TAG(State_Sleeping, "State.Sleeping");
-	UE_DEFINE_GAMEPLAY_TAG(State_Flinch, "State.Flinch");
+	// Element
+	UE_DEFINE_GAMEPLAY_TAG(Element_None, "Element.None");
+	UE_DEFINE_GAMEPLAY_TAG(Element_Water, "Element.Water");
+	UE_DEFINE_GAMEPLAY_TAG(Element_Fire, "Element.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(Element_Grass, "Element.Grass");
+	UE_DEFINE_GAMEPLAY_TAG(Element_Electric, "Element.Electric");
 }
