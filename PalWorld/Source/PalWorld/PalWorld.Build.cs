@@ -22,6 +22,8 @@ public class PalWorld : ModuleRules
 			"GameplayTags",
 			"AIModule",
 			"NavigationSystem",
+			"StateTreeModule",
+			"GameplayStateTreeModule"
 		});
 		
 		// 팀원 ROLE에 따라 나뉜 파트를 한번에 빌드할 때 사용
@@ -31,11 +33,11 @@ public class PalWorld : ModuleRules
 				System.IO.Path.Combine(ModuleDirectory, "OBI/Components/public"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/Pal/public"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/Data"),
+				System.IO.Path.Combine(ModuleDirectory, "OBI/AI/Evaluators/public"),
 				System.IO.Path.Combine(ModuleDirectory, "PJH/public"),
 				System.IO.Path.Combine(ModuleDirectory, "Global/Log/public"),
 				System.IO.Path.Combine(ModuleDirectory, "Global/Components/public"),
 				System.IO.Path.Combine(ModuleDirectory, "Global/GameplayTags/public"),
-				System.IO.Path.Combine(ModuleDirectory, "OBI/AI/Tasks/public"),
 				// 추가되는 역할(ROLE) 폴더가 있다면 여기에 동일하게 경로 지정
 			}
 		);
