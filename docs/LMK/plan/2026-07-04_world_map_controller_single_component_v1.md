@@ -30,7 +30,8 @@ WBP 자산이 없는 상태에서 안전하게 수정하기 위해 아래 표면
 
 - `UPW_WorldMapWidget::BP_OnMapDataRefreshed(...)` 이벤트 시그니처 유지
 - `MapBackgroundImage`, `MapZoomRoot`, `UnvisitedCellCanvas`, `VisitedDarkOverlayImage`, `InitialMapCoverImage`, `PlayerMarkerWidget`, `CurrentAreaHighlightWidget` BindWidget 이름 유지
-- `WorldMapTexture`, `WorldMapMaterial`, `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius`, `PlayerId` 등 기존 UPROPERTY 유지
+- `WorldMapMaterial`, `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius`, `PlayerId` 등 기존 UPROPERTY 유지
+- 월드맵 배경은 Texture Brush를 직접 사용하지 않고 UI 머티리얼만 사용
 - `UPW_WorldMapWidget::ConfigureMapWidget(const FString&, AActor*)` 기존 함수는 유지
 
 필요하면 새 함수만 추가한다.

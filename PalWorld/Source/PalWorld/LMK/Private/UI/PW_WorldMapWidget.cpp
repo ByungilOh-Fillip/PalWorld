@@ -5,10 +5,12 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
+#include "Components/Widget.h"
 #include "Engine/World.h"
 #include "Input/Events.h"
 #include "InputCoreTypes.h"
 #include "Map/PW_MapSubsystem.h"
+#include "Styling/SlateBrush.h"
 #include "TimerManager.h"
 
 void UPW_WorldMapWidget::ConfigureMapWidget(
@@ -85,6 +87,8 @@ void UPW_WorldMapWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	RefreshMapBackgroundImage();
+	ApplyMapViewportSettings();
+	SyncMapZoomRootToViewport();
 	ApplyMapZoom();
 	ApplyMapSettingsToSubsystem();
 	SetInitialMapCoverVisible(true);
@@ -143,6 +147,11 @@ FReply UPW_WorldMapWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, 
 		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 	}
 
+	if (CurrentMapZoom <= MinMapZoom + UE_KINDA_SMALL_NUMBER)
+	{
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
+
 	bIsDraggingMap = true;
 	LastDragScreenPosition = InMouseEvent.GetScreenSpacePosition();
 	return FReply::Handled().CaptureMouse(TakeWidget());
@@ -169,6 +178,7 @@ FReply UPW_WorldMapWidget::NativeOnMouseMove(const FGeometry& InGeometry, const 
 	const FVector2D CurrentScreenPosition = InMouseEvent.GetScreenSpacePosition();
 	CurrentMapPanOffset += CurrentScreenPosition - LastDragScreenPosition;
 	LastDragScreenPosition = CurrentScreenPosition;
+	ClampMapPanOffset();
 	ApplyMapTransform();
 	return FReply::Handled();
 }
@@ -190,7 +200,17 @@ FReply UPW_WorldMapWidget::NativeOnMouseWheel(const FGeometry& InGeometry, const
 void UPW_WorldMapWidget::SetMapZoom(float NewMapZoom)
 {
 	CurrentMapZoom = FMath::Clamp(NewMapZoom, MinMapZoom, MaxMapZoom);
-	ApplyMapTransform();
+	if (CurrentMapZoom <= MinMapZoom + UE_KINDA_SMALL_NUMBER)
+	{
+		CurrentMapPanOffset = FVector2D::ZeroVector;
+		bIsDraggingMap = false;
+	}
+	else
+	{
+		ClampMapPanOffset();
+	}
+
+	ApplyMapZoom();
 }
 
 void UPW_WorldMapWidget::ApplyMapSettingsToSubsystem()
@@ -220,23 +240,33 @@ void UPW_WorldMapWidget::RefreshMapBackgroundImage()
 		return;
 	}
 
-	if (WorldMapTexture != nullptr)
-	{
-		MapBackgroundImage->SetBrushFromTexture(WorldMapTexture, true);
-	}
+	FSlateBrush EmptyBrush;
+	MapBackgroundImage->SetBrush(EmptyBrush);
 }
 
 void UPW_WorldMapWidget::ApplyMapZoom()
 {
+	ApplyMapViewportSettings();
+	SyncMapZoomRootToViewport();
+	ClampMapPanOffset();
 	ApplyMapTransform();
+}
+
+void UPW_WorldMapWidget::ApplyMapViewportSettings()
+{
+	if (MapViewportRoot != nullptr)
+	{
+		MapViewportRoot->SetClipping(EWidgetClipping::ClipToBounds);
+	}
 }
 
 void UPW_WorldMapWidget::ApplyMapTransform()
 {
 	if (MapZoomRoot != nullptr)
 	{
+		MapZoomRoot->SetRenderTransformPivot(FVector2D(0.5f, 0.5f));
 		MapZoomRoot->SetRenderScale(FVector2D(CurrentMapZoom, CurrentMapZoom));
-		MapZoomRoot->SetRenderTranslation(CurrentMapPanOffset);
+		MapZoomRoot->SetRenderTranslation(CurrentMapZoom > MinMapZoom + UE_KINDA_SMALL_NUMBER ? CurrentMapPanOffset : FVector2D::ZeroVector);
 	}
 }
 
@@ -275,6 +305,7 @@ void UPW_WorldMapWidget::RefreshBuiltInMapVisuals(const TArray<int32>& VisitedCe
 
 void UPW_WorldMapWidget::RefreshMapDataAfterLayout()
 {
+	ApplyMapZoom();
 	RefreshMapData();
 }
 
@@ -310,6 +341,50 @@ void UPW_WorldMapWidget::SetInitialVisualWidgetsVisible(bool bVisible)
 	if (CurrentAreaHighlightWidget != nullptr)
 	{
 		CurrentAreaHighlightWidget->SetVisibility(NewVisibility);
+	}
+}
+
+void UPW_WorldMapWidget::ClampMapPanOffset()
+{
+	if (CurrentMapZoom <= MinMapZoom + UE_KINDA_SMALL_NUMBER)
+	{
+		CurrentMapPanOffset = FVector2D::ZeroVector;
+		return;
+	}
+
+	const FVector2D ContentSize = GetMapVisualSize();
+	const FVector2D ViewportSize = GetMapViewportSize();
+
+	const FVector2D ScaledContentSize = ContentSize * CurrentMapZoom;
+	const FVector2D MaxPan = FVector2D(
+		FMath::Max(0.0f, (ScaledContentSize.X - ViewportSize.X) * 0.5f),
+		FMath::Max(0.0f, (ScaledContentSize.Y - ViewportSize.Y) * 0.5f));
+
+	CurrentMapPanOffset.X = FMath::Clamp(CurrentMapPanOffset.X, -MaxPan.X, MaxPan.X);
+	CurrentMapPanOffset.Y = FMath::Clamp(CurrentMapPanOffset.Y, -MaxPan.Y, MaxPan.Y);
+}
+
+void UPW_WorldMapWidget::SyncMapZoomRootToViewport()
+{
+	if (MapViewportRoot == nullptr || MapZoomRoot == nullptr)
+	{
+		return;
+	}
+
+	UCanvasPanelSlot* ZoomRootSlot = Cast<UCanvasPanelSlot>(MapZoomRoot->Slot);
+	if (ZoomRootSlot == nullptr)
+	{
+		return;
+	}
+
+	ZoomRootSlot->SetAnchors(FAnchors(0.0f, 0.0f));
+	ZoomRootSlot->SetAlignment(FVector2D::ZeroVector);
+	ZoomRootSlot->SetPosition(FVector2D::ZeroVector);
+
+	const FVector2D ViewportSize = GetMapViewportSize();
+	if (ViewportSize.X > 1.0f && ViewportSize.Y > 1.0f)
+	{
+		ZoomRootSlot->SetSize(ViewportSize);
 	}
 }
 
@@ -432,6 +507,29 @@ FVector2D UPW_WorldMapWidget::GetMapVisualOrigin() const
 	}
 
 	return FVector2D::ZeroVector;
+}
+
+FVector2D UPW_WorldMapWidget::GetMapViewportSize() const
+{
+	if (MapViewportRoot != nullptr)
+	{
+		if (const UCanvasPanelSlot* ViewportSlot = Cast<UCanvasPanelSlot>(MapViewportRoot->Slot))
+		{
+			const FVector2D SlotSize = ViewportSlot->GetSize();
+			if (SlotSize.X > 1.0f && SlotSize.Y > 1.0f)
+			{
+				return SlotSize;
+			}
+		}
+
+		const FVector2D LocalSize = MapViewportRoot->GetCachedGeometry().GetLocalSize();
+		if (LocalSize.X > 1.0f && LocalSize.Y > 1.0f)
+		{
+			return LocalSize;
+		}
+	}
+
+	return GetMapVisualSize();
 }
 
 FVector2D UPW_WorldMapWidget::GetMapVisualSize() const

@@ -9,7 +9,6 @@
 class UImage;
 class UCanvasPanel;
 class UMaterialInterface;
-class UTexture2D;
 class UWidget;
 class AActor;
 
@@ -37,9 +36,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PW|Map")
 	void RefreshMapData();
 
-	UFUNCTION(BlueprintPure, Category = "PW|Map")
-	UTexture2D* GetWorldMapTexture() const { return WorldMapTexture; }
-
 	UFUNCTION(BlueprintCallable, Category = "PW|Map|Zoom")
 	void SetMapZoom(float NewMapZoom);
 
@@ -64,13 +60,13 @@ protected:
 		int32 InGridHeight);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Map")
-	TObjectPtr<UTexture2D> WorldMapTexture;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Map")
 	TObjectPtr<UMaterialInterface> WorldMapMaterial;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "PW|Map")
 	TObjectPtr<UImage> MapBackgroundImage;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "PW|Map|Zoom")
+	TObjectPtr<UWidget> MapViewportRoot;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "PW|Map|Zoom")
 	TObjectPtr<UWidget> MapZoomRoot;
@@ -156,16 +152,20 @@ private:
 	void ApplyMapSettingsToSubsystem();
 	void RefreshMapBackgroundImage();
 	void ApplyMapZoom();
+	void ApplyMapViewportSettings();
 	void ApplyMapTransform();
 	void RefreshBuiltInMapVisuals(const TArray<int32>& VisitedCellIndices, FVector2D PlayerMapUV, float RevealRadiusUV);
 	void RefreshMapDataAfterLayout();
 	void SetInitialMapCoverVisible(bool bVisible);
 	void SetInitialVisualWidgetsVisible(bool bVisible);
+	void ClampMapPanOffset();
+	void SyncMapZoomRootToViewport();
 	void SyncMapOverlaySlotsToBackground();
 	void SyncCanvasSlotToBackground(UWidget* Widget, bool bMatchSize) const;
 	void RefreshUnvisitedCells(const TArray<int32>& VisitedCellIndices, const FVector2D& MapSize);
 	void PositionWidgetAtMapUV(UWidget* Widget, FVector2D MapUV, const FVector2D& MapSize) const;
 	FVector2D GetMapVisualOrigin() const;
+	FVector2D GetMapViewportSize() const;
 	FVector2D GetMapVisualSize() const;
 	bool IsRenderCellVisited(int32 RenderCellX, int32 RenderCellY, const TSet<int32>& VisitedCells) const;
 };

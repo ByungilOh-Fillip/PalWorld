@@ -83,7 +83,7 @@ SaveGame에서 FPW_MapExplorationSaveData 읽기
 
 ## BP Setup
 
-1. 에디터에서 `Palworld.umap`을 탑다운으로 캡처해 Texture2D로 임포트한다.
+1. 에디터에서 `Palworld.umap`을 탑다운으로 캡처해 Texture2D로 임포트하고, 이 Texture를 사용하는 UI 머티리얼을 만든다.
 2. PlayerController BP에 `PW_WorldMapControllerComponent`를 추가한다.
    - `WorldMapWidgetClass`: `WBP_WorldMap`을 지정한다.
    - `WorldMapZOrder`: 기본값 `100`을 사용한다.
@@ -95,8 +95,11 @@ SaveGame에서 FPW_MapExplorationSaveData 읽기
    - `RevealUpdateIntervalSeconds`: 방문 처리 주기. 기본값은 `0.5`다.
 3. PlayerController BP에서 `M` 키 입력에 `PW_WorldMapControllerComponent.ToggleWorldMap()`을 연결한다.
 4. `UPW_WorldMapWidget`을 상속한 `WBP_WorldMap`을 만든다.
-5. `WBP_WorldMap`에 `MapBackgroundImage` 이름의 Image 위젯을 만들면 C++이 지도 배경을 자동으로 Brush에 넣는다.
-6. 확대/축소할 지도 컨테이너 위젯 이름을 `MapZoomRoot`로 만든다.
+5. `WBP_WorldMap`에 고정 뷰포트 `MapViewportRoot`와 확대/이동 컨테이너 `MapZoomRoot`를 만든다.
+   - `MapViewportRoot`: 화면 중앙에 고정되는 Canvas Panel. `Clipping`을 `Clip to Bounds`로 설정한다.
+   - `MapZoomRoot`: `MapViewportRoot`의 직접 자식 Canvas Panel. 확대/축소와 드래그 이동은 이 위젯에만 적용된다.
+   - 액자 테두리나 고정 배경 장식은 `MapZoomRoot` 안에 넣지 않고 `MapViewportRoot` 바깥 형제 위젯이나 부모 쪽에 둔다.
+6. `MapZoomRoot` 아래에 지도 구성 위젯을 둔다.
    - 아래 위젯들을 `MapZoomRoot` 아래에 넣으면 휠 확대/축소와 좌클릭 드래그 이동이 같이 적용된다.
    - `MapZoomRoot`는 Canvas Panel로 두고, 아래 위젯들은 같은 부모의 직접 자식으로 둔다.
    - `MapBackgroundImage`: 지도 배경 Image.
@@ -106,12 +109,13 @@ SaveGame에서 FPW_MapExplorationSaveData 읽기
    - `CurrentAreaHighlightWidget`: 현재 위치 주변 밝기 표시용 위젯.
    - `PlayerMarkerWidget`: 플레이어 현재 위치 아이콘 위젯.
    - `PlayerMarkerWidget`과 `CurrentAreaHighlightWidget`은 같은 `PlayerMapUV`로 배치되므로 반드시 같은 부모 좌표계 아래에 둔다.
-7. `WBP_WorldMap`에서 `WorldMapTexture`를 설정한다.
+7. `WBP_WorldMap`에서 `WorldMapMaterial`을 설정한다.
    - `PlayerId`, 추적 Pawn, `WorldMin`, `WorldMax`, `GridWidth`, `GridHeight`, `RevealRadius`는 PlayerController 컴포넌트가 주입한다.
-   - Texture 알파 때문에 UMG에서 투명하게 보이면 `WorldMapMaterial`에 UI 머티리얼을 지정한다.
-   - `WorldMapMaterial`이 있으면 Texture보다 우선 적용된다.
+   - 월드맵 배경은 Texture Brush를 직접 쓰지 않고 UI 머티리얼만 사용한다.
+   - `WorldMapMaterial`이 비어 있으면 C++이 `MapBackgroundImage` Brush를 비우므로 지도 배경은 표시되지 않는다.
    - 방문 지역이 너무 밝거나 어두우면 `VisitedDarkOverlayColor`의 Alpha를 조정한다. 기본값은 `0.7`이다.
    - 지도 오픈 직후 위치가 한 프레임 틀어지면 `InitialRefreshDelaySeconds`를 `0.05~0.1` 사이에서 조정한다.
+   - `MinMapZoom` 상태에서는 드래그 이동이 비활성화되고, 확대 후에만 `MapViewportRoot` 내부에서 지도 내용물이 이동한다.
 8. `BP_OnMapDataRefreshed`에서:
    - `VisitedCellIndices`에 없는 셀은 검정 오버레이로 표시한다.
    - 방문 셀은 오버레이를 숨기거나 낮은 투명도로 둔다.
@@ -126,7 +130,8 @@ SaveGame에서 FPW_MapExplorationSaveData 읽기
 - `M` 입력으로 `ToggleWorldMap()`이 호출되는지 확인한다.
 - PIE에서 `WBP_WorldMap` 생성 시 `BP_OnMapDataRefreshed`가 호출되는지 확인한다.
 - 마우스 휠 입력 시 `MapZoomRoot`가 `MinMapZoom`과 `MaxMapZoom` 사이에서 확대/축소되는지 확인한다.
-- 좌클릭 드래그 시 확대된 `MapZoomRoot`가 이동하는지 확인한다.
+- `MinMapZoom` 상태에서 좌클릭 드래그해도 지도 프레임과 내용물이 움직이지 않는지 확인한다.
+- 마우스 휠 확대/축소와 좌클릭 드래그 시 고정된 `MapViewportRoot` 안에서 `MapZoomRoot` 내용물만 이동하는지 확인한다.
 - 플레이어 이동 후 방문 셀 수가 증가하는지 확인한다.
 - 미방문 지역이 검정색, 방문 지역이 월드맵 색으로 보이는지 확인한다.
 - 현재 플레이어 주변이 방문 지역보다 밝게 보이는지 확인한다.
