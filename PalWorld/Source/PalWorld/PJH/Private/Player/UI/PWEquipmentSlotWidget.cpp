@@ -42,10 +42,13 @@ void UPWEquipmentSlotWidget::InitializeEquipmentSlot(UPWPlayerEquipmentComponent
 void UPWEquipmentSlotWidget::RefreshFromEquipment()
 {
 	ItemData = nullptr;
+	Count = 0;
 
 	if (EquipmentComponent && EquipmentSlotIndex != INDEX_NONE)
 	{
-		ItemData = EquipmentComponent->GetSlotData(EquipmentSlotIndex).ItemData;
+		const FPWEquipmentSlotData& SlotData = EquipmentComponent->GetSlotData(EquipmentSlotIndex);
+		ItemData = SlotData.ItemData;
+		Count = SlotData.Count;
 	}
 
 	BP_OnSlotUpdated();
@@ -146,8 +149,9 @@ UWidget* UPWEquipmentSlotWidget::CreateDefaultDragVisual() const
 	USizeBox* DragRoot = NewObject<USizeBox>(const_cast<UPWEquipmentSlotWidget*>(this));
 	UOverlay* DragOverlay = NewObject<UOverlay>(DragRoot);
 	UImage* DragIcon = NewObject<UImage>(DragOverlay);
+	UTextBlock* DragCountText = NewObject<UTextBlock>(DragOverlay);
 	UTextBlock* DragNameText = NewObject<UTextBlock>(DragOverlay);
-	if (!DragRoot || !DragOverlay || !DragIcon || !DragNameText)
+	if (!DragRoot || !DragOverlay || !DragIcon || !DragCountText || !DragNameText)
 	{
 		return nullptr;
 	}
@@ -170,6 +174,17 @@ UWidget* UPWEquipmentSlotWidget::CreateDefaultDragVisual() const
 	{
 		IconSlot->SetHorizontalAlignment(HAlign_Fill);
 		IconSlot->SetVerticalAlignment(VAlign_Fill);
+	}
+
+	DragCountText->SetText(FText::AsNumber(Count));
+	DragCountText->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+	DragCountText->SetShadowOffset(FVector2D(1.f, 1.f));
+	DragCountText->SetVisibility(Count > 1 ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	if (UOverlaySlot* CountSlot = DragOverlay->AddChildToOverlay(DragCountText))
+	{
+		CountSlot->SetHorizontalAlignment(HAlign_Right);
+		CountSlot->SetVerticalAlignment(VAlign_Bottom);
+		CountSlot->SetPadding(FMargin(0.f, 0.f, 4.f, 2.f));
 	}
 
 	DragNameText->SetText(ItemData->GetDisplayName());
@@ -220,6 +235,12 @@ void UPWEquipmentSlotWidget::RefreshBoundWidgets()
 	{
 		Text_Name->SetText(bHasItem ? ItemData->GetDisplayName() : FText::GetEmpty());
 		Text_Name->SetVisibility(bHasItem ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+
+	if (Text_Count)
+	{
+		Text_Count->SetText(FText::AsNumber(Count));
+		Text_Count->SetVisibility(bHasItem && Count > 1 ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 	}
 
 	if (Panel_Selected)

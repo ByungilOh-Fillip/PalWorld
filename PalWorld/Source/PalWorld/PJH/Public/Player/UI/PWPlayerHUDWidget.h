@@ -7,9 +7,12 @@
 #include "PWPlayerHUDWidget.generated.h"
 
 class APWPlayerCharacter;
+class UProgressBar;
+class UTextBlock;
 class UWidget;
 class UPWInventoryPanelWidget;
 class UPWStaminaGaugeWidget;
+class UPWPlayerStatComponent;
 
 UCLASS(Blueprintable)
 class PALWORLD_API UPWPlayerHUDWidget : public UUserWidget
@@ -42,8 +45,32 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|UI|Inventory", meta = (DisplayName = "On Inventory Visibility Changed"))
 	void BP_OnInventoryVisibilityChanged(bool bVisible);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player|UI|Stats", meta = (DisplayName = "On Survival Stats Changed"))
+	void BP_OnSurvivalStatsChanged();
+
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stamina")
 	TObjectPtr<UPWStaminaGaugeWidget> StaminaGauge;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UProgressBar> Progress_Health;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UProgressBar> Progress_Shield;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UWidget> ShieldRoot;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UProgressBar> Progress_Hunger;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UTextBlock> Text_Health;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UTextBlock> Text_Shield;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UTextBlock> Text_Hunger;
 
 	// WBP_PlayerHUD 안에서 인벤토리 패널 이름을 InventoryPanel로 맞추면 C++이 초기화와 표시 상태를 제어한다.
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory")
@@ -58,12 +85,21 @@ protected:
 	TObjectPtr<UWidget> CrosshairRoot;
 
 private:
+	UFUNCTION()
+	void HandleSurvivalStatsChanged();
+
 	void BroadcastCrosshairVisibility();
 	void BroadcastInventoryVisibility();
+	void BindStatComponent(UPWPlayerStatComponent* InStatComponent);
+	void UnbindStatComponent();
+	void RefreshSurvivalStats();
 	UPWInventoryPanelWidget* GetOrCreateInventoryPanel();
 
 	UPROPERTY(Transient)
 	TObjectPtr<APWPlayerCharacter> BoundPlayerCharacter;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPWPlayerStatComponent> BoundStatComponent;
 
 	UPROPERTY(Transient)
 	bool bIsCrosshairVisible = false;

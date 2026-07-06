@@ -10,9 +10,11 @@
 class APWPlayerCharacter;
 class UPWPlayerEquipmentComponent;
 class UPWPlayerInventoryLinkComponent;
+class UPWPlayerStatComponent;
 class UPWEquipmentSlotWidget;
 class UPWInventoryDropZoneWidget;
 class UPWInventorySlotWidget;
+class UProgressBar;
 class UTextBlock;
 class UUniformGridPanel;
 
@@ -111,6 +113,33 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
 	TObjectPtr<UTextBlock> Text_Weight = nullptr;
 
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UTextBlock> Text_HP = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UTextBlock> Text_Stamina = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UTextBlock> Text_Hunger = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UTextBlock> Text_Attack = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UTextBlock> Text_Defense = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UTextBlock> Text_WorkSpeed = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UProgressBar> Progress_HP = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UProgressBar> Progress_Stamina = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UProgressBar> Progress_Hunger = nullptr;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|UI|Inventory|Classes")
 	TSubclassOf<UPWInventorySlotWidget> InventorySlotWidgetClass;
 
@@ -124,12 +153,17 @@ private:
 	UFUNCTION()
 	void HandleEquipmentChanged();
 
+	UFUNCTION()
+	void HandleSurvivalStatsChanged();
+
 	void UnbindInventoryComponent();
 	void UnbindEquipmentComponent();
+	void UnbindStatComponent();
 	void RebuildInventorySlots();
 	void RebuildEquipmentSlots();
 	void InitializeDropZones();
 	void RefreshWeightText();
+	void RefreshStatsText();
 	void InitializeFixedEquipmentSlot(UPWEquipmentSlotWidget* SlotWidget, int32 SlotIndex);
 
 	UPROPERTY(Transient)
@@ -137,4 +171,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPWPlayerEquipmentComponent> BoundEquipmentComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPWPlayerStatComponent> BoundStatComponent;
 };

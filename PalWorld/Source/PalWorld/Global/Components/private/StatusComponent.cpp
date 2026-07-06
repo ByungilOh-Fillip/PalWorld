@@ -61,7 +61,7 @@ void UStatusComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 void UStatusComponent::OnRep_CurrentHP()
 {
-    // [Client Only] 클라이언트 체력 동기화 처리
+    HandleCurrentHPChanged();
 }
 
 void UStatusComponent::OnRep_CurrentSP()
@@ -71,14 +71,17 @@ void UStatusComponent::OnRep_CurrentSP()
 
 void UStatusComponent::OnRep_CurrentHunger()
 {
+    HandleCurrentHungerChanged();
 }
 
 void UStatusComponent::OnRep_CurrentSanity()
 {
+    HandleCurrentSanityChanged();
 }
 
 void UStatusComponent::OnRep_CurrentCarryWeight()
 {
+    HandleCurrentCarryWeightChanged();
 }
 
 void UStatusComponent::OnRep_ActiveStatusEffects()
@@ -86,5 +89,21 @@ void UStatusComponent::OnRep_ActiveStatusEffects()
 }
 
 void UStatusComponent::HandleCurrentSPChanged()
+{
+}
+
+void UStatusComponent::HandleCurrentHPChanged()
+{
+}
+
+void UStatusComponent::HandleCurrentHungerChanged()
+{
+}
+
+void UStatusComponent::HandleCurrentSanityChanged()
+{
+}
+
+void UStatusComponent::HandleCurrentCarryWeightChanged()
 {
 }
