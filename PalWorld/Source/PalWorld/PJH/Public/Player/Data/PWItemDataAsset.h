@@ -68,6 +68,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Item|Equipment|Attach")
 	FTransform GetBackAttachTransform() const { return BackAttachTransform; }
 
+	UFUNCTION(BlueprintPure, Category = "Player|Item|Consumable")
+	float GetHealthRestoreAmount() const { return HealthRestoreAmount; }
+
+	UFUNCTION(BlueprintPure, Category = "Player|Item|Consumable")
+	float GetHungerRestoreAmount() const { return HungerRestoreAmount; }
+
+	UFUNCTION(BlueprintPure, Category = "Player|Item|Shield")
+	float GetShieldCapacity() const { return ShieldCapacity; }
+
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Item", meta = (AllowPrivateAccess = "true"))
 	FName ItemId = NAME_None;
@@ -119,4 +128,13 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Item|Equipment|Attach", meta = (AllowPrivateAccess = "true", EditCondition = "bEquippable && bOverrideBackAttachTransform", EditConditionHides))
 	FTransform BackAttachTransform = FTransform::Identity;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Item|Consumable", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float HealthRestoreAmount = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Item|Consumable", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float HungerRestoreAmount = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Item|Shield", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float ShieldCapacity = 0.f;
 };

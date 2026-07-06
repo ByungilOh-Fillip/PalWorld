@@ -67,6 +67,15 @@ FReply UPWInventorySlotWidget::HandleSlotMouseButtonDown(const FGeometry& InGeom
 {
 	if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
 	{
+		if (bOccupied && ItemData && ItemData->GetItemType() == EPWItemType::Consumable)
+		{
+			if (InventoryComponent)
+			{
+				InventoryComponent->UseItemFromSlot(SlotIndex);
+			}
+			return FReply::Handled();
+		}
+
 		if (bOccupied && EquipmentComponent)
 		{
 			EquipmentComponent->EquipFromInventorySlotToFirstAvailable(SlotIndex);

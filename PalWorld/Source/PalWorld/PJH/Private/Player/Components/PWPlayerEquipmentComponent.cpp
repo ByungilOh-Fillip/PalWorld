@@ -11,6 +11,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/Components/PWPlayerInventoryLinkComponent.h"
 #include "Player/Components/PWPlayerPrimaryActionComponent.h"
+#include "Player/Components/PWPlayerStatComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
 #include "Player/Data/PWItemDataAsset.h"
 #include "World/PWWorldItemDropLibrary.h"
@@ -57,7 +58,7 @@ FTransform FPWEquipmentSlotData::GetBackAttachTransform() const
 
 UPWPlayerEquipmentComponent::UPWPlayerEquipmentComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicatedByDefault(true);
 
 	EquipmentSlots.SetNum(EquipmentSlotCount);
@@ -69,8 +70,16 @@ void UPWPlayerEquipmentComponent::BeginPlay()
 	Super::BeginPlay();
 
 	EnsureSlotCount();
+	SyncShieldStatsToEquipment();
 	RebuildVisualComponents();
 	SyncSelectedToolToPrimaryActionComponent();
+}
+
+void UPWPlayerEquipmentComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	TryAutoUseFoodSlots();
 }
 
 void UPWPlayerEquipmentComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -130,6 +139,11 @@ const FPWEquipmentSlotData& UPWPlayerEquipmentComponent::GetSlotData(int32 SlotI
 {
 	static const FPWEquipmentSlotData EmptySlotData;
 	return IsValidSlotIndex(SlotIndex) ? EquipmentSlots[SlotIndex] : EmptySlotData;
+}
+
+int32 UPWPlayerEquipmentComponent::GetSlotItemCount(int32 SlotIndex) const
+{
+	return IsValidSlotIndex(SlotIndex) ? EquipmentSlots[SlotIndex].Count : 0;
 }
 
 EPWEquipmentSlotType UPWPlayerEquipmentComponent::GetSlotType(int32 SlotIndex) const
@@ -356,6 +370,14 @@ void UPWPlayerEquipmentComponent::EnsureSlotCount()
 
 	ApplyDefaultSlotTypes();
 
+	for (FPWEquipmentSlotData& SlotData : EquipmentSlots)
+	{
+		if (SlotData.ItemData && SlotData.Count <= 0)
+		{
+			SlotData.Count = 1;
+		}
+	}
+
 	if (!IsSlotSelectable(SelectedSlotIndex))
 	{
 		SelectedSlotIndex = 0;
@@ -428,6 +450,35 @@ bool UPWPlayerEquipmentComponent::IsSlotSelectable(int32 SlotIndex) const
 	return IsValidSlotIndex(SlotIndex) && IsWeaponQuickSlot(SlotIndex);
 }
 
+bool UPWPlayerEquipmentComponent::IsFoodSlotIndex(int32 SlotIndex) const
+{
+	return SlotIndex >= FoodSlotStartIndex && SlotIndex < FoodSlotStartIndex + FoodSlotCount;
+}
+
+bool UPWPlayerEquipmentComponent::IsFoodItem(UPWItemDataAsset* ItemData) const
+{
+	return ItemData
+		&& ItemData->GetItemType() == EPWItemType::Consumable
+		&& ItemData->GetHungerRestoreAmount() > 0.f;
+}
+
+float UPWPlayerEquipmentComponent::ResolveEquippedShieldCapacity() const
+{
+	if (!EquipmentSlots.IsValidIndex(ShieldSlotIndex))
+	{
+		return 0.f;
+	}
+
+	const UPWItemDataAsset* ShieldItemData = EquipmentSlots[ShieldSlotIndex].ItemData;
+	if (!ShieldItemData || ShieldItemData->GetEquipmentSlotType() != EPWEquipmentSlotType::Shield)
+	{
+		return 0.f;
+	}
+
+	const float ItemShieldCapacity = ShieldItemData->GetShieldCapacity();
+	return ItemShieldCapacity > 0.f ? ItemShieldCapacity : DefaultShieldCapacity;
+}
+
 bool UPWPlayerEquipmentComponent::IsItemCompatibleWithSlot(UPWItemDataAsset* ItemData, int32 SlotIndex) const
 {
 	if (!IsValidSlotIndex(SlotIndex))
@@ -438,6 +489,11 @@ bool UPWPlayerEquipmentComponent::IsItemCompatibleWithSlot(UPWItemDataAsset* Ite
 	if (!ItemData)
 	{
 		return true;
+	}
+
+	if (IsFoodSlotIndex(SlotIndex))
+	{
+		return IsFoodItem(ItemData);
 	}
 
 	return ItemData->IsEquippable()
@@ -518,6 +574,7 @@ bool UPWPlayerEquipmentComponent::SetEquipmentItemAuthority(int32 SlotIndex, UPW
 
 	FPWEquipmentSlotData& SlotData = EquipmentSlots[SlotIndex];
 	SlotData.ItemData = ItemData;
+	SlotData.Count = ItemData ? 1 : 0;
 	SlotData.ToolType = ItemData ? ItemData->GetToolType() : EPWToolType::Hand;
 	SlotData.StaticMesh = nullptr;
 	SlotData.SkeletalMesh = nullptr;
@@ -545,6 +602,7 @@ bool UPWPlayerEquipmentComponent::MoveEquipmentSlotAuthority(int32 FromSlotIndex
 
 	// 슬롯 타입/소켓 보정값은 위치 고정 데이터라서 아이템 관련 값만 교환한다.
 	Swap(EquipmentSlots[FromSlotIndex].ItemData, EquipmentSlots[ToSlotIndex].ItemData);
+	Swap(EquipmentSlots[FromSlotIndex].Count, EquipmentSlots[ToSlotIndex].Count);
 	Swap(EquipmentSlots[FromSlotIndex].ToolType, EquipmentSlots[ToSlotIndex].ToolType);
 	Swap(EquipmentSlots[FromSlotIndex].StaticMesh, EquipmentSlots[ToSlotIndex].StaticMesh);
 	Swap(EquipmentSlots[FromSlotIndex].SkeletalMesh, EquipmentSlots[ToSlotIndex].SkeletalMesh);
@@ -574,6 +632,36 @@ bool UPWPlayerEquipmentComponent::EquipFromInventorySlotAuthority(int32 Inventor
 	}
 
 	FPWEquipmentSlotData& TargetSlot = EquipmentSlots[EquipmentSlotIndex];
+	if (IsFoodSlotIndex(EquipmentSlotIndex))
+	{
+		if (TargetSlot.ItemData && TargetSlot.ItemData != NewItemData)
+		{
+			return false;
+		}
+
+		const int32 MaxStack = FMath::Max(1, NewItemData ? NewItemData->GetMaxStack() : 1);
+		const int32 CurrentCount = TargetSlot.ItemData ? TargetSlot.Count : 0;
+		const int32 MoveCount = FMath::Min(SourceStack->Count, MaxStack - CurrentCount);
+		if (MoveCount <= 0)
+		{
+			return false;
+		}
+
+		FPWInventoryItemStack RemovedStack;
+		if (!InventoryComponent->RemoveItemFromSlotAuthority(InventorySlotIndex, MoveCount, &RemovedStack))
+		{
+			return false;
+		}
+
+		TargetSlot.ItemData = NewItemData;
+		TargetSlot.Count = CurrentCount + MoveCount;
+		TargetSlot.ToolType = EPWToolType::Hand;
+		TargetSlot.StaticMesh = nullptr;
+		TargetSlot.SkeletalMesh = nullptr;
+		NotifyEquipmentChanged();
+		return true;
+	}
+
 	if (TargetSlot.ItemData == NewItemData)
 	{
 		return true;
@@ -636,7 +724,8 @@ bool UPWPlayerEquipmentComponent::UnequipToInventoryAuthority(int32 EquipmentSlo
 		return false;
 	}
 
-	if (!InventoryComponent->AddItemAuthority(ItemData->GetItemId(), 1))
+	const int32 ReturnCount = FMath::Max(1, EquipmentSlots[EquipmentSlotIndex].Count);
+	if (!InventoryComponent->AddItemAuthority(ItemData->GetItemId(), ReturnCount))
 	{
 		return false;
 	}
@@ -661,10 +750,11 @@ bool UPWPlayerEquipmentComponent::UnequipToInventorySlotAuthority(int32 Equipmen
 		return false;
 	}
 
+	const int32 EquipmentItemCount = FMath::Max(1, EquipmentSlots[EquipmentSlotIndex].Count);
 	const FPWInventoryItemStack* TargetStack = InventoryComponent->FindStackBySlot(InventorySlotIndex);
 	if (!TargetStack)
 	{
-		if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), 1, InventorySlotIndex))
+		if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), EquipmentItemCount, InventorySlotIndex))
 		{
 			return false;
 		}
@@ -674,7 +764,7 @@ bool UPWPlayerEquipmentComponent::UnequipToInventorySlotAuthority(int32 Equipmen
 
 	if (TargetStack->ItemId == EquipmentItemData->GetItemId())
 	{
-		if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), 1, InventorySlotIndex))
+		if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), EquipmentItemCount, InventorySlotIndex))
 		{
 			return false;
 		}
@@ -699,7 +789,7 @@ bool UPWPlayerEquipmentComponent::UnequipToInventorySlotAuthority(int32 Equipmen
 		return false;
 	}
 
-	if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), 1, InventorySlotIndex))
+	if (!InventoryComponent->AddItemToSlotAuthority(EquipmentItemData->GetItemId(), EquipmentItemCount, InventorySlotIndex))
 	{
 		InventoryComponent->AddItemToSlotAuthority(RemovedStack.ItemId, RemovedStack.Count, InventorySlotIndex);
 		return false;
@@ -729,7 +819,7 @@ bool UPWPlayerEquipmentComponent::DropEquipmentSlotAuthority(int32 EquipmentSlot
 	FPWWorldItemDropRequest DropRequest;
 	DropRequest.ItemData = ItemData;
 	DropRequest.ItemId = ItemData->GetItemId();
-	DropRequest.Count = 1;
+	DropRequest.Count = FMath::Max(1, EquipmentSlots[EquipmentSlotIndex].Count);
 	DropRequest.SourceActor = PlayerCharacter;
 	DropRequest.SourceLocation = PlayerCharacter->GetActorLocation() + Forward * 120.f + FVector(0.f, 0.f, 45.f);
 	DropRequest.TargetLocation = PlayerCharacter->GetActorLocation() + Forward * 260.f;
@@ -766,9 +856,89 @@ int32 UPWPlayerEquipmentComponent::FindFirstCompatibleEquipmentSlotIndex(UPWItem
 	return INDEX_NONE;
 }
 
+bool UPWPlayerEquipmentComponent::DecrementEquipmentSlotCountAuthority(int32 EquipmentSlotIndex, int32 Count)
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority()
+		|| !IsValidSlotIndex(EquipmentSlotIndex)
+		|| Count <= 0)
+	{
+		return false;
+	}
+
+	FPWEquipmentSlotData& SlotData = EquipmentSlots[EquipmentSlotIndex];
+	if (!SlotData.ItemData || SlotData.Count <= 0)
+	{
+		return false;
+	}
+
+	SlotData.Count -= FMath::Min(Count, SlotData.Count);
+	if (SlotData.Count <= 0)
+	{
+		SlotData.ItemData = nullptr;
+		SlotData.Count = 0;
+		SlotData.ToolType = EPWToolType::Hand;
+		SlotData.StaticMesh = nullptr;
+		SlotData.SkeletalMesh = nullptr;
+	}
+
+	NotifyEquipmentChanged();
+	return true;
+}
+
+void UPWPlayerEquipmentComponent::TryAutoUseFoodSlots()
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!bEnableAutoUseFoodSlots || !PlayerCharacter || !PlayerCharacter->HasAuthority())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World || World->GetTimeSeconds() < NextAutoUseFoodCheckTime)
+	{
+		return;
+	}
+
+	NextAutoUseFoodCheckTime = World->GetTimeSeconds() + FMath::Max(0.05f, AutoUseFoodCheckInterval);
+
+	UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent();
+	UPWPlayerInventoryLinkComponent* InventoryComponent = GetInventoryComponent();
+	if (!StatComponent || !InventoryComponent || StatComponent->GetMaxHunger() <= 0.f)
+	{
+		return;
+	}
+
+	if (StatComponent->GetHungerRatio() > AutoUseFoodHungerRatioThreshold)
+	{
+		return;
+	}
+
+	for (int32 SlotIndex = FoodSlotStartIndex; SlotIndex < FoodSlotStartIndex + FoodSlotCount; ++SlotIndex)
+	{
+		if (!EquipmentSlots.IsValidIndex(SlotIndex))
+		{
+			continue;
+		}
+
+		FPWEquipmentSlotData& FoodSlot = EquipmentSlots[SlotIndex];
+		if (!IsFoodItem(FoodSlot.ItemData) || FoodSlot.Count <= 0)
+		{
+			continue;
+		}
+
+		if (InventoryComponent->ApplyConsumableItemAuthority(FoodSlot.ItemData))
+		{
+			DecrementEquipmentSlotCountAuthority(SlotIndex, 1);
+		}
+		return;
+	}
+}
+
 void UPWPlayerEquipmentComponent::NotifyEquipmentChanged()
 {
 	EnsureSlotCount();
+	SyncShieldStatsToEquipment();
 	RebuildVisualComponents();
 	SyncSelectedToolToPrimaryActionComponent();
 	OnEquipmentChanged.Broadcast();
@@ -777,6 +947,26 @@ void UPWPlayerEquipmentComponent::NotifyEquipmentChanged()
 	{
 		OwnerActor->ForceNetUpdate();
 	}
+}
+
+void UPWPlayerEquipmentComponent::SyncShieldStatsToEquipment() const
+{
+	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
+	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
+	{
+		return;
+	}
+
+	UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent();
+	if (!StatComponent)
+	{
+		return;
+	}
+
+	const float NewShieldCapacity = ResolveEquippedShieldCapacity();
+	const bool bFillShield = NewShieldCapacity > 0.f
+		&& !FMath::IsNearlyEqual(StatComponent->GetMaxShield(), NewShieldCapacity);
+	StatComponent->SetShieldCapacity(NewShieldCapacity, bFillShield);
 }
 
 void UPWPlayerEquipmentComponent::RebuildVisualComponents()

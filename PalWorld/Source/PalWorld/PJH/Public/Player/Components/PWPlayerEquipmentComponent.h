@@ -31,6 +31,9 @@ struct FPWEquipmentSlotData
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UPWItemDataAsset> ItemData = nullptr;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (ClampMin = "0"))
+	int32 Count = 0;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment")
 	EPWToolType ToolType = EPWToolType::Hand;
 
@@ -68,6 +71,7 @@ public:
 	UPWPlayerEquipmentComponent();
 
 	virtual void BeginPlay() override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -94,6 +98,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Player|Equipment")
 	const FPWEquipmentSlotData& GetSlotData(int32 SlotIndex) const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Equipment")
+	int32 GetSlotItemCount(int32 SlotIndex) const;
 
 	UFUNCTION(BlueprintPure, Category = "Player|Equipment")
 	EPWEquipmentSlotType GetSlotType(int32 SlotIndex) const;
@@ -162,8 +169,22 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_SelectedSlotIndex, VisibleInstanceOnly, Category = "Player|Equipment")
 	int32 SelectedSlotIndex = 0;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Equipment|Food", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float AutoUseFoodHungerRatioThreshold = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Equipment|Food", meta = (ClampMin = "0.05"))
+	float AutoUseFoodCheckInterval = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Equipment|Food")
+	bool bEnableAutoUseFoodSlots = true;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Equipment|Shield", meta = (ClampMin = "0.0"))
+	float DefaultShieldCapacity = 100.f;
+
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<USceneComponent>> SlotVisualComponents;
+
+	float NextAutoUseFoodCheckTime = 0.f;
 
 	UFUNCTION(Server, Reliable)
 	void ServerSelectEquipmentSlot(int32 NewSlotIndex);
@@ -209,6 +230,9 @@ private:
 	void ApplyDefaultSlotTypes();
 	bool IsValidSlotIndex(int32 SlotIndex) const;
 	bool IsSlotSelectable(int32 SlotIndex) const;
+	bool IsFoodSlotIndex(int32 SlotIndex) const;
+	bool IsFoodItem(UPWItemDataAsset* ItemData) const;
+	float ResolveEquippedShieldCapacity() const;
 	bool IsItemCompatibleWithSlot(UPWItemDataAsset* ItemData, int32 SlotIndex) const;
 	bool CanSwapEquipmentSlots(int32 FromSlotIndex, int32 ToSlotIndex) const;
 	int32 FindSelectableSlotByOffset(int32 StartSlotIndex, int32 Offset) const;
@@ -223,6 +247,9 @@ private:
 	bool UnequipToInventorySlotAuthority(int32 EquipmentSlotIndex, int32 InventorySlotIndex);
 	bool DropEquipmentSlotAuthority(int32 EquipmentSlotIndex);
 	int32 FindFirstCompatibleEquipmentSlotIndex(UPWItemDataAsset* ItemData) const;
+	bool DecrementEquipmentSlotCountAuthority(int32 EquipmentSlotIndex, int32 Count);
+	void TryAutoUseFoodSlots();
+	void SyncShieldStatsToEquipment() const;
 	void NotifyEquipmentChanged();
 
 	void RebuildVisualComponents();

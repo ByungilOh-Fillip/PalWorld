@@ -10,6 +10,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "Player/Core/PWPlayerCharacter.h"
+#include "Player/Components/PWPlayerStatComponent.h"
 #include "Player/UI/PWPlayerHUDWidget.h"
 
 APWPlayerController::APWPlayerController()
@@ -65,6 +66,14 @@ void APWPlayerController::SetupInputComponent()
 		// 메뉴 입력은 지금 단계에서 확실히 동작해야 하므로 IMC와 별도로 직접 바인딩한다.
 		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &APWPlayerController::ToggleInventoryMenu);
 		InputComponent->BindKey(EKeys::F, IE_Pressed, this, &APWPlayerController::HandleInteractPressed);
+
+		if (bEnableDebugStatHotkeys)
+		{
+			InputComponent->BindKey(EKeys::NumPadOne, IE_Pressed, this, &APWPlayerController::DebugApplyHealthDamage);
+			InputComponent->BindKey(EKeys::NumPadTwo, IE_Pressed, this, &APWPlayerController::DebugApplyDirectHealthDamage);
+			InputComponent->BindKey(EKeys::NumPadThree, IE_Pressed, this, &APWPlayerController::DebugConsumeShield);
+			InputComponent->BindKey(EKeys::NumPadFour, IE_Pressed, this, &APWPlayerController::DebugConsumeHunger);
+		}
 	}
 
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
@@ -276,6 +285,100 @@ void APWPlayerController::HandleEquipmentWheelPreviousStarted(const FInputAction
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->SelectPreviousEquipmentSlot();
+	}
+}
+
+void APWPlayerController::DebugApplyHealthDamage()
+{
+	if (bEnableDebugStatHotkeys)
+	{
+		ServerDebugApplyHealthDamage();
+	}
+}
+
+void APWPlayerController::DebugApplyDirectHealthDamage()
+{
+	if (bEnableDebugStatHotkeys)
+	{
+		ServerDebugApplyDirectHealthDamage();
+	}
+}
+
+void APWPlayerController::DebugConsumeShield()
+{
+	if (bEnableDebugStatHotkeys)
+	{
+		ServerDebugConsumeShield();
+	}
+}
+
+void APWPlayerController::DebugConsumeHunger()
+{
+	if (bEnableDebugStatHotkeys)
+	{
+		ServerDebugConsumeHunger();
+	}
+}
+
+void APWPlayerController::ServerDebugApplyHealthDamage_Implementation()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		if (UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent())
+		{
+			StatComponent->ApplyHealthDamage(DebugHealthDamageAmount);
+			UE_LOG(LogTemp, Display, TEXT("[PWDebugStats] Apply damage. Amount=%.1f Health=%.1f/%.1f Shield=%.1f/%.1f"),
+				DebugHealthDamageAmount,
+				StatComponent->GetCurrentHealth(),
+				StatComponent->GetMaxHealth(),
+				StatComponent->GetCurrentShield(),
+				StatComponent->GetMaxShield());
+		}
+	}
+}
+
+void APWPlayerController::ServerDebugApplyDirectHealthDamage_Implementation()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		if (UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent())
+		{
+			StatComponent->ApplyDirectHealthDamage(DebugHealthDamageAmount);
+			UE_LOG(LogTemp, Display, TEXT("[PWDebugStats] Apply direct health damage. Amount=%.1f Health=%.1f/%.1f"),
+				DebugHealthDamageAmount,
+				StatComponent->GetCurrentHealth(),
+				StatComponent->GetMaxHealth());
+		}
+	}
+}
+
+void APWPlayerController::ServerDebugConsumeShield_Implementation()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		if (UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent())
+		{
+			StatComponent->ConsumeShield(DebugShieldDamageAmount);
+			UE_LOG(LogTemp, Display, TEXT("[PWDebugStats] Consume shield. Amount=%.1f Shield=%.1f/%.1f"),
+				DebugShieldDamageAmount,
+				StatComponent->GetCurrentShield(),
+				StatComponent->GetMaxShield());
+		}
+	}
+}
+
+void APWPlayerController::ServerDebugConsumeHunger_Implementation()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		if (UPWPlayerStatComponent* StatComponent = PlayerCharacter->GetStatComponent())
+		{
+			StatComponent->ConsumeHunger(DebugHungerConsumeAmount);
+			UE_LOG(LogTemp, Display, TEXT("[PWDebugStats] Consume hunger. Amount=%.1f Hunger=%.1f/%.1f"),
+				DebugHungerConsumeAmount,
+				StatComponent->GetCurrentHunger(),
+				StatComponent->GetMaxHunger());
+		}
 	}
 }
 

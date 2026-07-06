@@ -55,10 +55,19 @@ protected:
 	TObjectPtr<UProgressBar> Progress_Health;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UProgressBar> Progress_Shield;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UWidget> ShieldRoot;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
 	TObjectPtr<UProgressBar> Progress_Hunger;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
 	TObjectPtr<UTextBlock> Text_Health;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
+	TObjectPtr<UTextBlock> Text_Shield;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stats")
 	TObjectPtr<UTextBlock> Text_Hunger;

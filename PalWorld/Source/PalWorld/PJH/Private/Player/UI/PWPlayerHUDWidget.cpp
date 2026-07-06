@@ -122,11 +122,24 @@ void UPWPlayerHUDWidget::UnbindStatComponent()
 void UPWPlayerHUDWidget::RefreshSurvivalStats()
 {
 	const float HealthRatio = BoundStatComponent ? BoundStatComponent->GetHealthRatio() : 1.f;
+	const float ShieldRatio = BoundStatComponent ? BoundStatComponent->GetShieldRatio() : 1.f;
 	const float HungerRatio = BoundStatComponent ? BoundStatComponent->GetHungerRatio() : 1.f;
+	const bool bHasShieldCapacity = BoundStatComponent && BoundStatComponent->HasShieldCapacity();
 
 	if (Progress_Health)
 	{
 		Progress_Health->SetPercent(HealthRatio);
+	}
+
+	if (ShieldRoot)
+	{
+		ShieldRoot->SetVisibility(bHasShieldCapacity ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+
+	if (Progress_Shield)
+	{
+		Progress_Shield->SetPercent(ShieldRatio);
+		Progress_Shield->SetVisibility(bHasShieldCapacity ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 	}
 
 	if (Progress_Hunger)
@@ -142,6 +155,17 @@ void UPWPlayerHUDWidget::RefreshSurvivalStats()
 				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetCurrentHealth())),
 				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetMaxHealth())))
 			: FText::GetEmpty());
+	}
+
+	if (Text_Shield)
+	{
+		Text_Shield->SetText(BoundStatComponent
+			? FText::Format(
+				NSLOCTEXT("PWPlayerHUD", "ShieldFormat", "{0} / {1}"),
+				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetCurrentShield())),
+				FText::AsNumber(FMath::RoundToInt(BoundStatComponent->GetMaxShield())))
+			: FText::GetEmpty());
+		Text_Shield->SetVisibility(bHasShieldCapacity ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 	}
 
 	if (Text_Hunger)
