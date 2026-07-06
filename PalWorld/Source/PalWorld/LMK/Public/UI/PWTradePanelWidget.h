@@ -6,6 +6,7 @@
 #include "PWTradePanelWidget.generated.h"
 
 class APW_MerchantPalCharacter;
+class UButton;
 class UPWPlayerTradeComponent;
 
 UCLASS(Blueprintable)
@@ -43,8 +44,15 @@ private:
 	UFUNCTION()
 	void HandleTradeStateChanged();
 
+	UFUNCTION()
+	void HandleCloseButtonClicked();
+
 	void UnbindTradeComponent();
 	void RefreshVisibility();
+	void RestoreGameInputMode();
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> Button_Close;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPWPlayerTradeComponent> BoundTradeComponent;

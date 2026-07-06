@@ -8,6 +8,8 @@
 
 class UPWInteractableTargetComponent;
 class UPW_MerchantComponent;
+class UPWPlayerTradeComponent;
+class UPWTradePanelWidget;
 
 UCLASS(Blueprintable)
 class PALWORLD_API APW_MerchantPalCharacter : public APWPalCharacter, public IPWInteractable, public IPWLocalInteractable
@@ -34,9 +36,18 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "PW|Merchant", meta = (DisplayName = "On Merchant Local Interacted"))
 	void BP_OnMerchantLocalInteracted(AActor* Interactor);
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Merchant|UI")
+	TSubclassOf<UPWTradePanelWidget> TradePanelWidgetClass;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Merchant")
 	TObjectPtr<UPW_MerchantComponent> MerchantComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Interaction")
 	TObjectPtr<UPWInteractableTargetComponent> InteractableTargetComponent;
+
+private:
+	bool OpenTradePanel(AActor* Interactor, UPWPlayerTradeComponent* TradeComponent);
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPWTradePanelWidget> TradePanelWidget;
 };

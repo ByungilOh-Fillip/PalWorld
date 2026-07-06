@@ -2,6 +2,8 @@
 
 #include "Merchant/PWPlayerTradeComponent.h"
 #include "Merchant/PW_MerchantPalCharacter.h"
+#include "Components/Button.h"
+#include "GameFramework/PlayerController.h"
 
 void UPWTradePanelWidget::InitializeWithTradeComponent(UPWPlayerTradeComponent* InTradeComponent)
 {
@@ -47,11 +49,23 @@ bool UPWTradePanelWidget::RequestSellItem(FName ItemId, int32 Count)
 void UPWTradePanelWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	if (Button_Close)
+	{
+		Button_Close->OnClicked.AddUniqueDynamic(this, &UPWTradePanelWidget::HandleCloseButtonClicked);
+	}
+
 	HandleTradeStateChanged();
 }
 
 void UPWTradePanelWidget::NativeDestruct()
 {
+	if (Button_Close)
+	{
+		Button_Close->OnClicked.RemoveDynamic(this, &UPWTradePanelWidget::HandleCloseButtonClicked);
+	}
+
+	RestoreGameInputMode();
 	UnbindTradeComponent();
 	Super::NativeDestruct();
 }
@@ -60,6 +74,14 @@ void UPWTradePanelWidget::HandleTradeStateChanged()
 {
 	RefreshVisibility();
 	BP_OnTradeStateChanged();
+}
+
+void UPWTradePanelWidget::HandleCloseButtonClicked()
+{
+	if (BoundTradeComponent)
+	{
+		BoundTradeComponent->CloseTrade();
+	}
 }
 
 void UPWTradePanelWidget::UnbindTradeComponent()
@@ -73,5 +95,24 @@ void UPWTradePanelWidget::UnbindTradeComponent()
 
 void UPWTradePanelWidget::RefreshVisibility()
 {
-	SetVisibility(GetCurrentMerchant() ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	const bool bHasMerchant = GetCurrentMerchant() != nullptr;
+	SetVisibility(bHasMerchant ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+
+	if (!bHasMerchant)
+	{
+		RestoreGameInputMode();
+	}
+}
+
+void UPWTradePanelWidget::RestoreGameInputMode()
+{
+	APlayerController* PlayerController = GetOwningPlayer();
+	if (PlayerController == nullptr || !PlayerController->IsLocalController())
+	{
+		return;
+	}
+
+	FInputModeGameOnly InputMode;
+	PlayerController->SetInputMode(InputMode);
+	PlayerController->bShowMouseCursor = false;
 }
