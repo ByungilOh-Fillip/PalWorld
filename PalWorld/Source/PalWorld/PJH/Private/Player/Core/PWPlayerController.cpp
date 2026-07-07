@@ -134,6 +134,13 @@ void APWPlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleAimCompleted);
 	}
 
+	if (CaptureSphereAction)
+	{
+		EnhancedInputComponent->BindAction(CaptureSphereAction, ETriggerEvent::Started, this, &APWPlayerController::HandleSphereAimStarted);
+		EnhancedInputComponent->BindAction(CaptureSphereAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleSphereAimCompleted);
+		EnhancedInputComponent->BindAction(CaptureSphereAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleSphereAimCompleted);
+	}
+
 	if (EquipmentWheelNextAction)
 	{
 		EnhancedInputComponent->BindAction(EquipmentWheelNextAction, ETriggerEvent::Started, this, &APWPlayerController::HandleEquipmentWheelNextStarted);
@@ -269,7 +276,28 @@ void APWPlayerController::HandleAimCompleted(const FInputActionValue& Value)
 		PlayerCharacter->StopAim();
 	}
 
-	SetCrosshairVisible(false);
+	RefreshCrosshairVisibility();
+}
+
+void APWPlayerController::HandleSphereAimStarted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		if (PlayerCharacter->StartSphereAim())
+		{
+			SetCrosshairVisible(true);
+		}
+	}
+}
+
+void APWPlayerController::HandleSphereAimCompleted(const FInputActionValue& Value)
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->ReleaseSphereAim();
+	}
+
+	RefreshCrosshairVisibility();
 }
 
 void APWPlayerController::HandleEquipmentWheelNextStarted(const FInputActionValue& Value)
@@ -435,6 +463,12 @@ void APWPlayerController::SetCrosshairVisible(bool bVisible)
 	{
 		PlayerHUDWidget->SetCrosshairVisible(bVisible);
 	}
+}
+
+void APWPlayerController::RefreshCrosshairVisibility()
+{
+	const APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter();
+	SetCrosshairVisible(PlayerCharacter && (PlayerCharacter->IsAiming() || PlayerCharacter->IsSphereAiming()));
 }
 
 void APWPlayerController::ToggleInventoryMenu()

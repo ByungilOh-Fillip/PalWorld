@@ -235,6 +235,24 @@ bool UPWPlayerInventoryLinkComponent::UseItemFromSlot(int32 SlotIndex)
 	return UseItemFromSlotAuthority(SlotIndex);
 }
 
+bool UPWPlayerInventoryLinkComponent::ConsumeItem(FName ItemId, int32 Count)
+{
+	ItemId = NormalizeItemId(ItemId);
+	if (ItemId.IsNone() || Count <= 0)
+	{
+		return false;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority())
+	{
+		ServerConsumeItem(ItemId, Count);
+		return true;
+	}
+
+	return ConsumeItemAuthority(ItemId, Count);
+}
+
 int32 UPWPlayerInventoryLinkComponent::GetItemCount(FName ItemId) const
 {
 	ItemId = NormalizeItemId(ItemId);
@@ -360,6 +378,11 @@ void UPWPlayerInventoryLinkComponent::ServerDestroyItemFromSlot_Implementation(i
 void UPWPlayerInventoryLinkComponent::ServerUseItemFromSlot_Implementation(int32 SlotIndex)
 {
 	UseItemFromSlotAuthority(SlotIndex);
+}
+
+void UPWPlayerInventoryLinkComponent::ServerConsumeItem_Implementation(FName ItemId, int32 Count)
+{
+	ConsumeItemAuthority(ItemId, Count);
 }
 
 void UPWPlayerInventoryLinkComponent::OnRep_Items()
@@ -524,6 +547,49 @@ bool UPWPlayerInventoryLinkComponent::MoveItemSlotAuthority(int32 FromSlotIndex,
 	}
 
 	Swap(FromStack->SlotIndex, ToStack->SlotIndex);
+	OnInventoryChanged.Broadcast();
+	OwnerActor->ForceNetUpdate();
+	return true;
+}
+
+bool UPWPlayerInventoryLinkComponent::ConsumeItemAuthority(FName ItemId, int32 Count)
+{
+	ItemId = NormalizeItemId(ItemId);
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority() || ItemId.IsNone() || Count <= 0)
+	{
+		return false;
+	}
+
+	if (GetItemCount(ItemId) < Count)
+	{
+		return false;
+	}
+
+	int32 RemainingCount = Count;
+	for (int32 StackIndex = Items.Num() - 1; StackIndex >= 0 && RemainingCount > 0; --StackIndex)
+	{
+		FPWInventoryItemStack& Stack = Items[StackIndex];
+		if (Stack.ItemId != ItemId || Stack.Count <= 0)
+		{
+			continue;
+		}
+
+		const int32 RemoveCount = FMath::Min(Stack.Count, RemainingCount);
+		Stack.Count -= RemoveCount;
+		RemainingCount -= RemoveCount;
+
+		if (Stack.Count <= 0)
+		{
+			Items.RemoveAt(StackIndex);
+		}
+	}
+
+	if (RemainingCount > 0)
+	{
+		return false;
+	}
+
 	OnInventoryChanged.Broadcast();
 	OwnerActor->ForceNetUpdate();
 	return true;
