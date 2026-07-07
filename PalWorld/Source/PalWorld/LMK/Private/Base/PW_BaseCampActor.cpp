@@ -25,7 +25,7 @@ APW_BaseCampActor::APW_BaseCampActor()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	SetNetCullDistanceSquared(FMath::Square(12000.0f));
-	NetUpdateFrequency = 2.0f;
+	SetNetUpdateFrequency(2.0f);
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);

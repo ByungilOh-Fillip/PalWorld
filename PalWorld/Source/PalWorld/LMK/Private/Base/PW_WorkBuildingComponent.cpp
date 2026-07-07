@@ -1,6 +1,7 @@
 #include "Base/PW_WorkBuildingComponent.h"
 
 #include "Net/UnrealNetwork.h"
+#include "PWInteractableTargetComponent.h"
 
 UPW_WorkBuildingComponent::UPW_WorkBuildingComponent()
 {
@@ -17,6 +18,8 @@ void UPW_WorkBuildingComponent::BeginPlay()
 	{
 		ReserveWork(TEXT("DebugWork"));
 	}
+
+	RefreshInteractionGuideProgress();
 }
 
 void UPW_WorkBuildingComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -82,6 +85,7 @@ bool UPW_WorkBuildingComponent::ReserveWork(FName NewWorkId)
 	WorkState = EPW_WorkBuildingState::Reserved;
 	bHasReservedWork = true;
 	ClearActiveWorkers();
+	RefreshInteractionGuideProgress();
 	Owner->ForceNetUpdate();
 	return true;
 }
@@ -99,6 +103,7 @@ bool UPW_WorkBuildingComponent::CancelReservedWork()
 	WorkState = EPW_WorkBuildingState::Idle;
 	bHasReservedWork = false;
 	ClearActiveWorkers();
+	RefreshInteractionGuideProgress();
 	Owner->ForceNetUpdate();
 	return true;
 }
@@ -156,6 +161,7 @@ bool UPW_WorkBuildingComponent::EndWork(AActor* Worker)
 			WorkState = EPW_WorkBuildingState::Reserved;
 		}
 		RefreshActiveWorkerCount();
+		RefreshInteractionGuideProgress();
 		Owner->ForceNetUpdate();
 	}
 
@@ -180,6 +186,11 @@ float UPW_WorkBuildingComponent::GetWorkProgressRatio() const
 	return RequiredWorkProgress > 0.0f ? FMath::Clamp(WorkProgress / RequiredWorkProgress, 0.0f, 1.0f) : 0.0f;
 }
 
+float UPW_WorkBuildingComponent::GetRequiredPlayerWorkSeconds() const
+{
+	return PlayerWorkRate > 0.0f ? RequiredWorkProgress / PlayerWorkRate : 0.0f;
+}
+
 void UPW_WorkBuildingComponent::HandleActiveWorkerDestroyed(AActor* DestroyedActor)
 {
 	AActor* Owner = GetOwner();
@@ -197,7 +208,13 @@ void UPW_WorkBuildingComponent::HandleActiveWorkerDestroyed(AActor* DestroyedAct
 		}
 		RefreshActiveWorkerCount();
 		Owner->ForceNetUpdate();
+		RefreshInteractionGuideProgress();
 	}
+}
+
+void UPW_WorkBuildingComponent::OnRep_WorkGuideState()
+{
+	RefreshInteractionGuideProgress();
 }
 
 void UPW_WorkBuildingComponent::ApplyActiveWorkerProgress(float DeltaTime)
@@ -225,6 +242,7 @@ void UPW_WorkBuildingComponent::ApplyActiveWorkerProgress(float DeltaTime)
 	}
 
 	WorkProgress = FMath::Min(RequiredWorkProgress, WorkProgress + PlayerWorkRate * DeltaTime * ActiveWorkers.Num());
+	RefreshInteractionGuideProgress();
 	if (WorkProgress >= RequiredWorkProgress)
 	{
 		CompleteWork();
@@ -265,6 +283,7 @@ void UPW_WorkBuildingComponent::CompleteWork()
 	WorkState = EPW_WorkBuildingState::Completed;
 	bHasReservedWork = false;
 	ClearActiveWorkers();
+	RefreshInteractionGuideProgress();
 	OnWorkCompleted.Broadcast();
 	Owner->ForceNetUpdate();
 }
@@ -286,6 +305,18 @@ void UPW_WorkBuildingComponent::ClearActiveWorkers()
 void UPW_WorkBuildingComponent::RefreshActiveWorkerCount()
 {
 	ActiveWorkerCount = ActiveWorkers.Num();
+}
+
+void UPW_WorkBuildingComponent::RefreshInteractionGuideProgress() const
+{
+	const AActor* Owner = GetOwner();
+	UPWInteractableTargetComponent* TargetComponent = Owner != nullptr ? Owner->FindComponentByClass<UPWInteractableTargetComponent>() : nullptr;
+	if (TargetComponent == nullptr)
+	{
+		return;
+	}
+
+	TargetComponent->SetInteractionGuideActionProgress(TEXT("Default"), GetWorkProgressRatio());
 }
 
 bool UPW_WorkBuildingComponent::IsWorkerInRange(AActor* Worker) const

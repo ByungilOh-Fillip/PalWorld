@@ -15,7 +15,7 @@ APW_StorageBoxActor::APW_StorageBoxActor()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	SetNetCullDistanceSquared(FMath::Square(8000.0f));
-	NetUpdateFrequency = 2.0f;
+	SetNetUpdateFrequency(2.0f);
 
 	StorageMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StorageMesh"));
 	SetRootComponent(StorageMesh);
