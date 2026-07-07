@@ -5,6 +5,7 @@
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "Components/Widget.h"
+#include "Player/Components/PWPlayerCaptureComponent.h"
 #include "Player/Components/PWPlayerStatComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
 #include "Player/UI/PWInventoryPanelWidget.h"
@@ -14,6 +15,7 @@ void UPWPlayerHUDWidget::InitializeWithPlayerCharacter(APWPlayerCharacter* InPla
 {
 	BoundPlayerCharacter = InPlayerCharacter;
 	BindStatComponent(InPlayerCharacter ? InPlayerCharacter->GetStatComponent() : nullptr);
+	BindCaptureComponent();
 
 	if (StaminaGauge)
 	{
@@ -27,6 +29,7 @@ void UPWPlayerHUDWidget::InitializeWithPlayerCharacter(APWPlayerCharacter* InPla
 
 	SetCrosshairVisible(InPlayerCharacter && InPlayerCharacter->IsAiming());
 	RefreshSurvivalStats();
+	BroadcastCaptureAimChanged();
 	BroadcastInventoryVisibility();
 }
 
@@ -40,6 +43,36 @@ void UPWPlayerHUDWidget::SetInventoryVisible(bool bVisible)
 {
 	bIsInventoryVisible = bVisible;
 	BroadcastInventoryVisibility();
+}
+
+bool UPWPlayerHUDWidget::IsCaptureAimVisible() const
+{
+	return BoundCaptureComponent && BoundCaptureComponent->IsCaptureAimVisible();
+}
+
+bool UPWPlayerHUDWidget::HasCaptureAimTarget() const
+{
+	return BoundCaptureComponent && BoundCaptureComponent->HasCaptureAimTarget();
+}
+
+float UPWPlayerHUDWidget::GetCaptureAimChance() const
+{
+	return BoundCaptureComponent ? BoundCaptureComponent->GetCaptureAimChance() : 0.f;
+}
+
+int32 UPWPlayerHUDWidget::GetCaptureAimChancePercent() const
+{
+	return BoundCaptureComponent ? BoundCaptureComponent->GetCaptureAimChancePercent() : 0;
+}
+
+FText UPWPlayerHUDWidget::GetCaptureAimTargetNameText() const
+{
+	return BoundCaptureComponent ? BoundCaptureComponent->GetCaptureAimTargetNameText() : FText::GetEmpty();
+}
+
+int32 UPWPlayerHUDWidget::GetCaptureSphereCount() const
+{
+	return BoundCaptureComponent ? BoundCaptureComponent->GetThrowableCaptureSphereCount() : 0;
 }
 
 void UPWPlayerHUDWidget::NativeConstruct()
@@ -60,6 +93,7 @@ void UPWPlayerHUDWidget::NativeConstruct()
 void UPWPlayerHUDWidget::NativeDestruct()
 {
 	UnbindStatComponent();
+	UnbindCaptureComponent();
 
 	if (CreatedInventoryPanel)
 	{
@@ -110,6 +144,31 @@ void UPWPlayerHUDWidget::BindStatComponent(UPWPlayerStatComponent* InStatCompone
 	}
 }
 
+void UPWPlayerHUDWidget::BindCaptureComponent()
+{
+	UPWPlayerCaptureComponent* NewCaptureComponent = BoundPlayerCharacter ? BoundPlayerCharacter->GetCaptureComponent() : nullptr;
+	if (BoundCaptureComponent == NewCaptureComponent)
+	{
+		return;
+	}
+
+	UnbindCaptureComponent();
+	BoundCaptureComponent = NewCaptureComponent;
+	if (BoundCaptureComponent)
+	{
+		BoundCaptureComponent->OnCaptureAimInfoChanged.AddUniqueDynamic(this, &UPWPlayerHUDWidget::HandleCaptureAimInfoChanged);
+	}
+}
+
+void UPWPlayerHUDWidget::UnbindCaptureComponent()
+{
+	if (BoundCaptureComponent)
+	{
+		BoundCaptureComponent->OnCaptureAimInfoChanged.RemoveDynamic(this, &UPWPlayerHUDWidget::HandleCaptureAimInfoChanged);
+		BoundCaptureComponent = nullptr;
+	}
+}
+
 void UPWPlayerHUDWidget::UnbindStatComponent()
 {
 	if (BoundStatComponent)
@@ -117,6 +176,16 @@ void UPWPlayerHUDWidget::UnbindStatComponent()
 		BoundStatComponent->OnSurvivalStatsChanged.RemoveDynamic(this, &UPWPlayerHUDWidget::HandleSurvivalStatsChanged);
 		BoundStatComponent = nullptr;
 	}
+}
+
+void UPWPlayerHUDWidget::BroadcastCaptureAimChanged()
+{
+	BP_OnCaptureAimChanged();
+}
+
+void UPWPlayerHUDWidget::HandleCaptureAimInfoChanged()
+{
+	BroadcastCaptureAimChanged();
 }
 
 void UPWPlayerHUDWidget::RefreshSurvivalStats()

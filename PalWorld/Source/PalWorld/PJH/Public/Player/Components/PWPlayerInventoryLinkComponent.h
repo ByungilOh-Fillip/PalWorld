@@ -85,6 +85,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
 	bool UseItemFromSlot(int32 SlotIndex);
 
+	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
+	bool ConsumeItem(FName ItemId, int32 Count);
+
 	UFUNCTION(BlueprintPure, Category = "Player|Inventory")
 	int32 GetItemCount(FName ItemId) const;
 
@@ -152,6 +155,9 @@ private:
 	UFUNCTION(Server, Reliable)
 	void ServerUseItemFromSlot(int32 SlotIndex);
 
+	UFUNCTION(Server, Reliable)
+	void ServerConsumeItem(FName ItemId, int32 Count);
+
 	UFUNCTION()
 	void OnRep_Items();
 
@@ -160,6 +166,7 @@ private:
 	bool AddItemAuthority(FName ItemId, int32 Count);
 	bool AddItemToSlotAuthority(FName ItemId, int32 Count, int32 TargetSlotIndex);
 	bool MoveItemSlotAuthority(int32 FromSlotIndex, int32 ToSlotIndex);
+	bool ConsumeItemAuthority(FName ItemId, int32 Count);
 	bool RemoveItemFromSlotAuthority(int32 SlotIndex, int32 Count, FPWInventoryItemStack* OutRemovedStack = nullptr);
 	bool UseItemFromSlotAuthority(int32 SlotIndex);
 	bool ApplyConsumableItemAuthority(UPWItemDataAsset* ItemData);

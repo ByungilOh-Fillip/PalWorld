@@ -57,6 +57,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Action")
 	TObjectPtr<UInputAction> AimAction;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Action")
+	TObjectPtr<UInputAction> CaptureSphereAction;
+
 	// 장비 변경은 마우스 휠 전용이다. 숫자키 1/2/3/4는 팰/스피어 조작에 사용한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Equipment")
 	TObjectPtr<UInputAction> EquipmentWheelNextAction;
@@ -97,6 +100,8 @@ private:
 	void HandleInteractPressed();
 	void HandleAimStarted(const FInputActionValue& Value);
 	void HandleAimCompleted(const FInputActionValue& Value);
+	void HandleSphereAimStarted(const FInputActionValue& Value);
+	void HandleSphereAimCompleted(const FInputActionValue& Value);
 	void HandleEquipmentWheelNextStarted(const FInputActionValue& Value);
 	void HandleEquipmentWheelPreviousStarted(const FInputActionValue& Value);
 	void DebugApplyHealthDamage();
@@ -120,6 +125,7 @@ private:
 	void CreatePlayerHUD();
 	void InitializePlayerHUD();
 	void SetCrosshairVisible(bool bVisible);
+	void RefreshCrosshairVisibility();
 	void ToggleInventoryMenu();
 	void SetInventoryVisible(bool bVisible);
 };

@@ -1,4 +1,4 @@
-# PW Palworld Reference
+****# PW Palworld Reference
 
 이 문서는 PJH 작업 기준으로 팰월드의 플레이어 UI/스탯/장비 구조를 헷갈리지 않기 위해 남긴 기준 메모다.
 

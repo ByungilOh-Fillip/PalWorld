@@ -45,6 +45,8 @@ public:
 	void Interact();
 	bool StartAim();
 	void StopAim();
+	bool StartSphereAim();
+	void ReleaseSphereAim();
 	void SelectNextEquipmentSlot();
 	void SelectPreviousEquipmentSlot();
 
@@ -65,6 +67,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Player|Aim")
 	bool IsAiming() const { return bIsAiming; }
+
+	UFUNCTION(BlueprintPure, Category = "Player|Capture")
+	bool IsSphereAiming() const { return bIsSphereAiming; }
 
 	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
 	bool IsWallClimbing() const;
@@ -99,6 +104,7 @@ public:
 	UPWPlayerEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
 	UPWPlayerInventoryLinkComponent* GetInventoryLinkComponent() const { return InventoryLinkComponent; }
 	UPWPlayerClimbComponent* GetClimbComponent() const { return ClimbComponent; }
+	UPWPlayerCaptureComponent* GetCaptureComponent() const { return CaptureComponent; }
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Player|Camera")
@@ -149,6 +155,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement")
 	float CrouchedWalkSpeed = 220.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement")
+	float SphereAimWalkSpeed = 260.f;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement", meta = (ClampMin = "0.0"))
 	float MinSprintActiveSpeed = 10.f;
 
@@ -173,6 +182,9 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_IsAiming)
 	bool bIsAiming = false;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsSphereAiming)
+	bool bIsSphereAiming = false;
+
 	// 달리기는 커스텀 속도 상태라 CharacterMovement 기본 이동과 별도로 복제한다.
 	UFUNCTION()
 	void OnRep_IsSprinting();
@@ -180,16 +192,25 @@ private:
 	UFUNCTION()
 	void OnRep_IsAiming();
 
+	UFUNCTION()
+	void OnRep_IsSphereAiming();
+
 	UFUNCTION(Server, Reliable)
 	void ServerSetSprinting(bool bNewIsSprinting);
 
 	UFUNCTION(Server, Reliable)
 	void ServerSetAiming(bool bNewIsAiming);
 
+	UFUNCTION(Server, Reliable)
+	void ServerSetSphereAiming(bool bNewIsSphereAiming);
+
 	bool CanStartSprint() const;
 	void SetSprinting(bool bNewIsSprinting);
 	bool CanStartAim() const;
 	void SetAiming(bool bNewIsAiming);
+	bool CanStartSphereAim() const;
+	void SetSphereAiming(bool bNewIsSphereAiming);
+	bool ShouldUseAimCamera() const;
 	bool IsSprintMovementActive() const;
 	void ApplyMovementSpeed();
 	void ApplyRotationMode();

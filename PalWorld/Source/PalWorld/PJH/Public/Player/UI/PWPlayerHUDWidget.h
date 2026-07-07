@@ -35,6 +35,24 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|UI|Inventory")
 	bool IsInventoryVisible() const { return bIsInventoryVisible; }
 
+	UFUNCTION(BlueprintPure, Category = "Player|UI|Capture")
+	bool IsCaptureAimVisible() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|UI|Capture")
+	bool HasCaptureAimTarget() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|UI|Capture")
+	float GetCaptureAimChance() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|UI|Capture")
+	int32 GetCaptureAimChancePercent() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|UI|Capture")
+	FText GetCaptureAimTargetNameText() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|UI|Capture")
+	int32 GetCaptureSphereCount() const;
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
@@ -47,6 +65,9 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|UI|Stats", meta = (DisplayName = "On Survival Stats Changed"))
 	void BP_OnSurvivalStatsChanged();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player|UI|Capture", meta = (DisplayName = "On Capture Aim Changed"))
+	void BP_OnCaptureAimChanged();
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Stamina")
 	TObjectPtr<UPWStaminaGaugeWidget> StaminaGauge;
@@ -92,14 +113,23 @@ private:
 	void BroadcastInventoryVisibility();
 	void BindStatComponent(UPWPlayerStatComponent* InStatComponent);
 	void UnbindStatComponent();
+	void BindCaptureComponent();
+	void UnbindCaptureComponent();
 	void RefreshSurvivalStats();
+	void BroadcastCaptureAimChanged();
 	UPWInventoryPanelWidget* GetOrCreateInventoryPanel();
+
+	UFUNCTION()
+	void HandleCaptureAimInfoChanged();
 
 	UPROPERTY(Transient)
 	TObjectPtr<APWPlayerCharacter> BoundPlayerCharacter;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPWPlayerStatComponent> BoundStatComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class UPWPlayerCaptureComponent> BoundCaptureComponent;
 
 	UPROPERTY(Transient)
 	bool bIsCrosshairVisible = false;
