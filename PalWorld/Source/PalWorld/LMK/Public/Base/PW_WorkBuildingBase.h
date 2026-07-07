@@ -25,6 +25,7 @@ public:
 	APW_WorkBuildingBase();
 
 	virtual void BeginPlay() override;
+	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
@@ -62,16 +63,16 @@ public:
 	UPW_WorkBuildingComponent* GetWorkBuildingComponent() const { return WorkBuildingComponent; }
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Work")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Components")
 	TObjectPtr<UStaticMeshComponent> BuildingMesh;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Work")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Components")
 	TObjectPtr<UPW_InventoryComponent> InternalInventoryComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Work")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Components")
 	TObjectPtr<UPW_WorkBuildingComponent> WorkBuildingComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Work|Interaction")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PW|Components")
 	TObjectPtr<UPWInteractableTargetComponent> InteractableTargetComponent;
 
 	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "PW|Work")
@@ -101,6 +102,7 @@ private:
 	void RegisterWithBaseCamp();
 	void ScheduleBaseCampRegistrationRetry();
 	void UnregisterFromBaseCamp();
+	void SynchronizeInteractionGuideActions();
 	const FPW_WorkRecipe* FindRecipe(FName RecipeId) const;
 	bool HasIngredients(const FPW_WorkRecipe& Recipe) const;
 	bool ConsumeIngredients(const FPW_WorkRecipe& Recipe);

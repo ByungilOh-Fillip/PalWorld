@@ -4,6 +4,7 @@
 #include "PWInteractable.h"
 #include "PWInteractableTargetComponent.h"
 #include "PWLocalInteractable.h"
+#include "PWMultiInteractable.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
@@ -19,12 +20,32 @@ void UPWInteractionScannerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ScanForInteractables();
+	if (ShouldUpdateLocalInteractionGuide())
+	{
+		ScanForInteractables();
+	}
+}
+
+void UPWInteractionScannerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (ShouldUpdateLocalInteractionGuide())
+	{
+		SetCurrentInteractableActor(nullptr);
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void UPWInteractionScannerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (!ShouldUpdateLocalInteractionGuide())
+	{
+		return;
+	}
+
+	UpdateHoldGuideProgress(DeltaTime);
 
 	TimeUntilNextScan -= DeltaTime;
 	if (TimeUntilNextScan > 0.0f)
@@ -47,6 +68,11 @@ FText UPWInteractionScannerComponent::GetCurrentPrompt() const
 	return IPWInteractable::Execute_GetInteractionPrompt(InteractableActor);
 }
 
+void UPWInteractionScannerComponent::GetCurrentInteractionGuideActions(TArray<FPWInteractionGuideAction>& OutActions) const
+{
+	GetInteractionGuideActions(CurrentInteractableActor.Get(), OutActions);
+}
+
 bool UPWInteractionScannerComponent::TryInteract()
 {
 	AActor* Owner = GetOwner();
@@ -63,6 +89,50 @@ bool UPWInteractionScannerComponent::TryInteract()
 	if (CurrentInteractableActor.IsValid())
 	{
 		ServerTryInteract();
+		return true;
+	}
+
+	return false;
+}
+
+bool UPWInteractionScannerComponent::TryInteractByKey(FKey Key)
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || !Key.IsValid())
+	{
+		return false;
+	}
+
+	if (Owner->HasAuthority())
+	{
+		return ExecuteInteractionByKey(FindBestInteractable(), Key.GetFName());
+	}
+
+	if (CurrentInteractableActor.IsValid())
+	{
+		ServerTryInteractByKey(Key.GetFName());
+		return true;
+	}
+
+	return false;
+}
+
+bool UPWInteractionScannerComponent::TryInteractByActionId(FName ActionId)
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || ActionId.IsNone())
+	{
+		return false;
+	}
+
+	if (Owner->HasAuthority())
+	{
+		return ExecuteInteractionAction(FindBestInteractable(), ActionId);
+	}
+
+	if (CurrentInteractableActor.IsValid())
+	{
+		ServerTryInteractByActionId(ActionId);
 		return true;
 	}
 
@@ -89,6 +159,7 @@ bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
 	{
 		if (bCanBeginHold)
 		{
+			StartHoldGuideProgress(InteractableActor);
 			return ExecuteBeginHoldInteraction(InteractableActor);
 		}
 
@@ -97,6 +168,7 @@ bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
 
 	if (bCanBeginHold)
 	{
+		StartHoldGuideProgress(InteractableActor);
 		ServerTryBeginHoldInteraction();
 		return true;
 	}
@@ -114,16 +186,28 @@ void UPWInteractionScannerComponent::EndHoldInteraction()
 
 	if (Owner->HasAuthority())
 	{
+		StopHoldGuideProgress();
 		ExecuteEndHoldInteraction(CurrentHoldInteractableActor.Get());
 		return;
 	}
 
+	StopHoldGuideProgress();
 	ServerEndHoldInteraction();
 }
 
 void UPWInteractionScannerComponent::ServerTryInteract_Implementation()
 {
 	ExecuteInteraction(FindBestInteractable());
+}
+
+void UPWInteractionScannerComponent::ServerTryInteractByKey_Implementation(FName KeyName)
+{
+	ExecuteInteractionByKey(FindBestInteractable(), KeyName);
+}
+
+void UPWInteractionScannerComponent::ServerTryInteractByActionId_Implementation(FName ActionId)
+{
+	ExecuteInteractionAction(FindBestInteractable(), ActionId);
 }
 
 void UPWInteractionScannerComponent::ServerTryBeginHoldInteraction_Implementation()
@@ -138,7 +222,8 @@ void UPWInteractionScannerComponent::ServerEndHoldInteraction_Implementation()
 
 void UPWInteractionScannerComponent::ScanForInteractables()
 {
-	CurrentInteractableActor = FindBestInteractable();
+	SetCurrentInteractableActor(FindBestInteractable());
+	RefreshCurrentInteractionGuide();
 }
 
 AActor* UPWInteractionScannerComponent::FindBestInteractable() const
@@ -241,6 +326,207 @@ bool UPWInteractionScannerComponent::IsBetterInteractable(
 	return CurrentInteractableActor.Get() != BestActor && CurrentInteractableActor.Get() == CandidateActor;
 }
 
+bool UPWInteractionScannerComponent::ShouldUpdateLocalInteractionGuide() const
+{
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	return OwnerPawn != nullptr && OwnerPawn->IsLocallyControlled();
+}
+
+void UPWInteractionScannerComponent::SetCurrentInteractableActor(AActor* NewInteractableActor)
+{
+	AActor* PreviousInteractableActor = CurrentInteractableActor.Get();
+	if (PreviousInteractableActor == NewInteractableActor)
+	{
+		return;
+	}
+
+	HideInteractionGuide(PreviousInteractableActor);
+	if (PreviousInteractableActor != nullptr && PreviousInteractableActor == CurrentHoldGuideActor.Get())
+	{
+		StopHoldGuideProgress();
+	}
+	CurrentInteractableActor = NewInteractableActor;
+	ShowInteractionGuide(NewInteractableActor);
+}
+
+void UPWInteractionScannerComponent::RefreshCurrentInteractionGuide()
+{
+	AActor* InteractableActor = CurrentInteractableActor.Get();
+	if (InteractableActor == nullptr)
+	{
+		return;
+	}
+
+	ShowInteractionGuide(InteractableActor);
+}
+
+void UPWInteractionScannerComponent::HideInteractionGuide(AActor* InteractableActor) const
+{
+	if (InteractableActor == nullptr)
+	{
+		return;
+	}
+
+	if (UPWInteractableTargetComponent* TargetComponent = InteractableActor->FindComponentByClass<UPWInteractableTargetComponent>())
+	{
+		TargetComponent->SetInteractionGuideVisible(false);
+	}
+}
+
+void UPWInteractionScannerComponent::ShowInteractionGuide(AActor* InteractableActor) const
+{
+	if (InteractableActor == nullptr)
+	{
+		return;
+	}
+
+	UPWInteractableTargetComponent* TargetComponent = InteractableActor->FindComponentByClass<UPWInteractableTargetComponent>();
+	if (TargetComponent == nullptr)
+	{
+		return;
+	}
+
+	TArray<FPWInteractionGuideAction> GuideActions;
+	GetInteractionGuideActions(InteractableActor, GuideActions);
+	TargetComponent->RefreshInteractionGuideWidget();
+	TargetComponent->SetInteractionGuideVisible(GuideActions.Num() > 0);
+}
+
+void UPWInteractionScannerComponent::StartHoldGuideProgress(AActor* InteractableActor)
+{
+	if (!ShouldUpdateLocalInteractionGuide() || InteractableActor == nullptr)
+	{
+		return;
+	}
+
+	FPWInteractionGuideAction HoldGuideAction;
+	if (!GetHoldGuideAction(InteractableActor, HoldGuideAction))
+	{
+		return;
+	}
+
+	StopHoldGuideProgress();
+
+	CurrentHoldGuideActor = InteractableActor;
+	CurrentHoldGuideActionId = HoldGuideAction.ActionId;
+	CurrentHoldGuideDurationSeconds = FMath::Max(HoldGuideAction.ProgressDurationSeconds, KINDA_SMALL_NUMBER);
+	const float InitialProgress = FMath::Clamp(HoldGuideAction.Progress, 0.0f, 1.0f);
+	CurrentHoldGuideElapsedSeconds = InitialProgress * CurrentHoldGuideDurationSeconds;
+	bHoldGuideProgressActive = true;
+
+	if (UPWInteractableTargetComponent* TargetComponent = InteractableActor->FindComponentByClass<UPWInteractableTargetComponent>())
+	{
+		TargetComponent->SetInteractionGuideActionProgress(CurrentHoldGuideActionId, InitialProgress);
+	}
+}
+
+void UPWInteractionScannerComponent::UpdateHoldGuideProgress(float DeltaTime)
+{
+	if (!bHoldGuideProgressActive)
+	{
+		return;
+	}
+
+	AActor* HoldGuideActor = CurrentHoldGuideActor.Get();
+	if (HoldGuideActor == nullptr || CurrentHoldGuideActionId.IsNone())
+	{
+		StopHoldGuideProgress();
+		return;
+	}
+
+	CurrentHoldGuideElapsedSeconds += DeltaTime;
+	const float Progress = FMath::Clamp(CurrentHoldGuideElapsedSeconds / CurrentHoldGuideDurationSeconds, 0.0f, 1.0f);
+
+	if (UPWInteractableTargetComponent* TargetComponent = HoldGuideActor->FindComponentByClass<UPWInteractableTargetComponent>())
+	{
+		TargetComponent->SetInteractionGuideActionProgress(CurrentHoldGuideActionId, Progress);
+	}
+}
+
+void UPWInteractionScannerComponent::StopHoldGuideProgress()
+{
+	CurrentHoldGuideActor.Reset();
+	CurrentHoldGuideActionId = NAME_None;
+	CurrentHoldGuideElapsedSeconds = 0.0f;
+	CurrentHoldGuideDurationSeconds = 1.0f;
+	bHoldGuideProgressActive = false;
+}
+
+bool UPWInteractionScannerComponent::GetHoldGuideAction(AActor* InteractableActor, FPWInteractionGuideAction& OutAction) const
+{
+	TArray<FPWInteractionGuideAction> GuideActions;
+	GetInteractionGuideActions(InteractableActor, GuideActions);
+
+	for (const FPWInteractionGuideAction& GuideAction : GuideActions)
+	{
+		if (GuideAction.bEnabled && GuideAction.bShowProgress && GuideAction.Key == EKeys::F)
+		{
+			OutAction = GuideAction;
+			return true;
+		}
+	}
+
+	for (const FPWInteractionGuideAction& GuideAction : GuideActions)
+	{
+		if (GuideAction.bEnabled && GuideAction.bShowProgress)
+		{
+			OutAction = GuideAction;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void UPWInteractionScannerComponent::GetInteractionGuideActions(AActor* InteractableActor, TArray<FPWInteractionGuideAction>& OutActions) const
+{
+	OutActions.Reset();
+
+	if (InteractableActor == nullptr)
+	{
+		return;
+	}
+
+	if (const UPWInteractableTargetComponent* TargetComponent = InteractableActor->FindComponentByClass<UPWInteractableTargetComponent>())
+	{
+		TargetComponent->GetInteractionGuideActions(OutActions);
+	}
+}
+
+bool UPWInteractionScannerComponent::FindGuideActionByKey(AActor* InteractableActor, FName KeyName, FPWInteractionGuideAction& OutAction) const
+{
+	TArray<FPWInteractionGuideAction> GuideActions;
+	GetInteractionGuideActions(InteractableActor, GuideActions);
+
+	for (const FPWInteractionGuideAction& GuideAction : GuideActions)
+	{
+		if (GuideAction.bEnabled && GuideAction.Key.GetFName() == KeyName)
+		{
+			OutAction = GuideAction;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UPWInteractionScannerComponent::FindGuideActionByActionId(AActor* InteractableActor, FName ActionId, FPWInteractionGuideAction& OutAction) const
+{
+	TArray<FPWInteractionGuideAction> GuideActions;
+	GetInteractionGuideActions(InteractableActor, GuideActions);
+
+	for (const FPWInteractionGuideAction& GuideAction : GuideActions)
+	{
+		if (GuideAction.bEnabled && GuideAction.ActionId == ActionId)
+		{
+			OutAction = GuideAction;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool UPWInteractionScannerComponent::ExecuteInteraction(AActor* InteractableActor) const
 {
 	AActor* Owner = GetOwner();
@@ -261,6 +547,55 @@ bool UPWInteractionScannerComponent::ExecuteInteraction(AActor* InteractableActo
 	}
 
 	return IPWInteractable::Execute_Interact(InteractableActor, Owner);
+}
+
+bool UPWInteractionScannerComponent::ExecuteInteractionAction(AActor* InteractableActor, FName ActionId) const
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || InteractableActor == nullptr || ActionId.IsNone())
+	{
+		return false;
+	}
+
+	FPWInteractionGuideAction GuideAction;
+	if (!FindGuideActionByActionId(InteractableActor, ActionId, GuideAction))
+	{
+		return false;
+	}
+
+	if (!InteractableActor->GetClass()->ImplementsInterface(UPWMultiInteractable::StaticClass()))
+	{
+		return ExecuteInteraction(InteractableActor);
+	}
+
+	const UPWInteractableTargetComponent* TargetComponent = InteractableActor->FindComponentByClass<UPWInteractableTargetComponent>();
+	if (TargetComponent == nullptr || !TargetComponent->IsInteractionEnabled() || !IsInteractableInRange(InteractableActor, TargetComponent))
+	{
+		return false;
+	}
+
+	if (!IPWMultiInteractable::Execute_CanInteractAction(InteractableActor, Owner, ActionId))
+	{
+		return false;
+	}
+
+	return IPWMultiInteractable::Execute_InteractAction(InteractableActor, Owner, ActionId);
+}
+
+bool UPWInteractionScannerComponent::ExecuteInteractionByKey(AActor* InteractableActor, FName KeyName) const
+{
+	if (KeyName.IsNone())
+	{
+		return false;
+	}
+
+	FPWInteractionGuideAction GuideAction;
+	if (!FindGuideActionByKey(InteractableActor, KeyName, GuideAction))
+	{
+		return false;
+	}
+
+	return ExecuteInteractionAction(InteractableActor, GuideAction.ActionId);
 }
 
 bool UPWInteractionScannerComponent::ExecuteLocalInteraction(AActor* InteractableActor) const
