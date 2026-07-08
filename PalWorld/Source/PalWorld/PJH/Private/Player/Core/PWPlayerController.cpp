@@ -126,6 +126,10 @@ void APWPlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Completed, this, &APWPlayerController::HandlePrimaryActionCompleted);
 		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandlePrimaryActionCompleted);
 	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] PrimaryAction input asset is not assigned on PlayerController."));
+	}
 
 	if (AimAction)
 	{
@@ -236,9 +240,15 @@ void APWPlayerController::HandleRollStarted(const FInputActionValue& Value)
 
 void APWPlayerController::HandlePrimaryActionStarted(const FInputActionValue& Value)
 {
+	UE_LOG(LogTemp, Log, TEXT("[PWPrimaryAction] Primary action input started."));
+
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->StartPrimaryAction();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Primary action input ignored. PlayerCharacter is missing."));
 	}
 }
 
