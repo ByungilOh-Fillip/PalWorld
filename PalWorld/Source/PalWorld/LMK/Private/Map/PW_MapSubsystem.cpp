@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 #include "Map/PW_TeleportPointActor.h"
 #include "TimerManager.h"
 
@@ -117,9 +118,75 @@ void UPW_MapSubsystem::GetVisitedCellIndices(const FString& PlayerId, TArray<int
 
 void UPW_MapSubsystem::GetMapMarkers(TArray<FPW_MapMarker>& OutMarkers) const
 {
+	GetMapMarkersForPlayerController(nullptr, OutMarkers);
+}
+
+void UPW_MapSubsystem::GetMapMarkersForPlayerController(const APlayerController* PlayerController, TArray<FPW_MapMarker>& OutMarkers) const
+{
+	GetMapMarkersForPlayer(GetLocalPlayerId(), PlayerController, OutMarkers);
+}
+
+void UPW_MapSubsystem::GetMapMarkersForPlayer(const FString& PlayerId, const APlayerController* PlayerController, TArray<FPW_MapMarker>& OutMarkers) const
+{
 	OutMarkers.Reset();
-	AddTeleportMarkers(OutMarkers);
-	AddBaseCampMarkers(OutMarkers);
+	AddTeleportMarkers(PlayerId, OutMarkers);
+	AddBaseCampMarkers(OutMarkers, PlayerController);
+}
+
+bool UPW_MapSubsystem::GetTeleportDestination(EPW_MapMarkerType MarkerType, FName MarkerId, FVector& OutWorldLocation) const
+{
+	return GetTeleportDestinationForPlayerController(nullptr, MarkerType, MarkerId, OutWorldLocation);
+}
+
+bool UPW_MapSubsystem::GetTeleportDestinationForPlayerController(const APlayerController* PlayerController, EPW_MapMarkerType MarkerType, FName MarkerId, FVector& OutWorldLocation) const
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr || MarkerId.IsNone())
+	{
+		return false;
+	}
+
+	if (MarkerType == EPW_MapMarkerType::TeleportPoint)
+	{
+		for (TActorIterator<APW_TeleportPointActor> It(World); It; ++It)
+		{
+			const APW_TeleportPointActor* TeleportPoint = *It;
+			if (!IsValid(TeleportPoint))
+			{
+				continue;
+			}
+
+			const FName ResolvedTeleportPointId = TeleportPoint->GetTeleportPointId().IsNone()
+				? FName(*TeleportPoint->GetName())
+				: TeleportPoint->GetTeleportPointId();
+			if (ResolvedTeleportPointId == MarkerId
+				&& TeleportPoint->IsDiscovered()
+				&& TeleportPoint->CanTeleport())
+			{
+				OutWorldLocation = TeleportPoint->GetTeleportArrivalLocation();
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	if (MarkerType == EPW_MapMarkerType::BaseCamp)
+	{
+		for (TActorIterator<APW_BaseCampActor> It(World); It; ++It)
+		{
+			const APW_BaseCampActor* BaseCamp = *It;
+			if (IsValid(BaseCamp)
+				&& FName(*BaseCamp->GetBaseCampId().Value.ToString()) == MarkerId
+				&& CanPlayerUseBaseCamp(PlayerController, BaseCamp))
+			{
+				OutWorldLocation = BaseCamp->GetActorLocation();
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 bool UPW_MapSubsystem::GetLocalPlayerMapUV(FVector2D& OutPlayerMapUV) const
@@ -243,7 +310,26 @@ void UPW_MapSubsystem::AddVisitedCell(const FString& PlayerId, int32 CellX, int3
 	RuntimeState.VisitedCellIndices.Add(CellIndex);
 }
 
-void UPW_MapSubsystem::AddTeleportMarkers(TArray<FPW_MapMarker>& OutMarkers) const
+bool UPW_MapSubsystem::IsWorldLocationVisited(const FString& PlayerId, const FVector& WorldLocation) const
+{
+	if (PlayerId.IsEmpty() || !IsMapConfigured())
+	{
+		return false;
+	}
+
+	const FPW_MapExplorationRuntimeState* RuntimeState = ExplorationByPlayerId.Find(PlayerId);
+	if (RuntimeState == nullptr)
+	{
+		return false;
+	}
+
+	const FVector2D MapUV = WorldLocationToMapUV(WorldLocation);
+	const int32 CellX = FMath::Clamp(FMath::FloorToInt(MapUV.X * GridWidth), 0, GridWidth - 1);
+	const int32 CellY = FMath::Clamp(FMath::FloorToInt(MapUV.Y * GridHeight), 0, GridHeight - 1);
+	return RuntimeState->VisitedCellIndices.Contains(GetCellIndex(CellX, CellY));
+}
+
+void UPW_MapSubsystem::AddTeleportMarkers(const FString& PlayerId, TArray<FPW_MapMarker>& OutMarkers) const
 {
 	UWorld* World = GetWorld();
 	if (World == nullptr)
@@ -254,24 +340,35 @@ void UPW_MapSubsystem::AddTeleportMarkers(TArray<FPW_MapMarker>& OutMarkers) con
 	for (TActorIterator<APW_TeleportPointActor> It(World); It; ++It)
 	{
 		const APW_TeleportPointActor* TeleportPoint = *It;
-		if (!IsValid(TeleportPoint) || !TeleportPoint->IsDiscovered())
+		if (!IsValid(TeleportPoint))
 		{
 			continue;
 		}
 
+		const bool bIsDiscovered = TeleportPoint->IsDiscovered();
+		const bool bIsMapVisited = IsWorldLocationVisited(PlayerId, TeleportPoint->GetActorLocation());
+		if (!bIsDiscovered && !bIsMapVisited)
+		{
+			continue;
+		}
+
+		const FName MarkerId = TeleportPoint->GetTeleportPointId().IsNone()
+			? FName(*TeleportPoint->GetName())
+			: TeleportPoint->GetTeleportPointId();
+
 		FPW_MapMarker Marker;
 		Marker.MarkerType = EPW_MapMarkerType::TeleportPoint;
-		Marker.MarkerId = TeleportPoint->GetTeleportPointId();
+		Marker.MarkerId = MarkerId;
 		Marker.DisplayName = TeleportPoint->GetDisplayName();
 		Marker.WorldLocation = TeleportPoint->GetActorLocation();
 		Marker.MapUV = WorldLocationToMapUV(Marker.WorldLocation);
-		Marker.bDiscovered = TeleportPoint->IsDiscovered();
-		Marker.bCanTeleport = TeleportPoint->CanTeleport();
+		Marker.bDiscovered = bIsDiscovered;
+		Marker.bCanTeleport = bIsDiscovered && TeleportPoint->CanTeleport();
 		OutMarkers.Add(Marker);
 	}
 }
 
-void UPW_MapSubsystem::AddBaseCampMarkers(TArray<FPW_MapMarker>& OutMarkers) const
+void UPW_MapSubsystem::AddBaseCampMarkers(TArray<FPW_MapMarker>& OutMarkers, const APlayerController* PlayerController) const
 {
 	UWorld* World = GetWorld();
 	if (World == nullptr)
@@ -294,7 +391,37 @@ void UPW_MapSubsystem::AddBaseCampMarkers(TArray<FPW_MapMarker>& OutMarkers) con
 		Marker.WorldLocation = BaseCamp->GetActorLocation();
 		Marker.MapUV = WorldLocationToMapUV(Marker.WorldLocation);
 		Marker.bDiscovered = true;
-		Marker.bCanTeleport = false;
+		Marker.bCanTeleport = CanPlayerUseBaseCamp(PlayerController, BaseCamp);
 		OutMarkers.Add(Marker);
 	}
+}
+
+FPW_BaseOwnerId UPW_MapSubsystem::MakeBaseOwnerIdFromPlayerController(const APlayerController* PlayerController) const
+{
+	FPW_BaseOwnerId OwnerId;
+	OwnerId.OwnerType = EPW_BaseOwnerType::Player;
+
+	const APawn* Pawn = PlayerController != nullptr ? PlayerController->GetPawn() : nullptr;
+	const APlayerState* PlayerState = Pawn != nullptr ? Pawn->GetPlayerState() : nullptr;
+	if (PlayerState != nullptr && PlayerState->GetPlayerId() != INDEX_NONE)
+	{
+		OwnerId.OwnerId = FString::FromInt(PlayerState->GetPlayerId());
+	}
+	else if (Pawn != nullptr)
+	{
+		OwnerId.OwnerId = GetNameSafe(Pawn);
+	}
+
+	return OwnerId;
+}
+
+bool UPW_MapSubsystem::CanPlayerUseBaseCamp(const APlayerController* PlayerController, const APW_BaseCampActor* BaseCamp) const
+{
+	if (PlayerController == nullptr || BaseCamp == nullptr)
+	{
+		return false;
+	}
+
+	const FPW_BaseOwnerId RequesterOwnerId = MakeBaseOwnerIdFromPlayerController(PlayerController);
+	return RequesterOwnerId.IsValid() && BaseCamp->GetBaseOwnerId() == RequesterOwnerId;
 }

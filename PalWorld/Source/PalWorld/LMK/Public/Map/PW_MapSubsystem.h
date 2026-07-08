@@ -1,11 +1,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Base/PW_BaseTypes.h"
 #include "Map/PW_MapTypes.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "PW_MapSubsystem.generated.h"
 
 class APawn;
+class APlayerController;
+class APW_BaseCampActor;
 
 struct FPW_MapExplorationRuntimeState
 {
@@ -44,6 +47,15 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "PW|Map")
 	void GetMapMarkers(TArray<FPW_MapMarker>& OutMarkers) const;
+
+	void GetMapMarkersForPlayerController(const APlayerController* PlayerController, TArray<FPW_MapMarker>& OutMarkers) const;
+
+	void GetMapMarkersForPlayer(const FString& PlayerId, const APlayerController* PlayerController, TArray<FPW_MapMarker>& OutMarkers) const;
+
+	UFUNCTION(BlueprintPure, Category = "PW|Map|Teleport")
+	bool GetTeleportDestination(EPW_MapMarkerType MarkerType, FName MarkerId, FVector& OutWorldLocation) const;
+
+	bool GetTeleportDestinationForPlayerController(const APlayerController* PlayerController, EPW_MapMarkerType MarkerType, FName MarkerId, FVector& OutWorldLocation) const;
 
 	UFUNCTION(BlueprintPure, Category = "PW|Map")
 	bool GetLocalPlayerMapUV(FVector2D& OutPlayerMapUV) const;
@@ -90,6 +102,9 @@ private:
 	APawn* GetLocalPlayerPawn() const;
 	void UpdateLocalPlayerExploration();
 	void AddVisitedCell(const FString& PlayerId, int32 CellX, int32 CellY);
-	void AddTeleportMarkers(TArray<FPW_MapMarker>& OutMarkers) const;
-	void AddBaseCampMarkers(TArray<FPW_MapMarker>& OutMarkers) const;
+	bool IsWorldLocationVisited(const FString& PlayerId, const FVector& WorldLocation) const;
+	void AddTeleportMarkers(const FString& PlayerId, TArray<FPW_MapMarker>& OutMarkers) const;
+	void AddBaseCampMarkers(TArray<FPW_MapMarker>& OutMarkers, const APlayerController* PlayerController) const;
+	FPW_BaseOwnerId MakeBaseOwnerIdFromPlayerController(const APlayerController* PlayerController) const;
+	bool CanPlayerUseBaseCamp(const APlayerController* PlayerController, const APW_BaseCampActor* BaseCamp) const;
 };
