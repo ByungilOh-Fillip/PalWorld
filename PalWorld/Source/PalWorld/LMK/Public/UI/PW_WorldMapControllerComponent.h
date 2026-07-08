@@ -7,6 +7,7 @@
 
 class UPW_WorldMapWidget;
 class UPW_MapSubsystem;
+class APW_TeleportPointActor;
 
 UCLASS(ClassGroup = (PW), meta = (BlueprintSpawnableComponent))
 class PALWORLD_API UPW_WorldMapControllerComponent : public UActorComponent
@@ -18,6 +19,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "PW|Map|UI")
 	void ShowWorldMap();
+
+	UFUNCTION(BlueprintCallable, Category = "PW|Map|UI")
+	void ShowTeleportMap();
 
 	UFUNCTION(BlueprintCallable, Category = "PW|Map|UI")
 	void HideWorldMap();
@@ -33,6 +37,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "PW|Map")
 	void RevealControlledPawnLocation();
+
+	UFUNCTION(BlueprintCallable, Category = "PW|Map|Teleport")
+	void RequestTeleportToMarker(EPW_MapMarkerType MarkerType, FName MarkerId);
+
+	void SetActiveTeleportSource(APW_TeleportPointActor* TeleportSource);
+
+	UFUNCTION(Client, Reliable)
+	void ClientShowTeleportMap();
 
 	UFUNCTION(BlueprintPure, Category = "PW|Map")
 	FString GetResolvedPlayerId() const;
@@ -55,6 +67,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Map|UI")
 	bool bApplyGameAndUIInputMode = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Map|UI")
+	bool bUseUIOnlyInputModeWhenMapVisible = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Map|UI")
 	bool bRestoreGameOnlyInputModeOnHide = true;
@@ -86,18 +101,30 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Map", meta = (ClampMin = "0.0"))
 	float RevealRadius = 2500.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Map|Teleport")
+	FVector TeleportArrivalOffset = FVector(0.0f, 0.0f, 120.0f);
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPW_WorldMapWidget> WorldMapWidgetInstance;
 
+	UPROPERTY(Transient)
+	TObjectPtr<APW_TeleportPointActor> ActiveTeleportSource;
+
 	FTimerHandle RevealTimerHandle;
 	bool bPreviousShowMouseCursor = false;
 	bool bHasAppliedWorldMapInputMode = false;
+	bool bTeleportSelectionMode = false;
 
 	class APlayerController* GetOwningPlayerController() const;
 	class APawn* GetControlledPawn() const;
 	UPW_MapSubsystem* GetMapSubsystem() const;
 	void ConfigureWorldMapWidget(UPW_WorldMapWidget* Widget) const;
+	void ShowWorldMapInternal(bool bEnableTeleportSelection);
 	void ApplyShowInputMode();
 	void ApplyHideInputMode();
+	bool CanUseActiveTeleportSource() const;
+
+	UFUNCTION(Server, Reliable)
+	void ServerRequestTeleportToMarker(EPW_MapMarkerType MarkerType, FName MarkerId);
 };
