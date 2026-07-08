@@ -82,6 +82,15 @@ APWPlayerCharacter* UPWPlayerCaptureComponent::GetOwnerCharacter() const
 	return Cast<APWPlayerCharacter>(GetOwner());
 }
 
+bool UPWPlayerCaptureComponent::IsValidCaptureAimTarget(APWPalBase* TargetPal) const
+{
+	return IsValid(TargetPal)
+		&& !TargetPal->IsActorBeingDestroyed()
+		&& !TargetPal->IsCaptureInteractionDisabled()
+		&& !TargetPal->IsHidden()
+		&& TargetPal->GetActorEnableCollision();
+}
+
 void UPWPlayerCaptureComponent::UpdateCaptureAimInfo()
 {
 	APWPlayerCharacter* PlayerCharacter = GetOwnerCharacter();
@@ -116,8 +125,13 @@ void UPWPlayerCaptureComponent::UpdateCaptureAimInfo()
 		QueryParams);
 
 	APWPalBase* TargetPal = bHit ? Cast<APWPalBase>(Hit.GetActor()) : nullptr;
-	const float Chance = TargetPal ? CalculateCaptureChance(TargetPal) : 0.f;
-	SetCaptureAimInfo(true, TargetPal, Chance);
+	if (!IsValidCaptureAimTarget(TargetPal))
+	{
+		TargetPal = nullptr;
+	}
+
+	const float Chance = TargetPal ? CalculateCaptureChanceForTarget(TargetPal) : 0.f;
+	SetCaptureAimInfo(TargetPal != nullptr, TargetPal, Chance);
 }
 
 void UPWPlayerCaptureComponent::ClearCaptureAimInfo()
@@ -146,7 +160,7 @@ void UPWPlayerCaptureComponent::SetCaptureAimInfo(bool bNewVisible, APWPalBase* 
 	OnCaptureAimInfoChanged.Broadcast();
 }
 
-float UPWPlayerCaptureComponent::CalculateCaptureChance(APWPalBase* TargetPal) const
+float UPWPlayerCaptureComponent::CalculateCaptureChanceForTarget(APWPalBase* TargetPal) const
 {
 	if (!TargetPal)
 	{

@@ -8,6 +8,7 @@
 #include "Player/Components/PWPlayerCaptureComponent.h"
 #include "Player/Components/PWPlayerStatComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
+#include "Player/UI/PWCaptureAimWidget.h"
 #include "Player/UI/PWInventoryPanelWidget.h"
 #include "Player/UI/PWStaminaGaugeWidget.h"
 
@@ -25,6 +26,15 @@ void UPWPlayerHUDWidget::InitializeWithPlayerCharacter(APWPlayerCharacter* InPla
 	if (UPWInventoryPanelWidget* ActiveInventoryPanel = GetOrCreateInventoryPanel())
 	{
 		ActiveInventoryPanel->InitializeWithPlayerCharacter(InPlayerCharacter);
+	}
+
+	if (CaptureAim)
+	{
+		CaptureAim->InitializeWithPlayerCharacter(InPlayerCharacter);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWCaptureAim] WBP_PlayerHUD does not have a bound CaptureAim widget."));
 	}
 
 	SetCrosshairVisible(InPlayerCharacter && InPlayerCharacter->IsAiming());

@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden">
+<video id="v" src="file:///C:/Users/nos36/Videos/화면%20녹화/화면%20녹화%20중%202026-07-08%20110349.mp4" style="max-width:100vw;max-height:100vh" muted></video>
+<script>
+const v = document.getElementById('v');
+window.seekVideo = async (t) => {
+  await new Promise((resolve) => {
+    if (v.readyState >= 1) resolve();
+    else v.addEventListener('loadedmetadata', resolve, { once: true });
+  });
+  v.currentTime = Math.min(Math.max(0, t), v.duration || t);
+  await new Promise((resolve) => v.addEventListener('seeked', resolve, { once: true }));
+  return { duration: v.duration, currentTime: v.currentTime, width: v.videoWidth, height: v.videoHeight };
+};
+</script>
+</body>
+</html>

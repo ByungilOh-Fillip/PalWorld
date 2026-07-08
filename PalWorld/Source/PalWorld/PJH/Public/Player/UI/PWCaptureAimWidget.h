@@ -7,10 +7,7 @@
 #include "PWCaptureAimWidget.generated.h"
 
 class APWPlayerCharacter;
-class UCanvasPanel;
-class UImage;
 class UTextBlock;
-class UTexture2D;
 class UPWPlayerCaptureComponent;
 class UWidget;
 
@@ -32,14 +29,10 @@ private:
 	UFUNCTION()
 	void HandleCaptureAimChanged();
 
-	void BuildDefaultLayout();
 	void BindCaptureComponent(UPWPlayerCaptureComponent* InCaptureComponent);
 	void UnbindCaptureComponent();
 	void RefreshCaptureAim();
-
-	UImage* AddCaptureImage(const FName WidgetName, UTexture2D* Texture, const FVector2D Position, const FVector2D Size, float Opacity = 1.f);
-	UTextBlock* AddCaptureText(const FName WidgetName, const FVector2D Position, const FVector2D Size, int32 FontSize);
-	UTexture2D* LoadCaptureTexture(const TCHAR* TexturePath) const;
+	void SetTargetOnlyWidgetsVisibility(ESlateVisibility NewVisibility);
 
 	UPROPERTY(Transient)
 	TObjectPtr<APWPlayerCharacter> BoundPlayerCharacter;
@@ -47,20 +40,34 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UPWPlayerCaptureComponent> BoundCaptureComponent;
 
-	UPROPERTY(Transient)
-	TObjectPtr<UCanvasPanel> RootCanvas;
+	// WBP_CaptureAim의 최상위 패널. 이 이름으로 두면 C++이 표시/숨김을 직접 관리한다.
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, AllowPrivateAccess = "true"), Category = "Player|UI|Capture")
+	TObjectPtr<UWidget> Root_CaptureAim;
 
-	UPROPERTY(Transient)
+	// 조준선, 원형 UI처럼 타겟이 없어도 Q 조준 중에는 보이는 기본 파츠들.
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, AllowPrivateAccess = "true"), Category = "Player|UI|Capture")
+	TObjectPtr<UWidget> Panel_Reticle;
+
+	// 펠에 조준됐을 때만 보이는 확률/이름 패널.
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, AllowPrivateAccess = "true"), Category = "Player|UI|Capture")
+	TObjectPtr<UWidget> Panel_TargetInfo;
+
+	// 일반 Q 조준 때만 보이는 기존 조준 UI 묶음. 없으면 Panel_Reticle을 대신 숨긴다.
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, AllowPrivateAccess = "true"), Category = "Player|UI|Capture")
+	TObjectPtr<UWidget> Panel_AimOnly;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, AllowPrivateAccess = "true"), Category = "Player|UI|Capture")
 	TObjectPtr<UTextBlock> Text_Chance;
 
-	UPROPERTY(Transient)
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, AllowPrivateAccess = "true"), Category = "Player|UI|Capture")
+	TObjectPtr<UTextBlock> Text_CaptureChance;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, AllowPrivateAccess = "true"), Category = "Player|UI|Capture")
 	TObjectPtr<UTextBlock> Text_TargetName;
 
-	UPROPERTY(Transient)
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, AllowPrivateAccess = "true"), Category = "Player|UI|Capture")
 	TObjectPtr<UTextBlock> Text_SphereCount;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UWidget>> TargetOnlyWidgets;
-
-	bool bLayoutBuilt = false;
 };

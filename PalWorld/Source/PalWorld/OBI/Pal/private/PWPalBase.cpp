@@ -1,4 +1,6 @@
 #include "PWPalBase.h"
+#include "Components/ActorComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "StatusComponent.h"
 #include "PWSkillComponent.h"
 
@@ -22,4 +24,45 @@ void APWPalBase::BeginPlay()
 void APWPalBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+}
+
+void APWPalBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(APWPalBase, bCaptureInteractionDisabled);
+}
+
+void APWPalBase::SetCaptureInteractionDisabled(bool bDisabled)
+{
+    if (!HasAuthority() || bCaptureInteractionDisabled == bDisabled)
+    {
+        return;
+    }
+
+    bCaptureInteractionDisabled = bDisabled;
+    ApplyCaptureInteractionDisabled();
+    ForceNetUpdate();
+}
+
+void APWPalBase::OnRep_CaptureInteractionDisabled()
+{
+    ApplyCaptureInteractionDisabled();
+}
+
+void APWPalBase::ApplyCaptureInteractionDisabled()
+{
+    SetActorHiddenInGame(bCaptureInteractionDisabled);
+    SetActorEnableCollision(!bCaptureInteractionDisabled);
+    SetActorTickEnabled(!bCaptureInteractionDisabled);
+
+    TArray<UActorComponent*> Components;
+    GetComponents(Components);
+    for (UActorComponent* Component : Components)
+    {
+        if (Component)
+        {
+            Component->SetComponentTickEnabled(!bCaptureInteractionDisabled);
+        }
+    }
 }

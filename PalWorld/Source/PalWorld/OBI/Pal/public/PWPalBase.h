@@ -15,6 +15,8 @@ class PALWORLD_API APWPalBase : public ACharacter
 public:
     APWPalBase();
 
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -24,6 +26,11 @@ public:
     UFUNCTION(BlueprintPure, Category = "Pal|Components")
     UPWSkillComponent* GetSkillComponent() const { return SkillComponent; }
 
+    UFUNCTION(BlueprintPure, Category = "Pal|Capture")
+    bool IsCaptureInteractionDisabled() const { return bCaptureInteractionDisabled; }
+
+    void SetCaptureInteractionDisabled(bool bDisabled);
+
 protected:
     // 팰 상태 관리 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|Components")
@@ -32,4 +39,13 @@ protected:
     // 팰 스킬 및 적성 관리 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|Components")
     TObjectPtr<UPWSkillComponent> SkillComponent;
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_CaptureInteractionDisabled)
+    bool bCaptureInteractionDisabled = false;
+
+    UFUNCTION()
+    void OnRep_CaptureInteractionDisabled();
+
+    void ApplyCaptureInteractionDisabled();
 };
