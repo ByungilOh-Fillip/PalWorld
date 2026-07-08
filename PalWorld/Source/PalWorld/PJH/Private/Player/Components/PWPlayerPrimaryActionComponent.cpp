@@ -36,10 +36,13 @@ void UPWPlayerPrimaryActionComponent::GetLifetimeReplicatedProps(TArray<FLifetim
 
 void UPWPlayerPrimaryActionComponent::TryStartPrimaryAction()
 {
+	UE_LOG(LogTemp, Log, TEXT("[PWPrimaryAction] TryStartPrimaryAction."));
+
 	FVector ViewLocation = FVector::ZeroVector;
 	FVector ViewDirection = FVector::ZeroVector;
 	if (!GetView(ViewLocation, ViewDirection))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Start failed. Controller view is missing."));
 		BP_OnPrimaryActionFailed();
 		return;
 	}
@@ -50,6 +53,7 @@ void UPWPlayerPrimaryActionComponent::TryStartPrimaryAction()
 	APWPlayerCharacter* PlayerCharacter = GetPlayerCharacter();
 	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
 	{
+		UE_LOG(LogTemp, Log, TEXT("[PWPrimaryAction] Send primary action request to server."));
 		ServerRequestPrimaryAction(FVector_NetQuantize(ViewLocation), FVector_NetQuantizeNormal(ViewDirection));
 		return;
 	}
@@ -95,8 +99,11 @@ EPWToolType UPWPlayerPrimaryActionComponent::GetCurrentToolType() const
 
 void UPWPlayerPrimaryActionComponent::ServerRequestPrimaryAction_Implementation(FVector_NetQuantize ViewLocation, FVector_NetQuantizeNormal ViewDirection)
 {
+	UE_LOG(LogTemp, Log, TEXT("[PWPrimaryAction] Server received primary action request."));
+
 	if (!IsViewLocationAllowed(ViewLocation))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Server rejected request. View location is too far from character."));
 		BP_OnPrimaryActionFailed();
 		return;
 	}
@@ -517,6 +524,7 @@ void UPWPlayerPrimaryActionComponent::StartAuthority(const FHitResult& HitResult
 	AActor* TargetActor = HitResult.GetActor();
 	if (!PlayerCharacter || !PlayerCharacter->HasAuthority())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Authority start failed. Character or authority is missing."));
 		BP_OnPrimaryActionFailed();
 		return;
 	}
@@ -524,6 +532,7 @@ void UPWPlayerPrimaryActionComponent::StartAuthority(const FHitResult& HitResult
 	UPWPlayerActionComponent* ActionComponent = PlayerCharacter->GetActionComponent();
 	if (ActionComponent && !ActionComponent->TryStartActionAuthority(EPWPlayerActionState::PrimaryAction))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Authority start failed. Another action state is active."));
 		bPrimaryActionHeld = false;
 		bPrimaryActionFacingLocked = false;
 		BP_OnPrimaryActionFailed();
@@ -535,6 +544,7 @@ void UPWPlayerPrimaryActionComponent::StartAuthority(const FHitResult& HitResult
 		const float ActionStaminaCost = GetStaminaCost();
 		if (ActionStaminaCost > 0.f && !StatComponent->TryConsumeStamina(ActionStaminaCost))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Authority start failed. Not enough stamina. Cost=%.2f"), ActionStaminaCost);
 			if (ActionComponent)
 			{
 				ActionComponent->FinishActionAuthority(EPWPlayerActionState::PrimaryAction);
@@ -567,11 +577,13 @@ void UPWPlayerPrimaryActionComponent::StartAuthority(const FHitResult& HitResult
 	BP_OnPrimaryActionStarted(TargetActor, ToolType);
 	if (ShouldPlayPrimaryActionAnimation(ToolType))
 	{
+		UE_LOG(LogTemp, Log, TEXT("[PWPrimaryAction] Authority starts montage flow. ToolType=%d"), static_cast<int32>(ToolType));
 		MulticastPlayPrimaryActionAnimation(ToolType);
 		ScheduleHarvestHitTimers();
 	}
 	else
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Authority has no montage for ToolType=%d. Applying hit directly."), static_cast<int32>(ToolType));
 		ApplyPrimaryActionHitAuthority(PlayerCharacter->GetActorLocation(), ActionDirection);
 	}
 
@@ -726,6 +738,13 @@ void UPWPlayerPrimaryActionComponent::PlayPrimaryActionAnimation(EPWToolType Too
 	const UPWPrimaryActionDataAsset* ActionData = GetActionData();
 	if (!ActionData || !ShouldPlayPrimaryActionAnimation(ToolType))
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[PWPrimaryAction] Cannot play montage. ActionData=%s ToolType=%d HasMontage=%d"),
+			ActionData ? TEXT("Valid") : TEXT("None"),
+			static_cast<int32>(ToolType),
+			(ActionData && ActionData->GetPrimaryActionMontage(ToolType)) ? 1 : 0);
 		return;
 	}
 

@@ -216,6 +216,13 @@ void APWPlayerCharacter::StartPrimaryAction()
 {
 	if (IsWallClimbing() || IsWallClimbTopOut() || bIsSphereAiming)
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[PWPrimaryAction] Start blocked. Climbing=%d TopOut=%d SphereAiming=%d"),
+			IsWallClimbing() ? 1 : 0,
+			IsWallClimbTopOut() ? 1 : 0,
+			bIsSphereAiming ? 1 : 0);
 		return;
 	}
 
@@ -224,6 +231,10 @@ void APWPlayerCharacter::StartPrimaryAction()
 	if (PrimaryActionComponent)
 	{
 		PrimaryActionComponent->TryStartPrimaryAction();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Start blocked. PrimaryActionComponent is missing."));
 	}
 }
 
