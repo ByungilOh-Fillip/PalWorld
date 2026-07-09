@@ -16,6 +16,8 @@
 #include "PWPalDataTypes.h"
 #include "PWSkillComponent.generated.h"
 
+// FPWSkillData moved to PWPalDataTypes.h
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PALWORLD_API UPWSkillComponent : public UActorComponent
 {
@@ -36,11 +38,27 @@ public:
     UFUNCTION(BlueprintPure, Category = "Pal|Work")
     bool FindWorkAttitude(FGameplayTag WorkTag, FWorkAttitude& OutWorkAttitude) const;
 
-    // 파트너 스킬
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pal|Skill")
-    FPalPartnerSkill PartnerSkill;
+    /* 
+     * 전투 스킬 슬롯 (3가지) - 런타임에 쿨타임 관리 및 상태 저장을 위해 존재함
+     * (원본 데이터는 PWPalDataAsset에서 복사되어 들어옵니다)
+     */
+    // 가벼운 스킬 (쿨타임 짧음)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "Pal|CombatSkills")
+    FPWSkillData LightSkill;
 
-    // 작업 적성 배열
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pal|Work")
-    TArray<FWorkAttitude> WorkAttitudes;
+    // 중간 스킬 (쿨타임 보통)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "Pal|CombatSkills")
+    FPWSkillData MediumSkill;
+
+    // 무거운 스킬 (쿨타임 길고 위력 강함)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "Pal|CombatSkills")
+    FPWSkillData HeavySkill;
+
+    // 현재 쿨타임이 끝나서 사용 가능한 스킬 중 하나를 무작위로 골라 반환 (0: Light, 1: Medium, 2: Heavy)
+    UFUNCTION(BlueprintCallable, Category = "Pal|CombatSkills")
+    bool GetAvailableRandomSkill(FPWSkillData& OutSkillData, int32& OutSkillSlot);
+
+    // 스킬 사용 후 쿨타임 시작 적용
+    UFUNCTION(BlueprintCallable, Category = "Pal|CombatSkills")
+    void MarkSkillAsUsed(int32 SkillSlot);
 };

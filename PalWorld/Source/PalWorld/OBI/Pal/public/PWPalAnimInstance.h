@@ -23,7 +23,7 @@ public:
 
 protected:
     // 캐릭터의 이동 속도 (Locomotion 용)
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|Animation")
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Pal|Animation")
     float Speed;
 
     // 캐릭터의 이동 방향 (조준/스트레이핑 용, -180 ~ 180)
