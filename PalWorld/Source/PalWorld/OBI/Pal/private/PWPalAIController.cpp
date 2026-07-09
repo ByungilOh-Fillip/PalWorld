@@ -1,5 +1,6 @@
 #include "PWPalAIController.h"
 
+#include "PW_ST_EventsTags.h"
 #include "Components/StateTreeComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Hearing.h"
@@ -10,7 +11,7 @@ APWPalAIController::APWPalAIController()
 {
     PalPerceptionComponent = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("PalPerceptionComponent"));
     SetPerceptionComponent(*PalPerceptionComponent);
-    
+
     StateTreeComponent = CreateDefaultSubobject<UStateTreeComponent>(TEXT("StateTreeComponent"));
 
     // 시각(Sight) 센서 설정
@@ -23,7 +24,7 @@ APWPalAIController::APWPalAIController()
     SightConfig->DetectionByAffiliation.bDetectEnemies = true;
     SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
     SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
-    
+
 
     // 청각(Hearing) 센서 설정
     HearingConfig = CreateDefaultSubobject<UAISenseConfig_Hearing>(TEXT("Hearing Config"));
@@ -46,6 +47,7 @@ void APWPalAIController::BeginPlay()
     if (PalPerceptionComponent)
     {
         PalPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &APWPalAIController::OnTargetDetected);
+        PalPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &APWPalAIController::OnTargetPerceptionUpdated);
     }
 }
 
@@ -71,5 +73,27 @@ void APWPalAIController::OnTargetDetected(AActor* Actor, FAIStimulus const Stimu
     else
     {
         // TODO : 시야에서 사라졌을 때의 처리 (TargetActor 초기화 등)
+    }
+}
+
+// 내장되어 있는 함수랑 별게로 Payload를 담기 위한 함수
+void APWPalAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus const Stimulus)
+{
+    if (Stimulus.WasSuccessfullySensed())
+    {
+        FStateTreeEvent TreeEvent;
+
+        // 설정한 Event용 GameplayTag
+        TreeEvent.Tag = PW_ST_EventsTags::Event_SenseThreat;
+
+        FST_PerceptionPayload Payload;
+        Payload.TargetActor = Actor;
+
+        TreeEvent.Payload = FInstancedStruct::Make(Payload);
+
+        if (StateTreeComponent)
+        {
+            StateTreeComponent -> SendStateTreeEvent(TreeEvent);
+        }
     }
 }

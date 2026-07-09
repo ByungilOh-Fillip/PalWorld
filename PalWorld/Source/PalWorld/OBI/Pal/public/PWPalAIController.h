@@ -14,6 +14,17 @@ class UStateTreeComponent;
  * @class APWPalAIController
  * @brief 팰의 두뇌 역할을 하며 시각/청각 인지(AIPerception) 및 StateTree를 구동하는 컨트롤러
  */
+
+USTRUCT(BlueprintType)
+struct FST_PerceptionPayload
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pal|StateTree")
+    AActor* TargetActor = nullptr;
+
+};
+
 UCLASS()
 class PALWORLD_API APWPalAIController : public AAIController
 {
@@ -30,10 +41,10 @@ public:
     // AI 인지 시스템(시야, 소리)에 무언가 포착되었을 때 호출되는 함수
     UFUNCTION()
     void OnTargetDetected(AActor* Actor, FAIStimulus const Stimulus);
-    
+
 
 protected:
-    
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|AI")
     TObjectPtr<UAIPerceptionComponent> PalPerceptionComponent;
 
@@ -46,4 +57,8 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|AI")
     TObjectPtr<UAISenseConfig_Hearing> HearingConfig;
+
+    UFUNCTION()
+    void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus const Stimulus);
+
 };
