@@ -102,6 +102,16 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skills")
     TArray<FPWPalLearnableSkill> LearnableSkillsPool;
 
+    // 태어날 때 기본적으로 장착하고 있는 액티브 스킬 3종 (컴포넌트로 복사됨)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skills|Active")
+    FPWSkillData DefaultLightSkill;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skills|Active")
+    FPWSkillData DefaultMediumSkill;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skills|Active")
+    FPWSkillData DefaultHeavySkill;
+
     /* ========================================
      * Visual & Anim
      * ======================================== */
@@ -116,6 +126,12 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
     class UAnimMontage* KitingMontage; // 백점프 등 카이팅 모션
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+    class UAnimMontage* SleepMontage; // 수면 모션
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animations")
+    class UAnimMontage* EatMontage; // 식사 모션
 
     // 전투 시 적과 거리 유지를 위한 기본 카이팅 거리 설정
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat AI")
