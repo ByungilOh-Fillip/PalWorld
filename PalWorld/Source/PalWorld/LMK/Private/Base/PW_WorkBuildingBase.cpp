@@ -16,7 +16,7 @@ APW_WorkBuildingBase::APW_WorkBuildingBase()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	SetNetCullDistanceSquared(FMath::Square(8000.0f));
-	NetUpdateFrequency = 2.0f;
+	SetNetUpdateFrequency(2.0f);
 
 	BuildingMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BuildingMesh"));
 	SetRootComponent(BuildingMesh);
@@ -31,9 +31,18 @@ APW_WorkBuildingBase::APW_WorkBuildingBase()
 	InteractableTargetComponent->SetPriority(75);
 }
 
+void APW_WorkBuildingBase::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	SynchronizeInteractionGuideActions();
+}
+
 void APW_WorkBuildingBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SynchronizeInteractionGuideActions();
 
 	if (HasAuthority())
 	{
@@ -264,6 +273,42 @@ void APW_WorkBuildingBase::UnregisterFromBaseCamp()
 	}
 
 	OwningBaseCamp = nullptr;
+}
+
+void APW_WorkBuildingBase::SynchronizeInteractionGuideActions()
+{
+	if (WorkBuildingComponent == nullptr || InteractableTargetComponent == nullptr)
+	{
+		return;
+	}
+
+	const float RequiredPlayerWorkSeconds = WorkBuildingComponent->GetRequiredPlayerWorkSeconds();
+	if (RequiredPlayerWorkSeconds <= 0.0f)
+	{
+		return;
+	}
+	const float WorkProgressRatio = WorkBuildingComponent->GetWorkProgressRatio();
+
+	TArray<FPWInteractionGuideAction> GuideActions;
+	InteractableTargetComponent->GetInteractionGuideActions(GuideActions);
+	if (GuideActions.Num() <= 0)
+	{
+		return;
+	}
+
+	for (FPWInteractionGuideAction& GuideAction : GuideActions)
+	{
+		if (GuideAction.ActionId != TEXT("Default") && GuideAction.Key != EKeys::F)
+		{
+			continue;
+		}
+
+		GuideAction.Progress = WorkProgressRatio;
+		GuideAction.bShowProgress = true;
+		GuideAction.ProgressDurationSeconds = RequiredPlayerWorkSeconds;
+	}
+
+	InteractableTargetComponent->SetInteractionGuideActions(GuideActions);
 }
 
 const FPW_WorkRecipe* APW_WorkBuildingBase::FindRecipe(FName RecipeId) const

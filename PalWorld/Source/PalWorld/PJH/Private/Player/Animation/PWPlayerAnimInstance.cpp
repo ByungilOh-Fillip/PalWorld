@@ -36,6 +36,7 @@ void UPWPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bIsCrouched = false;
 		bIsSprinting = false;
 		bIsRolling = false;
+		bIsSphereAiming = false;
 		bIsClimbing = false;
 		ClimbInputX = 0.f;
 		ClimbInputY = 0.f;
@@ -73,6 +74,7 @@ void UPWPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bIsCrouched = MovementComponent && MovementComponent->IsCrouching();
 	bIsSprinting = OwningCharacter->IsSprinting();
 	bIsRolling = OwningCharacter->IsRolling();
+	bIsSphereAiming = OwningCharacter->IsSphereAiming();
 	bIsClimbing = OwningCharacter->IsClimbing();
 	ClimbInputX = OwningCharacter->GetClimbInputX();
 	ClimbInputY = OwningCharacter->GetClimbInputY();

@@ -121,5 +121,9 @@ public:
 
 protected:
     // 자식 컴포넌트가 SP 변경에 맞춰 UI/게임플레이 이벤트를 연결할 수 있는 훅입니다.
+    virtual void HandleCurrentHPChanged();
     virtual void HandleCurrentSPChanged();
+    virtual void HandleCurrentHungerChanged();
+    virtual void HandleCurrentSanityChanged();
+    virtual void HandleCurrentCarryWeightChanged();
 };

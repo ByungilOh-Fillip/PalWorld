@@ -76,6 +76,33 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward", meta = (ClampMin = "0.0"))
 	float RewardDamageInterval = 25.f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Auto Collect", meta = (ClampMin = "0.0"))
+	float AutoCollectMinDelay = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Auto Collect", meta = (ClampMin = "0.0"))
+	float AutoCollectMaxDelay = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Auto Collect", meta = (ClampMin = "0.0"))
+	float AutoCollectRadius = 900.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Drop")
+	bool bSpawnWorldDrop = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Drop", meta = (EditCondition = "bSpawnWorldDrop"))
+	TSubclassOf<class APWWorldItemActor> WorldItemActorClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Drop", meta = (ClampMin = "0.0", EditCondition = "bSpawnWorldDrop"))
+	float DropScatterRadius = 60.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Drop", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "bSpawnWorldDrop"))
+	float DropTowardInstigatorMinAlpha = 0.55f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Drop", meta = (ClampMin = "0.0", ClampMax = "1.0", EditCondition = "bSpawnWorldDrop"))
+	float DropTowardInstigatorMaxAlpha = 0.85f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PW Harvest Cluster Reward|Drop", meta = (EditCondition = "bSpawnWorldDrop"))
+	FVector DropLocationOffset = FVector(0.f, 0.f, 30.f);
+
 	UPROPERTY(ReplicatedUsing = OnRep_DepletedInstanceIndices, Transient)
 	TArray<int32> DepletedInstanceIndices;
 
@@ -94,6 +121,11 @@ private:
 	void DepleteInstance(int32 InstanceIndex, AActor* InstigatorActor);
 	void RespawnInstance(int32 InstanceIndex);
 	bool IsValidInstanceIndex(int32 InstanceIndex) const;
+	FName ResolveRewardName() const;
 	int32 ConsumeRewardIntervals(int32 InstanceIndex, float AppliedDamage);
-	void GrantReward(AActor* InstigatorActor, int32 RewardMultiplier) const;
+	AActor* ResolveRewardReceiver(AActor* InstigatorActor) const;
+	class UPWItemDataAsset* ResolveRewardItemData(AActor* RewardReceiver, FName GrantedRewardName) const;
+	FVector GetRewardDropLocation(int32 InstanceIndex) const;
+	void GrantRewardDirectDelayed(AActor* RewardReceiver, FName GrantedRewardName, int32 GrantedRewardAmount);
+	void GrantReward(AActor* InstigatorActor, int32 RewardMultiplier, int32 InstanceIndex);
 };

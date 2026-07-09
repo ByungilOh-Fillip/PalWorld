@@ -22,6 +22,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PW Harvest Cluster")
 	UPW_HarvestableResourceClusterComponent* GetClusterResourceComponent() const { return ClusterComponent; }
 
+	bool GetInstanceWorldTransform(int32 InstanceIndex, FTransform& OutTransform) const;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -54,5 +56,4 @@ private:
 	void ApplyReplicatedInstanceStates();
 	void SetInstanceHidden(int32 InstanceIndex, bool bShouldHide);
 	void SpawnDepletionActor(int32 InstanceIndex, AActor* InstigatorActor);
-	bool GetInstanceWorldTransform(int32 InstanceIndex, FTransform& OutTransform) const;
 };

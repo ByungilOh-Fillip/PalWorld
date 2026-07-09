@@ -69,6 +69,9 @@ public:
 	float GetWorkProgressRatio() const;
 
 	UFUNCTION(BlueprintPure, Category = "PW|Work")
+	float GetRequiredPlayerWorkSeconds() const;
+
+	UFUNCTION(BlueprintPure, Category = "PW|Work")
 	int32 GetActiveWorkerCount() const { return ActiveWorkerCount; }
 
 	UPROPERTY(BlueprintAssignable, Category = "PW|Work")
@@ -99,10 +102,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Work")
 	bool bStartWithReservedWork = false;
 
-	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "PW|Work")
+	UPROPERTY(ReplicatedUsing = OnRep_WorkGuideState, VisibleInstanceOnly, BlueprintReadOnly, Category = "PW|Work")
 	EPW_WorkBuildingState WorkState = EPW_WorkBuildingState::Idle;
 
-	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "PW|Work")
+	UPROPERTY(ReplicatedUsing = OnRep_WorkGuideState, VisibleInstanceOnly, BlueprintReadOnly, Category = "PW|Work")
 	float WorkProgress = 0.0f;
 
 	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "PW|Work")
@@ -118,10 +121,14 @@ private:
 	UFUNCTION()
 	void HandleActiveWorkerDestroyed(AActor* DestroyedActor);
 
+	UFUNCTION()
+	void OnRep_WorkGuideState();
+
 	void ApplyActiveWorkerProgress(float DeltaTime);
 	void RemoveInvalidOrOutOfRangeWorkers();
 	void CompleteWork();
 	void ClearActiveWorkers();
 	void RefreshActiveWorkerCount();
+	void RefreshInteractionGuideProgress() const;
 	bool IsWorkerInRange(AActor* Worker) const;
 };

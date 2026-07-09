@@ -82,6 +82,7 @@ void APWPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 	DOREPLIFETIME(APWPlayerCharacter, bIsSprinting);
 	DOREPLIFETIME(APWPlayerCharacter, bIsAiming);
+	DOREPLIFETIME(APWPlayerCharacter, bIsSphereAiming);
 }
 
 bool APWPlayerCharacter::ReceiveItem_Implementation(FName ItemId, int32 Count)
@@ -213,8 +214,15 @@ void APWPlayerCharacter::StartRoll()
 
 void APWPlayerCharacter::StartPrimaryAction()
 {
-	if (IsWallClimbing() || IsWallClimbTopOut())
+	if (IsWallClimbing() || IsWallClimbTopOut() || bIsSphereAiming)
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[PWPrimaryAction] Start blocked. Climbing=%d TopOut=%d SphereAiming=%d"),
+			IsWallClimbing() ? 1 : 0,
+			IsWallClimbTopOut() ? 1 : 0,
+			bIsSphereAiming ? 1 : 0);
 		return;
 	}
 
@@ -223,6 +231,26 @@ void APWPlayerCharacter::StartPrimaryAction()
 	if (PrimaryActionComponent)
 	{
 		PrimaryActionComponent->TryStartPrimaryAction();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWPrimaryAction] Start blocked. PrimaryActionComponent is missing."));
+	}
+}
+
+void APWPlayerCharacter::StopPrimaryAction()
+{
+	if (PrimaryActionComponent)
+	{
+		PrimaryActionComponent->TryStopPrimaryAction();
+	}
+}
+
+void APWPlayerCharacter::Interact()
+{
+	if (InteractionComponent)
+	{
+		InteractionComponent->TryInteract();
 	}
 }
 
@@ -251,6 +279,47 @@ void APWPlayerCharacter::StopAim()
 	if (!HasAuthority())
 	{
 		ServerSetAiming(false);
+	}
+}
+
+bool APWPlayerCharacter::StartSphereAim()
+{
+	if (!CanStartSphereAim())
+	{
+		return false;
+	}
+
+	StopSprint();
+	SetSphereAiming(true);
+
+	if (!HasAuthority())
+	{
+		ServerSetSphereAiming(true);
+	}
+
+	return true;
+}
+
+void APWPlayerCharacter::ReleaseSphereAim()
+{
+	const bool bWasSphereAiming = bIsSphereAiming;
+	FVector ThrowDirection = FVector::ForwardVector;
+
+	if (Controller)
+	{
+		ThrowDirection = Controller->GetControlRotation().Vector();
+	}
+
+	SetSphereAiming(false);
+
+	if (!HasAuthority())
+	{
+		ServerSetSphereAiming(false);
+	}
+
+	if (bWasSphereAiming && CaptureComponent)
+	{
+		CaptureComponent->TryThrowCaptureSphere(ThrowDirection);
 	}
 }
 
@@ -339,6 +408,12 @@ void APWPlayerCharacter::OnRep_IsAiming()
 	ApplyRotationMode();
 }
 
+void APWPlayerCharacter::OnRep_IsSphereAiming()
+{
+	ApplyMovementSpeed();
+	ApplyRotationMode();
+}
+
 void APWPlayerCharacter::ServerSetSprinting_Implementation(bool bNewIsSprinting)
 {
 	if (bNewIsSprinting && !CanStartSprint())
@@ -361,11 +436,23 @@ void APWPlayerCharacter::ServerSetAiming_Implementation(bool bNewIsAiming)
 	SetAiming(bNewIsAiming);
 }
 
+void APWPlayerCharacter::ServerSetSphereAiming_Implementation(bool bNewIsSphereAiming)
+{
+	if (bNewIsSphereAiming && !CanStartSphereAim())
+	{
+		SetSphereAiming(false);
+		return;
+	}
+
+	SetSphereAiming(bNewIsSphereAiming);
+}
+
 bool APWPlayerCharacter::CanStartSprint() const
 {
 	return !bIsCrouched
 		&& !IsRolling()
 		&& !bIsAiming
+		&& !bIsSphereAiming
 		&& !IsWallClimbing()
 		&& !IsWallClimbTopOut()
 		&& (!StatComponent || StatComponent->CanStartSprint());
@@ -415,6 +502,37 @@ void APWPlayerCharacter::SetAiming(bool bNewIsAiming)
 	ApplyRotationMode();
 }
 
+bool APWPlayerCharacter::CanStartSphereAim() const
+{
+	return !IsRolling()
+		&& !IsWallClimbing()
+		&& !IsWallClimbTopOut()
+		&& CaptureComponent
+		&& CaptureComponent->HasThrowableCaptureSphere();
+}
+
+void APWPlayerCharacter::SetSphereAiming(bool bNewIsSphereAiming)
+{
+	if (bNewIsSphereAiming && !CanStartSphereAim())
+	{
+		bNewIsSphereAiming = false;
+	}
+
+	if (bIsSphereAiming == bNewIsSphereAiming)
+	{
+		return;
+	}
+
+	bIsSphereAiming = bNewIsSphereAiming;
+	ApplyMovementSpeed();
+	ApplyRotationMode();
+}
+
+bool APWPlayerCharacter::ShouldUseAimCamera() const
+{
+	return (bIsAiming || bIsSphereAiming) && !IsWallClimbing() && !IsWallClimbTopOut();
+}
+
 bool APWPlayerCharacter::IsSprintMovementActive() const
 {
 	const UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
@@ -434,13 +552,23 @@ bool APWPlayerCharacter::IsSprintMovementActive() const
 
 void APWPlayerCharacter::ApplyMovementSpeed()
 {
-	GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
+	float DesiredWalkSpeed = WalkSpeed;
+	if (bIsSphereAiming)
+	{
+		DesiredWalkSpeed = SphereAimWalkSpeed;
+	}
+	else if (bIsSprinting)
+	{
+		DesiredWalkSpeed = SprintSpeed;
+	}
+
+	GetCharacterMovement()->MaxWalkSpeed = DesiredWalkSpeed;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchedWalkSpeed;
 }
 
 void APWPlayerCharacter::ApplyRotationMode()
 {
-	const bool bUseAimRotation = bIsAiming && !IsWallClimbing() && !IsWallClimbTopOut();
+	const bool bUseAimRotation = ShouldUseAimCamera();
 	bUseControllerRotationYaw = bUseAimRotation;
 
 	if (UCharacterMovementComponent* MovementComponent = GetCharacterMovement())
@@ -491,7 +619,7 @@ void APWPlayerCharacter::ServerFacePrimaryActionDirection_Implementation(FVector
 
 void APWPlayerCharacter::UpdateAimRotation()
 {
-	if (!bIsAiming || !Controller || IsWallClimbing() || IsWallClimbTopOut())
+	if (!ShouldUseAimCamera() || !Controller)
 	{
 		return;
 	}
@@ -503,7 +631,7 @@ void APWPlayerCharacter::UpdateAimRotation()
 
 float APWPlayerCharacter::GetTargetCameraArmLength() const
 {
-	if (bIsAiming)
+	if (ShouldUseAimCamera())
 	{
 		return AimCameraArmLength;
 	}

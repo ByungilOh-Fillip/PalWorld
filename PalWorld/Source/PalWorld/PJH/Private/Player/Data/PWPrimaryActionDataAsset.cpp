@@ -39,3 +39,33 @@ float UPWPrimaryActionDataAsset::GetDamage(EPWToolType ToolType, EPWResourceType
 		? ToolDamage->StoneDamage
 		: ToolDamage->TreeDamage;
 }
+
+UAnimMontage* UPWPrimaryActionDataAsset::GetPrimaryActionMontage(EPWToolType ToolType) const
+{
+	return ToolType == EPWToolType::Hand ? HandMontage : HarvestMontage;
+}
+
+float UPWPrimaryActionDataAsset::GetActionDurationForTool(EPWToolType ToolType) const
+{
+	if (ToolType == EPWToolType::Hand)
+	{
+		return HandActionDuration;
+	}
+
+	if (ToolType == EPWToolType::Axe || ToolType == EPWToolType::Pickaxe)
+	{
+		return HarvestActionDuration;
+	}
+
+	return ActionDuration;
+}
+
+float UPWPrimaryActionDataAsset::GetAnimationPlayRate(EPWToolType ToolType) const
+{
+	return ToolType == EPWToolType::Hand ? HandAnimationPlayRate : HarvestAnimationPlayRate;
+}
+
+float UPWPrimaryActionDataAsset::GetFallbackHitTime(EPWToolType ToolType) const
+{
+	return ToolType == EPWToolType::Hand ? HandFallbackHitTime : HarvestFallbackHitTime;
+}
