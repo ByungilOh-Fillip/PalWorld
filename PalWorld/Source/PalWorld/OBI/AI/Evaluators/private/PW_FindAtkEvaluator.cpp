@@ -1,5 +1,7 @@
 #include "PW_FindAtkEvaluator.h"
 
+#include "PWPalCharacter.h"
+
 const UStruct* FPWStateTreeEvaluator_FindAttacker::GetInstanceDataType() const
 {
     return InstanceDataType::StaticStruct();
@@ -13,14 +15,14 @@ void FPWStateTreeEvaluator_FindAttacker::Tick(FStateTreeExecutionContext& Contex
     // 2. 주인이 누군지 확인 (Input으로 들어온 값)
     if (InstanceData.OwnerActor)
     {
-        // 3. 실제 게임 로직: 팰 캐릭터로 형변환해서 '최근 데미지 준 적'을 알아냅니다.
-        /*
-         * APWPalCharacter* Pal = Cast<APWPalCharacter>(InstanceData.OwnerActor);
-         * if (Pal)
-         * {
-         *     // Output 변수에 값을 채워 넣습니다! (이제 StateTree가 이 값을 볼 수 있음)
-         *     InstanceData.AttackerActor = Pal->GetLastAttacker();
-         * }
-         */
+
+         APWPalCharacter* Pal = Cast<APWPalCharacter>(InstanceData.OwnerActor);
+
+         if (Pal)
+         {
+              // Output 변수에 값을 채워 넣습니다! (이제 StateTree가 이 값을 볼 수 있음)
+              // InstanceData.AttackerActor = Pal->GetLastAttacker();
+         }
+
     }
 }
