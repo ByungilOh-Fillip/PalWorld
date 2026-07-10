@@ -298,22 +298,25 @@ bool UPWInteractionScannerComponent::IsBetterInteractable(
 		return true;
 	}
 
-	const int32 CandidatePriority = IPWInteractable::Execute_GetInteractionPriority(CandidateActor);
-	const int32 BestPriority = IPWInteractable::Execute_GetInteractionPriority(BestActor);
-	if (CandidatePriority != BestPriority)
-	{
-		return CandidatePriority > BestPriority;
-	}
-
 	const FVector ScanOrigin = GetScanOrigin();
 	const FVector ViewDirection = GetViewDirection();
 	const FVector CandidateDirection = (CandidateComponent->GetInteractionLocation() - ScanOrigin).GetSafeNormal();
 	const FVector BestDirection = (BestComponent->GetInteractionLocation() - ScanOrigin).GetSafeNormal();
 	const float CandidateFacingScore = FVector::DotProduct(ViewDirection, CandidateDirection);
 	const float BestFacingScore = FVector::DotProduct(ViewDirection, BestDirection);
-	if (!FMath::IsNearlyEqual(CandidateFacingScore, BestFacingScore, 0.01f))
+
+	// 여러 대상이 겹칠 때는 플레이어가 바라보는 대상을 먼저 고르고,
+	// 시선 차이가 애매할 때만 우선순위로 정렬한다.
+	if (!FMath::IsNearlyEqual(CandidateFacingScore, BestFacingScore, 0.15f))
 	{
 		return CandidateFacingScore > BestFacingScore;
+	}
+
+	const int32 CandidatePriority = IPWInteractable::Execute_GetInteractionPriority(CandidateActor);
+	const int32 BestPriority = IPWInteractable::Execute_GetInteractionPriority(BestActor);
+	if (CandidatePriority != BestPriority)
+	{
+		return CandidatePriority > BestPriority;
 	}
 
 	const float CandidateDistanceSquared = FVector::DistSquared(ScanOrigin, CandidateComponent->GetInteractionLocation());

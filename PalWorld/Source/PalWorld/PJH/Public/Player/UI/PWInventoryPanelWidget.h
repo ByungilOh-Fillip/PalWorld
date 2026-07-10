@@ -14,9 +14,12 @@ class UPWPlayerStatComponent;
 class UPWEquipmentSlotWidget;
 class UPWInventoryDropZoneWidget;
 class UPWInventorySlotWidget;
+class UPWPalPartyPanelWidget;
+class UButton;
 class UProgressBar;
 class UTextBlock;
 class UUniformGridPanel;
+class UWidgetSwitcher;
 
 UCLASS(Blueprintable)
 class PALWORLD_API UPWInventoryPanelWidget : public UUserWidget
@@ -48,6 +51,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|UI|Inventory")
 	float GetMaxCarryWeight() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Player|UI|Inventory")
+	void ShowInventoryPage();
+
+	UFUNCTION(BlueprintCallable, Category = "Player|UI|Inventory")
+	void ShowPalPartyPage();
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
@@ -58,6 +67,19 @@ protected:
 	// WBP_Inv에 같은 이름의 UniformGridPanel을 두면 인벤토리 슬롯을 C++에서 자동 생성한다.
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
 	TObjectPtr<UUniformGridPanel> Grid_Inventory = nullptr;
+
+	// WBP_Inv 안에서 인벤토리/보유 팰 페이지를 전환할 때 사용한다.
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UWidgetSwitcher> Switcher_InventoryPages = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UButton> Button_InventoryTab = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UButton> Button_PalPartyTab = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
+	TObjectPtr<UPWPalPartyPanelWidget> PalPartyPanel = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Inventory|Bind")
 	TObjectPtr<UPWEquipmentSlotWidget> Slot_Weapon0 = nullptr;
@@ -156,6 +178,14 @@ private:
 	UFUNCTION()
 	void HandleSurvivalStatsChanged();
 
+	UFUNCTION()
+	void HandleInventoryTabClicked();
+
+	UFUNCTION()
+	void HandlePalPartyTabClicked();
+
+	void BindPageButtons();
+	void UnbindPageButtons();
 	void UnbindInventoryComponent();
 	void UnbindEquipmentComponent();
 	void UnbindStatComponent();
@@ -174,4 +204,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPWPlayerStatComponent> BoundStatComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<APWPlayerCharacter> BoundPlayerCharacter;
 };

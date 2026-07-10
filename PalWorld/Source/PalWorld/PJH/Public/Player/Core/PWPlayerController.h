@@ -60,6 +60,15 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Action")
 	TObjectPtr<UInputAction> CaptureSphereAction;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Action")
+	TObjectPtr<UInputAction> PalSummonAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Action")
+	TObjectPtr<UInputAction> PalPreviousAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Action")
+	TObjectPtr<UInputAction> PalNextAction;
+
 	// 장비 변경은 마우스 휠 전용이다. 숫자키 1/2/3/4는 팰/스피어 조작에 사용한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Equipment")
 	TObjectPtr<UInputAction> EquipmentWheelNextAction;
@@ -98,6 +107,10 @@ private:
 	void HandlePrimaryActionStarted(const FInputActionValue& Value);
 	void HandlePrimaryActionCompleted(const FInputActionValue& Value);
 	void HandleInteractPressed();
+	void HandleInteractReleased();
+	void HandlePalSummonPressed();
+	void HandlePalPreviousPressed();
+	void HandlePalNextPressed();
 	void HandleAimStarted(const FInputActionValue& Value);
 	void HandleAimCompleted(const FInputActionValue& Value);
 	void HandleSphereAimStarted(const FInputActionValue& Value);
