@@ -27,6 +27,9 @@ void APWPlayerController::BeginPlay()
 		return;
 	}
 
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
+
 	ULocalPlayer* LocalPlayer = GetLocalPlayer();
 	if (!LocalPlayer)
 	{

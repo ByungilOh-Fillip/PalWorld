@@ -33,6 +33,7 @@ namespace
 	constexpr int32 FindRoomPageIndex = 3;
 	constexpr int32 DedicatedUnavailablePageIndex = 4;
 	constexpr int32 OptionsPageIndex = 5;
+	constexpr int32 MaxListenServerPlayers = 20;
 }
 
 TSharedRef<SWidget> UPW_MainMenuWidget::RebuildWidget()
@@ -60,7 +61,13 @@ void UPW_MainMenuWidget::NativeConstruct()
 	if (SpinBox_MaxPlayers)
 	{
 		SpinBox_MaxPlayers->SetMinValue(2.0f);
-		SpinBox_MaxPlayers->SetMaxValue(64.0f);
+		SpinBox_MaxPlayers->SetMaxValue(MaxListenServerPlayers);
+		SpinBox_MaxPlayers->SetMinSliderValue(2.0f);
+		SpinBox_MaxPlayers->SetMaxSliderValue(MaxListenServerPlayers);
+		SpinBox_MaxPlayers->SetDelta(1.0f);
+		SpinBox_MaxPlayers->SetMinFractionalDigits(0);
+		SpinBox_MaxPlayers->SetMaxFractionalDigits(0);
+		SpinBox_MaxPlayers->SetAlwaysUsesDeltaSnap(true);
 		SpinBox_MaxPlayers->SetValue(DefaultMaxPlayers);
 	}
 
@@ -83,8 +90,8 @@ void UPW_MainMenuWidget::ShowMainTitle()
 
 void UPW_MainMenuWidget::ShowPlayModeSelect()
 {
+	SetMultiplayerEnabled(false);
 	SetPageIndex(PlayModeSelectPageIndex);
-	RefreshPlayModeControls();
 }
 
 void UPW_MainMenuWidget::ShowCreateRoom()
@@ -153,11 +160,6 @@ void UPW_MainMenuWidget::BindButtonEvents()
 	if (Button_MultiplayerOn)
 	{
 		Button_MultiplayerOn->OnClicked.AddUniqueDynamic(this, &UPW_MainMenuWidget::HandleMultiplayerOnClicked);
-	}
-
-	if (Button_PlayStart)
-	{
-		Button_PlayStart->OnClicked.AddUniqueDynamic(this, &UPW_MainMenuWidget::HandlePlayStartClicked);
 	}
 
 	if (Button_PlayBack)
@@ -246,11 +248,6 @@ void UPW_MainMenuWidget::UnbindButtonEvents()
 	if (Button_MultiplayerOn)
 	{
 		Button_MultiplayerOn->OnClicked.RemoveDynamic(this, &UPW_MainMenuWidget::HandleMultiplayerOnClicked);
-	}
-
-	if (Button_PlayStart)
-	{
-		Button_PlayStart->OnClicked.RemoveDynamic(this, &UPW_MainMenuWidget::HandlePlayStartClicked);
 	}
 
 	if (Button_PlayBack)
@@ -347,9 +344,14 @@ void UPW_MainMenuWidget::SetPageIndex(int32 PageIndex)
 void UPW_MainMenuWidget::RefreshPlayModeControls()
 {
 	const bool bHasNickname = !GetNickname().IsEmpty();
-	if (Button_PlayStart)
+	if (Button_MultiplayerOff)
 	{
-		Button_PlayStart->SetVisibility(bMultiplayerEnabled ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+		Button_MultiplayerOff->SetVisibility(bMultiplayerEnabled ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+	}
+
+	if (Button_MultiplayerOn)
+	{
+		Button_MultiplayerOn->SetVisibility(bMultiplayerEnabled ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
 	}
 
 	if (Button_CreateRoom)
@@ -368,6 +370,12 @@ void UPW_MainMenuWidget::RefreshPlayModeControls()
 	{
 		Edit_Nickname->SetVisibility(bMultiplayerEnabled ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
+}
+
+void UPW_MainMenuWidget::ShowMultiplayerMenu()
+{
+	SetMultiplayerEnabled(true);
+	SetPageIndex(PlayModeSelectPageIndex);
 }
 
 void UPW_MainMenuWidget::RefreshRoomDefaults()
@@ -400,6 +408,11 @@ void UPW_MainMenuWidget::SetSessionButtonsEnabled(bool bEnabled)
 	if (Button_RefreshSessions)
 	{
 		Button_RefreshSessions->SetIsEnabled(bEnabled);
+	}
+
+	if (Scroll_RoomList)
+	{
+		Scroll_RoomList->SetIsEnabled(bEnabled);
 	}
 
 	RefreshPlayModeControls();
@@ -556,7 +569,6 @@ UWidget* UPW_MainMenuWidget::BuildPlayModeSelectPage()
 	PageBox->AddChildToVerticalBox(MakeMenuText(NSLOCTEXT("PWMainMenu", "FallbackPlayMode", "플레이 방식"), 30));
 	Button_MultiplayerOff = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackSolo", "싱글 플레이"));
 	Button_MultiplayerOn = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackMulti", "멀티 플레이"));
-	Button_PlayStart = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackStartWorld", "월드 시작"));
 	Button_CreateRoom = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackCreateRoom", "방 만들기"));
 	Button_FindRoom = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackFindRoom", "방 찾기"));
 	Button_PlayBack = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackBack", "뒤로"));
@@ -565,7 +577,6 @@ UWidget* UPW_MainMenuWidget::BuildPlayModeSelectPage()
 	PageBox->AddChildToVerticalBox(Button_MultiplayerOff);
 	PageBox->AddChildToVerticalBox(Button_MultiplayerOn);
 	PageBox->AddChildToVerticalBox(Edit_Nickname);
-	PageBox->AddChildToVerticalBox(Button_PlayStart);
 	PageBox->AddChildToVerticalBox(Button_CreateRoom);
 	PageBox->AddChildToVerticalBox(Button_FindRoom);
 	PageBox->AddChildToVerticalBox(Button_PlayBack);
@@ -682,20 +693,22 @@ void UPW_MainMenuWidget::HandleQuitGameClicked()
 void UPW_MainMenuWidget::HandleMultiplayerOffClicked()
 {
 	SetMultiplayerEnabled(false);
+	UGameplayStatics::OpenLevel(this, GameMapName, true, GameMapTravelOptions);
 }
 
 void UPW_MainMenuWidget::HandleMultiplayerOnClicked()
 {
-	SetMultiplayerEnabled(true);
-}
-
-void UPW_MainMenuWidget::HandlePlayStartClicked()
-{
-	UGameplayStatics::OpenLevel(this, GameMapName, true, GameMapTravelOptions);
+	ShowMultiplayerMenu();
 }
 
 void UPW_MainMenuWidget::HandlePlayBackClicked()
 {
+	if (bMultiplayerEnabled)
+	{
+		ShowPlayModeSelect();
+		return;
+	}
+
 	ShowMainTitle();
 }
 
@@ -732,7 +745,7 @@ void UPW_MainMenuWidget::HandleCreateRoomStartClicked()
 
 void UPW_MainMenuWidget::HandleCreateRoomBackClicked()
 {
-	ShowPlayModeSelect();
+	ShowMultiplayerMenu();
 }
 
 void UPW_MainMenuWidget::HandleRefreshSessionsClicked()
@@ -755,7 +768,7 @@ void UPW_MainMenuWidget::HandleRefreshSessionsClicked()
 
 void UPW_MainMenuWidget::HandleFindRoomBackClicked()
 {
-	ShowPlayModeSelect();
+	ShowMultiplayerMenu();
 }
 
 void UPW_MainMenuWidget::HandleDedicatedBackClicked()
@@ -811,6 +824,11 @@ void UPW_MainMenuWidget::HandleSessionSearchStateChanged(bool bSearching)
 
 void UPW_MainMenuWidget::HandleSessionSlotJoinRequested(int32 SearchIndex)
 {
+	if (bSessionOperationInProgress)
+	{
+		return;
+	}
+
 	if (GetNickname().IsEmpty())
 	{
 		SetStatusMessage(NSLOCTEXT("PWMainMenu", "JoinNicknameRequired", "Enter a nickname first."));

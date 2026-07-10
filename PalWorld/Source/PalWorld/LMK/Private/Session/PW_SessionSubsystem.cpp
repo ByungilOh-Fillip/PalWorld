@@ -41,7 +41,14 @@ void UPW_SessionSubsystem::CreateListenSession(const FString& RoomName, const FS
 	if (SessionInterface->GetNamedSession(NAME_GameSession) != nullptr)
 	{
 		bCreateSessionAfterDestroy = true;
-		SessionInterface->DestroySession(NAME_GameSession);
+		if (!SessionInterface->DestroySession(NAME_GameSession))
+		{
+			bCreateSessionAfterDestroy = false;
+			BroadcastOperationFinished(
+				EPW_SessionOperation::Create,
+				false,
+				NSLOCTEXT("PWSession", "CreateDestroyStartFailed", "Failed to destroy the existing session before creating a new one."));
+		}
 		return;
 	}
 
@@ -325,6 +332,12 @@ void UPW_SessionSubsystem::HandleDestroySessionComplete(FName SessionName, bool 
 			CreateListenSessionInternal(PendingRoomName, PendingHostNickname, PendingMaxPlayers);
 			return;
 		}
+
+		BroadcastOperationFinished(
+			EPW_SessionOperation::Create,
+			false,
+			NSLOCTEXT("PWSession", "CreateDestroyFailed", "Failed to destroy the existing session before creating a new one."));
+		return;
 	}
 
 	BroadcastOperationFinished(

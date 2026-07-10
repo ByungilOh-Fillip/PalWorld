@@ -23,7 +23,6 @@ public class PalWorld : ModuleRules
 			"AIModule",
 			"NavigationSystem",
 			"StateTreeModule",
-			"StateTreeEditorModule",
 			"GameplayStateTreeModule",
 			"OnlineSubsystem",
 			"OnlineSubsystemSteam",

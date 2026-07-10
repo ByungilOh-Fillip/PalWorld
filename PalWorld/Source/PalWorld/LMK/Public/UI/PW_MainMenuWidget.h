@@ -67,7 +67,7 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Main Menu", meta = (AllowPrivateAccess = "true"))
 	FString GameMapTravelOptions = TEXT("game=/Game/_Private/LMK/BluePrints/BP_PWGameMode.BP_PWGameMode_C");
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Main Menu", meta = (AllowPrivateAccess = "true", ClampMin = "2", ClampMax = "64"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Main Menu", meta = (AllowPrivateAccess = "true", ClampMin = "2", ClampMax = "20"))
 	int32 DefaultMaxPlayers = 4;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Main Menu", meta = (AllowPrivateAccess = "true"))
@@ -99,9 +99,6 @@ private:
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> Button_MultiplayerOn;
-
-	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<UButton> Button_PlayStart;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> Button_PlayBack;
@@ -157,6 +154,7 @@ private:
 	void UnbindSessionEvents();
 	void SetPageIndex(int32 PageIndex);
 	void RefreshPlayModeControls();
+	void ShowMultiplayerMenu();
 	void RefreshRoomDefaults();
 	void SetStatusMessage(const FText& Message);
 	void SetSessionButtonsEnabled(bool bEnabled);
@@ -196,9 +194,6 @@ private:
 
 	UFUNCTION()
 	void HandleMultiplayerOnClicked();
-
-	UFUNCTION()
-	void HandlePlayStartClicked();
 
 	UFUNCTION()
 	void HandlePlayBackClicked();

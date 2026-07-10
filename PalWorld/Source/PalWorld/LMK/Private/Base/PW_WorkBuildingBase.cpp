@@ -6,10 +6,14 @@
 #include "Base/PW_BaseWorkTargetRegistryComponent.h"
 #include "Base/PW_InventoryComponent.h"
 #include "Base/PW_WorkBuildingComponent.h"
+#include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Net/UnrealNetwork.h"
 #include "PWInteractableTargetComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/Character.h"
+#include "Player/Components/PWPlayerInventoryLinkComponent.h"
 
 APW_WorkBuildingBase::APW_WorkBuildingBase()
 {
@@ -18,8 +22,11 @@ APW_WorkBuildingBase::APW_WorkBuildingBase()
 	SetNetCullDistanceSquared(FMath::Square(8000.0f));
 	SetNetUpdateFrequency(2.0f);
 
+	USceneComponent* SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	SetRootComponent(SceneRoot);
+
 	BuildingMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BuildingMesh"));
-	SetRootComponent(BuildingMesh);
+	BuildingMesh->SetupAttachment(SceneRoot);
 	BuildingMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	BuildingMesh->SetCanEverAffectNavigation(true);
 
@@ -224,11 +231,15 @@ void APW_WorkBuildingBase::HandleWorkCompleted()
 		return;
 	}
 
-	const FPW_WorkRecipe* Recipe = FindRecipe(WorkBuildingComponent->GetWorkId());
+	FName CompletedWorkId = WorkBuildingComponent->GetWorkId();
+	const FPW_WorkRecipe* Recipe = FindRecipe(CompletedWorkId);
 	if (Recipe != nullptr)
 	{
 		AddCraftResult(*Recipe);
 	}
+
+	// Reset the work progress so it can be repeated
+	WorkBuildingComponent->ReserveWork(CompletedWorkId);
 }
 
 void APW_WorkBuildingBase::RegisterWithBaseCamp()
@@ -371,6 +382,17 @@ void APW_WorkBuildingBase::AddCraftResult(const FPW_WorkRecipe& Recipe)
 	if (!Recipe.ResultItem.IsValid())
 	{
 		return;
+	}
+
+	ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(this, 0);
+	if (PlayerCharacter != nullptr)
+	{
+		UPWPlayerInventoryLinkComponent* PlayerInventory = PlayerCharacter->FindComponentByClass<UPWPlayerInventoryLinkComponent>();
+		if (PlayerInventory != nullptr)
+		{
+			PlayerInventory->AddItem(Recipe.ResultItem.ItemId, 1);
+			return; // Successfully added to player inventory
+		}
 	}
 
 	UPW_BaseInventoryAggregatorComponent* InventoryAggregator = OwningBaseCamp != nullptr
