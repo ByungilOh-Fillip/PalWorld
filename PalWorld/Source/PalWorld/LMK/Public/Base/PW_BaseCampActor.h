@@ -4,6 +4,7 @@
 #include "Base/PW_BaseTypes.h"
 #include "GameFramework/Actor.h"
 #include "PWInteractable.h"
+#include "PWMultiInteractable.h"
 #include "PW_BaseCampActor.generated.h"
 
 class UPW_BaseInventoryAggregatorComponent;
@@ -17,7 +18,7 @@ class UNavigationInvokerComponent;
 class USceneComponent;
 
 UCLASS(Blueprintable)
-class PALWORLD_API APW_BaseCampActor : public AActor, public IPWInteractable
+class PALWORLD_API APW_BaseCampActor : public AActor, public IPWInteractable, public IPWMultiInteractable
 {
 	GENERATED_BODY()
 
@@ -32,6 +33,8 @@ public:
 	virtual bool Interact_Implementation(AActor* Interactor) override;
 	virtual FText GetInteractionPrompt_Implementation() const override;
 	virtual int32 GetInteractionPriority_Implementation() const override;
+	virtual bool CanInteractAction_Implementation(AActor* Interactor, FName ActionId) const override;
+	virtual bool InteractAction_Implementation(AActor* Interactor, FName ActionId) override;
 
 	UFUNCTION(BlueprintPure, Category = "PW|Base")
 	FPW_BaseCampId GetBaseCampId() const { return BaseCampId; }

@@ -36,10 +36,13 @@ public:
 	float GetCaptureAimChance() const { return CaptureAimChance; }
 
 	UFUNCTION(BlueprintPure, Category = "Player|Capture|Aim")
-	int32 GetCaptureAimChancePercent() const { return FMath::RoundToInt(CaptureAimChance * 100.f); }
+	int32 GetCaptureAimChancePercent() const { return FMath::RoundToInt(GetCaptureAimChance() * 100.f); }
 
 	UFUNCTION(BlueprintPure, Category = "Player|Capture|Aim")
 	FText GetCaptureAimTargetNameText() const;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Capture")
+	float CalculateCaptureChanceForTarget(APWPalBase* TargetPal) const;
 
 	UFUNCTION(BlueprintPure, Category = "Player|Capture")
 	int32 GetThrowableCaptureSphereCount() const;
@@ -94,10 +97,10 @@ private:
 	float CaptureAimChance = 0.f;
 
 	APWPlayerCharacter* GetOwnerCharacter() const;
+	bool IsValidCaptureAimTarget(APWPalBase* TargetPal) const;
 	void UpdateCaptureAimInfo();
 	void ClearCaptureAimInfo();
 	void SetCaptureAimInfo(bool bNewVisible, APWPalBase* NewTarget, float NewChance);
-	float CalculateCaptureChance(APWPalBase* TargetPal) const;
 	void ThrowCaptureSphere_Server(const FVector& ThrowDirection);
 
 	UFUNCTION(Server, Reliable)

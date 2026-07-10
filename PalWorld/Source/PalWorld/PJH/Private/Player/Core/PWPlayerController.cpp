@@ -27,6 +27,9 @@ void APWPlayerController::BeginPlay()
 		return;
 	}
 
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
+
 	ULocalPlayer* LocalPlayer = GetLocalPlayer();
 	if (!LocalPlayer)
 	{
@@ -66,6 +69,7 @@ void APWPlayerController::SetupInputComponent()
 		// 메뉴 입력은 지금 단계에서 확실히 동작해야 하므로 IMC와 별도로 직접 바인딩한다.
 		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &APWPlayerController::ToggleInventoryMenu);
 		InputComponent->BindKey(EKeys::F, IE_Pressed, this, &APWPlayerController::HandleInteractPressed);
+		InputComponent->BindKey(EKeys::F, IE_Released, this, &APWPlayerController::HandleInteractReleased);
 
 		if (bEnableDebugStatHotkeys)
 		{
@@ -143,6 +147,21 @@ void APWPlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(CaptureSphereAction, ETriggerEvent::Started, this, &APWPlayerController::HandleSphereAimStarted);
 		EnhancedInputComponent->BindAction(CaptureSphereAction, ETriggerEvent::Completed, this, &APWPlayerController::HandleSphereAimCompleted);
 		EnhancedInputComponent->BindAction(CaptureSphereAction, ETriggerEvent::Canceled, this, &APWPlayerController::HandleSphereAimCompleted);
+	}
+
+	if (PalSummonAction)
+	{
+		EnhancedInputComponent->BindAction(PalSummonAction, ETriggerEvent::Started, this, &APWPlayerController::HandlePalSummonPressed);
+	}
+
+	if (PalPreviousAction)
+	{
+		EnhancedInputComponent->BindAction(PalPreviousAction, ETriggerEvent::Started, this, &APWPlayerController::HandlePalPreviousPressed);
+	}
+
+	if (PalNextAction)
+	{
+		EnhancedInputComponent->BindAction(PalNextAction, ETriggerEvent::Started, this, &APWPlayerController::HandlePalNextPressed);
 	}
 
 	if (EquipmentWheelNextAction)
@@ -264,7 +283,39 @@ void APWPlayerController::HandleInteractPressed()
 {
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
-		PlayerCharacter->Interact();
+		PlayerCharacter->StartInteract();
+	}
+}
+
+void APWPlayerController::HandleInteractReleased()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StopInteract();
+	}
+}
+
+void APWPlayerController::HandlePalSummonPressed()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->ToggleSummonPartyPal();
+	}
+}
+
+void APWPlayerController::HandlePalPreviousPressed()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->SelectPreviousPartyPal();
+	}
+}
+
+void APWPlayerController::HandlePalNextPressed()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->SelectNextPartyPal();
 	}
 }
 

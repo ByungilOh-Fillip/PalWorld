@@ -1,4 +1,5 @@
 #include "PWPalBase.h"
+#include "Components/ActorComponent.h"
 #include "StatusComponent.h"
 #include "PWSkillComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -46,6 +47,8 @@ void APWPalBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(APWPalBase, ActiveTags);
+    DOREPLIFETIME(APWPalBase, bCaptureInteractionDisabled);
+    DOREPLIFETIME(APWPalBase, bIsPlayerOwnedPal);
 }
 
 void APWPalBase::OnRep_ActiveTags(const FGameplayTagContainer& PreviousTags)
@@ -97,6 +100,51 @@ void APWPalBase::RemoveStateTag(FGameplayTag TagToRemove)
         if (HasAuthority())
         {
             OnStateTagChangedDelegate.Broadcast(TagToRemove, false);
+        }
+    }
+}
+
+void APWPalBase::SetCaptureInteractionDisabled(bool bDisabled)
+{
+    if (!HasAuthority() || bCaptureInteractionDisabled == bDisabled)
+    {
+        return;
+    }
+
+    bCaptureInteractionDisabled = bDisabled;
+    ApplyCaptureInteractionDisabled();
+    ForceNetUpdate();
+}
+
+void APWPalBase::SetPlayerOwnedPal(bool bNewIsPlayerOwnedPal)
+{
+    if (!HasAuthority() || bIsPlayerOwnedPal == bNewIsPlayerOwnedPal)
+    {
+        return;
+    }
+
+    bIsPlayerOwnedPal = bNewIsPlayerOwnedPal;
+    ForceNetUpdate();
+}
+
+void APWPalBase::OnRep_CaptureInteractionDisabled()
+{
+    ApplyCaptureInteractionDisabled();
+}
+
+void APWPalBase::ApplyCaptureInteractionDisabled()
+{
+    SetActorHiddenInGame(bCaptureInteractionDisabled);
+    SetActorEnableCollision(!bCaptureInteractionDisabled);
+    SetActorTickEnabled(!bCaptureInteractionDisabled);
+
+    TArray<UActorComponent*> Components;
+    GetComponents(Components);
+    for (UActorComponent* Component : Components)
+    {
+        if (Component)
+        {
+            Component->SetComponentTickEnabled(!bCaptureInteractionDisabled);
         }
     }
 }

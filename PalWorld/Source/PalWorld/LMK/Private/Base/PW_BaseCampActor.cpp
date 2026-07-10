@@ -19,6 +19,7 @@
 #include "Net/UnrealNetwork.h"
 #include "PWInteractableTargetComponent.h"
 #include "PWSkillComponent.h"
+#include "UI/PW_WorldMapControllerComponent.h"
 
 APW_BaseCampActor::APW_BaseCampActor()
 {
@@ -339,4 +340,34 @@ void APW_BaseCampActor::SetBaseActiveState(bool bNewHasActiveVisitor)
 	{
 		BaseNavigationComponent->SetBaseNavigationActive(bHasActiveVisitor);
 	}
+}
+
+bool APW_BaseCampActor::CanInteractAction_Implementation(AActor* Interactor, FName ActionId) const
+{
+	return CanInteract_Implementation(Interactor);
+}
+
+bool APW_BaseCampActor::InteractAction_Implementation(AActor* Interactor, FName ActionId)
+{
+	if (!CanInteractAction_Implementation(Interactor, ActionId))
+	{
+		return false;
+	}
+
+	if (ActionId == TEXT("Teleport"))
+	{
+		const APawn* InteractingPawn = Cast<APawn>(Interactor);
+		APlayerController* PlayerController = InteractingPawn != nullptr ? Cast<APlayerController>(InteractingPawn->GetController()) : Cast<APlayerController>(Interactor);
+		UPW_WorldMapControllerComponent* WorldMapController = PlayerController != nullptr ? PlayerController->FindComponentByClass<UPW_WorldMapControllerComponent>() : nullptr;
+		if (WorldMapController == nullptr)
+		{
+			return false;
+		}
+
+		WorldMapController->SetActiveBaseCampTeleportSource(this);
+		WorldMapController->ClientShowTeleportMap();
+		return true;
+	}
+
+	return Interact_Implementation(Interactor);
 }

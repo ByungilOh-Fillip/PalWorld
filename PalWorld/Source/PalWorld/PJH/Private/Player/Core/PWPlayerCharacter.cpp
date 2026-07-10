@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Merchant/PWPlayerTradeComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Components/PWPalCommandComponent.h"
 #include "Player/Components/PWPlayerActionComponent.h"
@@ -14,9 +15,11 @@
 #include "Player/Components/PWPlayerInteractionComponent.h"
 #include "Player/Components/PWPlayerInventoryLinkComponent.h"
 #include "Player/Components/PWPlayerMountComponent.h"
+#include "Player/Components/PWPlayerPalStorageComponent.h"
 #include "Player/Components/PWPlayerPrimaryActionComponent.h"
 #include "Player/Components/PWPlayerSkillComponent.h"
 #include "Player/Components/PWPlayerStatComponent.h"
+#include "PWInteractionScannerComponent.h"
 
 APWPlayerCharacter::APWPlayerCharacter()
 {
@@ -52,6 +55,8 @@ APWPlayerCharacter::APWPlayerCharacter()
 	EquipmentComponent = CreateDefaultSubobject<UPWPlayerEquipmentComponent>(TEXT("EquipmentComponent"));
 	SkillComponent = CreateDefaultSubobject<UPWPlayerSkillComponent>(TEXT("SkillComponent"));
 	PalCommandComponent = CreateDefaultSubobject<UPWPalCommandComponent>(TEXT("PalCommandComponent"));
+	PalStorageComponent = CreateDefaultSubobject<UPWPlayerPalStorageComponent>(TEXT("PalStorageComponent"));
+	TradeComponent = CreateDefaultSubobject<UPWPlayerTradeComponent>(TEXT("TradeComponent"));
 	InteractionComponent = CreateDefaultSubobject<UPWPlayerInteractionComponent>(TEXT("InteractionComponent"));
 	InventoryLinkComponent = CreateDefaultSubobject<UPWPlayerInventoryLinkComponent>(TEXT("InventoryLinkComponent"));
 	CaptureComponent = CreateDefaultSubobject<UPWPlayerCaptureComponent>(TEXT("CaptureComponent"));
@@ -248,9 +253,69 @@ void APWPlayerCharacter::StopPrimaryAction()
 
 void APWPlayerCharacter::Interact()
 {
+	StartInteract();
+}
+
+void APWPlayerCharacter::StartInteract()
+{
+	if (UPWInteractionScannerComponent* ScannerComponent = FindComponentByClass<UPWInteractionScannerComponent>())
+	{
+		if (ScannerComponent->TryBeginHoldInteraction())
+		{
+			return;
+		}
+	}
+
 	if (InteractionComponent)
 	{
 		InteractionComponent->TryInteract();
+	}
+}
+
+void APWPlayerCharacter::StopInteract()
+{
+	if (UPWInteractionScannerComponent* ScannerComponent = FindComponentByClass<UPWInteractionScannerComponent>())
+	{
+		ScannerComponent->EndHoldInteraction();
+	}
+}
+
+void APWPlayerCharacter::ToggleSummonPartyPal()
+{
+	if (IsRolling() || IsWallClimbing() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
+	if (PalStorageComponent)
+	{
+		PalStorageComponent->ToggleSummonSelectedPartyPal();
+	}
+}
+
+void APWPlayerCharacter::SelectPreviousPartyPal()
+{
+	if (IsRolling() || IsWallClimbing() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
+	if (PalStorageComponent)
+	{
+		PalStorageComponent->SelectPreviousPartyPal();
+	}
+}
+
+void APWPlayerCharacter::SelectNextPartyPal()
+{
+	if (IsRolling() || IsWallClimbing() || IsWallClimbTopOut())
+	{
+		return;
+	}
+
+	if (PalStorageComponent)
+	{
+		PalStorageComponent->SelectNextPartyPal();
 	}
 }
 
