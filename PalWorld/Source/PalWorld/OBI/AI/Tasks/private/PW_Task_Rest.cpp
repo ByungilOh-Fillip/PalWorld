@@ -1,4 +1,5 @@
 #include "PW_Task_Rest.h"
+#include "PW_ST_Log.h"
 #include "PWPalCharacter.h"
 
 const UStruct* FPWStateTreeTask_Rest::GetInstanceDataType() const
@@ -8,6 +9,8 @@ const UStruct* FPWStateTreeTask_Rest::GetInstanceDataType() const
 
 EStateTreeRunStatus FPWStateTreeTask_Rest::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
+    UE_LOG(LogPalStateTree, Log, TEXT("[PW_Task_Rest] EnterState 진입"));
+
     FPW_Task_RestInstanceData& InstanceData = Context.GetInstanceData<FPW_Task_RestInstanceData>(*this);
     
     InstanceData.TimeElapsed = 0.0f;
@@ -35,6 +38,12 @@ EStateTreeRunStatus FPWStateTreeTask_Rest::Tick(FStateTreeExecutionContext& Cont
     // 2. 이미 End 섹션으로 넘어간 경우 (기지개 켜고 일어나는 중)
     if (InstanceData.bIsEnding)
     {
+        // 몽타주가 세팅되어 있지 않으면 바로 성공 처리
+        if (!InstanceData.RestMontage)
+        {
+            return EStateTreeRunStatus::Succeeded;
+        }
+
         // 몽타주가 완전히 끝났는지 확인 (현재 재생 중인 몽타주가 내 몽타주가 아니면 끝난 것)
         if (APWPalCharacter* Pal = Cast<APWPalCharacter>(InstanceData.OwnerActor))
         {

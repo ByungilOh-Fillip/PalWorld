@@ -46,7 +46,6 @@ void APWPalAIController::BeginPlay()
     // 퍼셉션 업데이트 이벤트 연결
     if (PalPerceptionComponent)
     {
-        PalPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &APWPalAIController::OnTargetDetected);
         PalPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &APWPalAIController::OnTargetPerceptionUpdated);
     }
 }
@@ -55,45 +54,58 @@ void APWPalAIController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
 
+    UE_LOG(LogTemp, Warning, TEXT("[PWPalAIController::OnPossess] 팰 빙의 완료: %s, StateTreeComp: %s"),
+        InPawn ? *InPawn->GetName() : TEXT("NULL"),
+        StateTreeComponent ? TEXT("존재함") : TEXT("NULL ← 문제!"));
+
     // 팰에 빙의(Possess)하면, 할당된 StateTree를 가동합니다.
     if (StateTreeComponent)
     {
         StateTreeComponent->StartLogic();
-    }
-}
-
-void APWPalAIController::OnTargetDetected(AActor* Actor, FAIStimulus const Stimulus)
-{
-    // 대상이 시야/청각에 성공적으로 들어왔는지 확인
-    if (Stimulus.WasSuccessfullySensed())
-    {
-         // TODO: StateTree 파라미터나 컨텍스트에 TargetActor 전달 로직 추가
-         // StateTree에서는 자체 컨텍스트 바인딩을 사용하므로 Blackboard 세팅을 제거합니다.
+        UE_LOG(LogTemp, Warning, TEXT("[PWPalAIController::OnPossess] StartLogic() 호출 완료"));
     }
     else
     {
-        // TODO : 시야에서 사라졌을 때의 처리 (TargetActor 초기화 등)
+        UE_LOG(LogTemp, Error, TEXT("[PWPalAIController::OnPossess] StateTreeComponent가 없음! Blueprint에서 StateTree 에셋이 할당됐는지 확인!"));
     }
 }
 
-// 내장되어 있는 함수랑 별게로 Payload를 담기 위한 함수
 void APWPalAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus const Stimulus)
 {
     if (Stimulus.WasSuccessfullySensed())
     {
-        FStateTreeEvent TreeEvent;
+        CurrentTargetActor = Actor; // 감지된 대상을 현재 타겟으로 저장
 
-        // 설정한 Event용 GameplayTag
+        FStateTreeEvent TreeEvent;
         TreeEvent.Tag = PW_ST_EventsTags::Event_SenseThreat;
 
         FST_PerceptionPayload Payload;
         Payload.TargetActor = Actor;
-
         TreeEvent.Payload = FInstancedStruct::Make(Payload);
 
         if (StateTreeComponent)
         {
-            StateTreeComponent -> SendStateTreeEvent(TreeEvent);
+            StateTreeComponent->SendStateTreeEvent(TreeEvent);
+        }
+    }
+    else
+    {
+        if (CurrentTargetActor == Actor)
+        {
+            CurrentTargetActor = nullptr; // 시야에서 벗어나면 타겟 초기화
+        }
+
+        // 시야에서 사라졌을 때 타겟 상실 이벤트 전송
+        FStateTreeEvent TreeEvent;
+        TreeEvent.Tag = PW_ST_EventsTags::Event_TargetLost;
+
+        FST_PerceptionPayload Payload;
+        Payload.TargetActor = Actor;
+        TreeEvent.Payload = FInstancedStruct::Make(Payload);
+
+        if (StateTreeComponent)
+        {
+            StateTreeComponent->SendStateTreeEvent(TreeEvent);
         }
     }
 }

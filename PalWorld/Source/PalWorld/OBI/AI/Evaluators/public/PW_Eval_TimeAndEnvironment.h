@@ -23,6 +23,7 @@ struct PALWORLD_API FPWStateTreeEvaluator_TimeAndEnv : public FStateTreeEvaluato
     typedef FPW_Eval_TimeAndEnvironmentInstanceData InstanceDataType;
     
     virtual const UStruct* GetInstanceDataType() const override;
+    void TreeStart(FStateTreeExecutionContext& Context) const;
 
     virtual void Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 };

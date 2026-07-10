@@ -38,6 +38,7 @@ struct PALWORLD_API FPWStateTreeEvaluator_FindAttacker : public FStateTreeEvalua
     typedef FPW_FindAtkEvaluatorInstanceData InstanceDataType;
     
     virtual const UStruct* GetInstanceDataType() const override;
+    void TreeStart(FStateTreeExecutionContext& Context) const;
 
     // 매 틱(Tick)마다 실행되는 정찰 로직
     virtual void Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;

@@ -38,19 +38,19 @@ protected:
     virtual void OnPossess(APawn* InPawn) override;
 
 public:
-    // AI 인지 시스템(시야, 소리)에 무언가 포착되었을 때 호출되는 함수
-    UFUNCTION()
-    void OnTargetDetected(AActor* Actor, FAIStimulus const Stimulus);
 
+    // 현재 쫓고 있거나 도망가고 있는 대상 (피격 또는 인지로 획득)
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Pal|AI")
+    TObjectPtr<AActor> CurrentTargetActor;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|AI")
+    TObjectPtr<UStateTreeComponent> StateTreeComponent;
 
 protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|AI")
     TObjectPtr<UAIPerceptionComponent> PalPerceptionComponent;
 
-    // StateTree 구동용 컴포넌트
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|AI")
-    TObjectPtr<UStateTreeComponent> StateTreeComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|AI")
     TObjectPtr<UAISenseConfig_Sight> SightConfig;
@@ -58,6 +58,7 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|AI")
     TObjectPtr<UAISenseConfig_Hearing> HearingConfig;
 
+    // StateTree 구동용 컴포넌트
     UFUNCTION()
     void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus const Stimulus);
 
