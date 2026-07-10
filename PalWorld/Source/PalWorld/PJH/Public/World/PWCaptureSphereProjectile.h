@@ -15,6 +15,8 @@ class USceneComponent;
 class USphereComponent;
 class UStaticMeshComponent;
 class UStaticMesh;
+class UWidgetComponent;
+class UPWCaptureProgressWidget;
 
 UENUM(BlueprintType)
 enum class EPWCaptureSphereProjectileState : uint8
@@ -39,6 +41,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -51,6 +54,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Capture|Visual")
 	TObjectPtr<UStaticMeshComponent> SphereVisual;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Capture|UI")
+	TObjectPtr<UWidgetComponent> CaptureProgressWidget;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Capture|Movement")
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
@@ -80,28 +86,25 @@ private:
 	TObjectPtr<UMaterialInterface> GlowMaterial = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Capture|Sequence", meta = (ClampMin = "0.0"))
-	float HitReactDuration = 0.22f;
+	float HitReactDuration = 0.28f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Capture|Sequence", meta = (ClampMin = "0.0"))
-	float HitReactBackDistance = 80.f;
+	float HitReactBackDistance = 110.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Capture|Sequence", meta = (ClampMin = "0.0"))
-	float HitReactUpHeight = 180.f;
+	float HitReactUpHeight = 230.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Capture|Sequence", meta = (ClampMin = "0.0"))
-	float OpenDuration = 0.22f;
+	float OpenDuration = 0.26f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Capture|Sequence", meta = (ClampMin = "0.0"))
-	float CloseDuration = 0.18f;
+	float CloseDuration = 0.22f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Capture|Sequence", meta = (ClampMin = "0.0"))
-	float CaptureShakeDuration = 2.2f;
+	float CaptureShakeDuration = 2.7f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Capture|Sequence", meta = (ClampMin = "0.0"))
 	float CaptureShakeYawAmplitude = 18.f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Player|Capture|Sequence", meta = (ClampMin = "0.0"))
-	float CaptureShakeFrequency = 8.f;
 
 	UPROPERTY(ReplicatedUsing = OnRep_ProjectileState)
 	EPWCaptureSphereProjectileState ProjectileState = EPWCaptureSphereProjectileState::Flying;
@@ -111,6 +114,31 @@ private:
 
 	UPROPERTY()
 	TWeakObjectPtr<AActor> HitTarget;
+
+	UPROPERTY(Transient)
+	TWeakObjectPtr<APWPalBase> CaptureUiTarget;
+
+	FTransform HitTargetOriginalTransform = FTransform::Identity;
+
+	float CaptureUiInitialChance = 0.f;
+
+	float CaptureUiTargetChance = 0.f;
+
+	float CaptureFailureProgress = 1.f;
+
+	bool bCaptureUiStarted = false;
+
+	UPROPERTY(Transient)
+	float PendingCaptureChance = 0.f;
+
+	UPROPERTY(Transient)
+	float PendingCaptureRoll = 1.f;
+
+	bool bPendingCaptureSuccess = false;
+
+	bool bCaptureResultResolved = false;
+
+	bool bHitTargetSuppressed = false;
 
 	UPROPERTY(ReplicatedUsing = OnRep_HitReactLocations)
 	FVector_NetQuantize HitReactStartLocation = FVector::ZeroVector;
@@ -133,7 +161,16 @@ private:
 	void OnRep_HitReactLocations();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastStartHitReact(FVector_NetQuantize StartLocation, FVector_NetQuantize TargetLocation);
+	void MulticastStartHitReact(
+		FVector_NetQuantize StartLocation,
+		FVector_NetQuantize TargetLocation,
+		APWPalBase* TargetPal,
+		float InitialChance,
+		float TargetDisplayChance,
+		float FailureProgress);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastSetHitTargetSuppressed(AActor* TargetActor, bool bSuppressed, FTransform RestoreTransform);
 
 	void EnterState(EPWCaptureSphereProjectileState NewState);
 	void UpdateCaptureSequence(float DeltaSeconds);
@@ -142,7 +179,18 @@ private:
 	void UpdateHitReact(float DeltaSeconds);
 	void ApplyStateVisual();
 	void ApplyCleanMaterials();
+	void ShowCaptureProgressWidget();
+	void UpdateCaptureProgressWidget() const;
+	void HideCaptureProgressWidget() const;
+	float CalculateCaptureUiProgress() const;
+	float CalculateCaptureDisplayChance() const;
+	void SetHitTargetSuppressed(bool bSuppressed);
+	void RestoreHitTargetIfNeeded();
+	void ResolveCaptureResult();
 	bool IsCaptureTarget(AActor* OtherActor) const;
 	bool HasValidHitReactLocations() const;
+	float CalculateFailureProgressFromRoll() const;
+	float CalculateFailureDisplayChance() const;
+	float EvaluateCaptureShakeYaw() const;
 	void StopProjectileMovement();
 };

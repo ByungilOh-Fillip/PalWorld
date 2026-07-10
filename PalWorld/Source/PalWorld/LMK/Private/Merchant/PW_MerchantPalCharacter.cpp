@@ -52,6 +52,9 @@ bool APW_MerchantPalCharacter::LocalInteract_Implementation(AActor* Interactor)
 {
 	if (!CanLocalInteract_Implementation(Interactor))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWTrade] Merchant local interact blocked. Merchant=%s Interactor=%s Reason=CanLocalInteractFailed"),
+			*GetNameSafe(this),
+			*GetNameSafe(Interactor));
 		return false;
 	}
 
@@ -59,10 +62,33 @@ bool APW_MerchantPalCharacter::LocalInteract_Implementation(AActor* Interactor)
 	{
 		if (TradeComponent->OpenTrade(this))
 		{
-			OpenTradePanel(Interactor, TradeComponent);
+			if (!OpenTradePanel(Interactor, TradeComponent))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[PWTrade] Trade opened but panel failed. Merchant=%s Interactor=%s WidgetClass=%s"),
+					*GetNameSafe(this),
+					*GetNameSafe(Interactor),
+					*GetNameSafe(TradePanelWidgetClass));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("[PWTrade] Trade panel opened. Merchant=%s Interactor=%s WidgetClass=%s"),
+					*GetNameSafe(this),
+					*GetNameSafe(Interactor),
+					*GetNameSafe(TradePanelWidgetClass));
+			}
 			BP_OnMerchantLocalInteracted(Interactor);
 			return true;
 		}
+
+		UE_LOG(LogTemp, Warning, TEXT("[PWTrade] Merchant trade component rejected open. Merchant=%s Interactor=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(Interactor));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWTrade] Player trade component missing. Merchant=%s Interactor=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(Interactor));
 	}
 
 	return false;

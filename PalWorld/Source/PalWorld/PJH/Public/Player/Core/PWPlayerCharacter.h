@@ -18,9 +18,11 @@ class UPWPlayerEquipmentComponent;
 class UPWPlayerInteractionComponent;
 class UPWPlayerInventoryLinkComponent;
 class UPWPlayerMountComponent;
+class UPWPlayerPalStorageComponent;
 class UPWPlayerPrimaryActionComponent;
 class UPWPlayerSkillComponent;
 class UPWPlayerStatComponent;
+class UPWPlayerTradeComponent;
 
 UCLASS()
 class PALWORLD_API APWPlayerCharacter : public ACharacter, public IPW_ItemReceiver
@@ -43,6 +45,11 @@ public:
 	void StartPrimaryAction();
 	void StopPrimaryAction();
 	void Interact();
+	void StartInteract();
+	void StopInteract();
+	void ToggleSummonPartyPal();
+	void SelectPreviousPartyPal();
+	void SelectNextPartyPal();
 	bool StartAim();
 	void StopAim();
 	bool StartSphereAim();
@@ -105,6 +112,8 @@ public:
 	UPWPlayerInventoryLinkComponent* GetInventoryLinkComponent() const { return InventoryLinkComponent; }
 	UPWPlayerClimbComponent* GetClimbComponent() const { return ClimbComponent; }
 	UPWPlayerCaptureComponent* GetCaptureComponent() const { return CaptureComponent; }
+	UPWPlayerPalStorageComponent* GetPalStorageComponent() const { return PalStorageComponent; }
+	UPWPlayerTradeComponent* GetTradeComponent() const { return TradeComponent; }
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Player|Camera")
@@ -130,6 +139,12 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPalCommandComponent> PalCommandComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPWPlayerPalStorageComponent> PalStorageComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPWPlayerTradeComponent> TradeComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerInteractionComponent> InteractionComponent;
