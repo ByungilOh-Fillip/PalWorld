@@ -68,6 +68,18 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Pal|BaseCamp")
     bool IsAssignedToBaseCamp() const { return BaseCampActor != nullptr; }
 
+    UFUNCTION(BlueprintPure, Category = "Pal|Capture")
+    bool IsCaptureInteractionDisabled() const { return bCaptureInteractionDisabled; }
+
+    UFUNCTION(BlueprintCallable, Category = "Pal|Capture")
+    void SetCaptureInteractionDisabled(bool bDisabled);
+
+    UFUNCTION(BlueprintPure, Category = "Pal|Ownership")
+    bool IsPlayerOwnedPal() const { return bIsPlayerOwnedPal; }
+
+    UFUNCTION(BlueprintCallable, Category = "Pal|Ownership")
+    void SetPlayerOwnedPal(bool bNewIsPlayerOwnedPal);
+
 protected:
     // 피격 애니메이션 재생 함수 (Perception 감지나 데미지 처리 시 호출)
     UFUNCTION(BlueprintCallable, Category = "Pal|Animation")
@@ -86,4 +98,18 @@ protected:
     // 팰 스킬 및 적성 관리 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pal|Components")
     TObjectPtr<UPWSkillComponent> SkillComponent;
+
+private:
+    // 플레이어가 소유/소환한 팰은 다른 플레이어의 포획 대상에서 제외한다.
+    UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Pal|Capture", meta = (AllowPrivateAccess = "true"))
+    bool bIsPlayerOwnedPal = false;
+
+    // 포획 연출 중에는 조준 UI와 추가 스피어 충돌 대상에서 잠시 제외한다.
+    UPROPERTY(ReplicatedUsing = OnRep_CaptureInteractionDisabled, VisibleInstanceOnly, BlueprintReadOnly, Category = "Pal|Capture", meta = (AllowPrivateAccess = "true"))
+    bool bCaptureInteractionDisabled = false;
+
+    UFUNCTION()
+    void OnRep_CaptureInteractionDisabled();
+
+    void ApplyCaptureInteractionDisabled();
 };
