@@ -31,6 +31,7 @@ void APWPalBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(APWPalBase, bCaptureInteractionDisabled);
+    DOREPLIFETIME(APWPalBase, bIsPlayerOwnedPal);
 }
 
 void APWPalBase::SetCaptureInteractionDisabled(bool bDisabled)
@@ -42,6 +43,17 @@ void APWPalBase::SetCaptureInteractionDisabled(bool bDisabled)
 
     bCaptureInteractionDisabled = bDisabled;
     ApplyCaptureInteractionDisabled();
+    ForceNetUpdate();
+}
+
+void APWPalBase::SetPlayerOwnedPal(bool bNewIsPlayerOwnedPal)
+{
+    if (!HasAuthority() || bIsPlayerOwnedPal == bNewIsPlayerOwnedPal)
+    {
+        return;
+    }
+
+    bIsPlayerOwnedPal = bNewIsPlayerOwnedPal;
     ForceNetUpdate();
 }
 

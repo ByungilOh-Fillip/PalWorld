@@ -10,7 +10,8 @@ enum class EPWToolType : uint8
 {
 	Hand,
 	Axe,
-	Pickaxe
+	Pickaxe,
+	Crossbow
 };
 
 UENUM(BlueprintType)

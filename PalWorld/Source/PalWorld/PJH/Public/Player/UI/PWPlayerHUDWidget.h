@@ -12,6 +12,7 @@ class UTextBlock;
 class UWidget;
 class UPWInventoryPanelWidget;
 class UPWCaptureAimWidget;
+class UPWPalPartyPanelWidget;
 class UPWStaminaGaugeWidget;
 class UPWPlayerStatComponent;
 
@@ -109,6 +110,10 @@ protected:
 	// WBP_PlayerHUD 안에 WBP_CaptureAim을 넣고 이름을 CaptureAim으로 맞추면 Q 조준 UI를 C++이 초기화한다.
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Capture")
 	TObjectPtr<UPWCaptureAimWidget> CaptureAim;
+
+	// WBP_PlayerHUD 안에 팰 파티 패널을 넣고 이름을 PalPartyPanel로 맞추면 C++이 보유 팰 목록을 초기화한다.
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Pal")
+	TObjectPtr<UPWPalPartyPanelWidget> PalPartyPanel;
 
 private:
 	UFUNCTION()

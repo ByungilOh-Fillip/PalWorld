@@ -29,7 +29,11 @@ public:
     UFUNCTION(BlueprintPure, Category = "Pal|Capture")
     bool IsCaptureInteractionDisabled() const { return bCaptureInteractionDisabled; }
 
+    UFUNCTION(BlueprintPure, Category = "Pal|Ownership")
+    bool IsPlayerOwnedPal() const { return bIsPlayerOwnedPal; }
+
     void SetCaptureInteractionDisabled(bool bDisabled);
+    void SetPlayerOwnedPal(bool bNewIsPlayerOwnedPal);
 
 protected:
     // 팰 상태 관리 컴포넌트
@@ -43,6 +47,9 @@ protected:
 private:
     UPROPERTY(ReplicatedUsing = OnRep_CaptureInteractionDisabled)
     bool bCaptureInteractionDisabled = false;
+
+    UPROPERTY(Replicated)
+    bool bIsPlayerOwnedPal = false;
 
     UFUNCTION()
     void OnRep_CaptureInteractionDisabled();

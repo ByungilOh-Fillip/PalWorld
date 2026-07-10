@@ -2,10 +2,12 @@
 
 #include "Player/UI/PWInventoryPanelWidget.h"
 
+#include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
+#include "Components/WidgetSwitcher.h"
 #include "Player/Components/PWPlayerEquipmentComponent.h"
 #include "Player/Components/PWPlayerStatComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
@@ -13,6 +15,7 @@
 #include "Player/UI/PWEquipmentSlotWidget.h"
 #include "Player/UI/PWInventoryDropZoneWidget.h"
 #include "Player/UI/PWInventorySlotWidget.h"
+#include "Player/UI/PWPalPartyPanelWidget.h"
 
 void UPWInventoryPanelWidget::InitializeWithInventoryComponent(UPWPlayerInventoryLinkComponent* InInventoryComponent)
 {
@@ -35,6 +38,8 @@ void UPWInventoryPanelWidget::InitializeWithInventoryComponent(UPWPlayerInventor
 
 void UPWInventoryPanelWidget::InitializeWithPlayerCharacter(APWPlayerCharacter* InPlayerCharacter)
 {
+	BoundPlayerCharacter = InPlayerCharacter;
+
 	UnbindEquipmentComponent();
 	BoundEquipmentComponent = InPlayerCharacter ? InPlayerCharacter->GetEquipmentComponent() : nullptr;
 	if (BoundEquipmentComponent)
@@ -47,6 +52,11 @@ void UPWInventoryPanelWidget::InitializeWithPlayerCharacter(APWPlayerCharacter* 
 	if (BoundStatComponent)
 	{
 		BoundStatComponent->OnSurvivalStatsChanged.AddUniqueDynamic(this, &UPWInventoryPanelWidget::HandleSurvivalStatsChanged);
+	}
+
+	if (PalPartyPanel)
+	{
+		PalPartyPanel->InitializeWithPlayerCharacter(InPlayerCharacter);
 	}
 
 	InitializeWithInventoryComponent(InPlayerCharacter ? InPlayerCharacter->GetInventoryLinkComponent() : nullptr);
@@ -75,16 +85,47 @@ float UPWInventoryPanelWidget::GetMaxCarryWeight() const
 void UPWInventoryPanelWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	BindPageButtons();
+	ShowInventoryPage();
 	InitializeDropZones();
 	HandleInventoryChanged();
+
+	if (PalPartyPanel)
+	{
+		PalPartyPanel->InitializeWithPlayerCharacter(BoundPlayerCharacter);
+	}
 }
 
 void UPWInventoryPanelWidget::NativeDestruct()
 {
+	UnbindPageButtons();
 	UnbindInventoryComponent();
 	UnbindEquipmentComponent();
 	UnbindStatComponent();
+	BoundPlayerCharacter = nullptr;
 	Super::NativeDestruct();
+}
+
+void UPWInventoryPanelWidget::ShowInventoryPage()
+{
+	if (Switcher_InventoryPages)
+	{
+		Switcher_InventoryPages->SetActiveWidgetIndex(0);
+	}
+}
+
+void UPWInventoryPanelWidget::ShowPalPartyPage()
+{
+	if (PalPartyPanel)
+	{
+		PalPartyPanel->InitializeWithPlayerCharacter(BoundPlayerCharacter);
+		PalPartyPanel->RefreshPalParty();
+	}
+
+	if (Switcher_InventoryPages)
+	{
+		Switcher_InventoryPages->SetActiveWidgetIndex(1);
+	}
 }
 
 void UPWInventoryPanelWidget::HandleInventoryChanged()
@@ -110,6 +151,42 @@ void UPWInventoryPanelWidget::HandleSurvivalStatsChanged()
 {
 	RefreshStatsText();
 	BP_OnInventoryChanged();
+}
+
+void UPWInventoryPanelWidget::HandleInventoryTabClicked()
+{
+	ShowInventoryPage();
+}
+
+void UPWInventoryPanelWidget::HandlePalPartyTabClicked()
+{
+	ShowPalPartyPage();
+}
+
+void UPWInventoryPanelWidget::BindPageButtons()
+{
+	if (Button_InventoryTab)
+	{
+		Button_InventoryTab->OnClicked.AddUniqueDynamic(this, &UPWInventoryPanelWidget::HandleInventoryTabClicked);
+	}
+
+	if (Button_PalPartyTab)
+	{
+		Button_PalPartyTab->OnClicked.AddUniqueDynamic(this, &UPWInventoryPanelWidget::HandlePalPartyTabClicked);
+	}
+}
+
+void UPWInventoryPanelWidget::UnbindPageButtons()
+{
+	if (Button_InventoryTab)
+	{
+		Button_InventoryTab->OnClicked.RemoveDynamic(this, &UPWInventoryPanelWidget::HandleInventoryTabClicked);
+	}
+
+	if (Button_PalPartyTab)
+	{
+		Button_PalPartyTab->OnClicked.RemoveDynamic(this, &UPWInventoryPanelWidget::HandlePalPartyTabClicked);
+	}
 }
 
 void UPWInventoryPanelWidget::UnbindInventoryComponent()

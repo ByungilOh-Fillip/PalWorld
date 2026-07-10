@@ -42,7 +42,17 @@ float UPWPrimaryActionDataAsset::GetDamage(EPWToolType ToolType, EPWResourceType
 
 UAnimMontage* UPWPrimaryActionDataAsset::GetPrimaryActionMontage(EPWToolType ToolType) const
 {
-	return ToolType == EPWToolType::Hand ? HandMontage : HarvestMontage;
+	if (ToolType == EPWToolType::Hand)
+	{
+		return HandMontage;
+	}
+
+	if (ToolType == EPWToolType::Axe || ToolType == EPWToolType::Pickaxe)
+	{
+		return HarvestMontage;
+	}
+
+	return nullptr;
 }
 
 float UPWPrimaryActionDataAsset::GetActionDurationForTool(EPWToolType ToolType) const
@@ -62,10 +72,30 @@ float UPWPrimaryActionDataAsset::GetActionDurationForTool(EPWToolType ToolType) 
 
 float UPWPrimaryActionDataAsset::GetAnimationPlayRate(EPWToolType ToolType) const
 {
-	return ToolType == EPWToolType::Hand ? HandAnimationPlayRate : HarvestAnimationPlayRate;
+	if (ToolType == EPWToolType::Hand)
+	{
+		return HandAnimationPlayRate;
+	}
+
+	if (ToolType == EPWToolType::Axe || ToolType == EPWToolType::Pickaxe)
+	{
+		return HarvestAnimationPlayRate;
+	}
+
+	return 1.f;
 }
 
 float UPWPrimaryActionDataAsset::GetFallbackHitTime(EPWToolType ToolType) const
 {
-	return ToolType == EPWToolType::Hand ? HandFallbackHitTime : HarvestFallbackHitTime;
+	if (ToolType == EPWToolType::Hand)
+	{
+		return HandFallbackHitTime;
+	}
+
+	if (ToolType == EPWToolType::Axe || ToolType == EPWToolType::Pickaxe)
+	{
+		return HarvestFallbackHitTime;
+	}
+
+	return 0.f;
 }

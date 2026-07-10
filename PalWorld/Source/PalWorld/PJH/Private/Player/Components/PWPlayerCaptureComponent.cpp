@@ -86,6 +86,7 @@ bool UPWPlayerCaptureComponent::IsValidCaptureAimTarget(APWPalBase* TargetPal) c
 {
 	return IsValid(TargetPal)
 		&& !TargetPal->IsActorBeingDestroyed()
+		&& !TargetPal->IsPlayerOwnedPal()
 		&& !TargetPal->IsCaptureInteractionDisabled()
 		&& !TargetPal->IsHidden()
 		&& TargetPal->GetActorEnableCollision();

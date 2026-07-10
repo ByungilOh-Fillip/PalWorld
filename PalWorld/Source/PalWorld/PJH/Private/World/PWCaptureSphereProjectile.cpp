@@ -12,6 +12,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/Components/PWPlayerCaptureComponent.h"
+#include "Player/Components/PWPlayerPalStorageComponent.h"
 #include "Player/Core/PWPlayerCharacter.h"
 #include "Player/UI/PWCaptureProgressWidget.h"
 #include "PWPalBase.h"
@@ -674,8 +675,20 @@ void APWCaptureSphereProjectile::ResolveCaptureResult()
 		return;
 	}
 
-	// 1차 검증 단계에서는 포획 성공 시 월드의 야생 펠을 제거한다.
-	// 추후 PalParty/PalBox가 생기면 여기서 보관 데이터 등록 후 제거하도록 확장한다.
+	APWPlayerCharacter* OwnerCharacter = Cast<APWPlayerCharacter>(GetOwner());
+	UPWPlayerPalStorageComponent* PalStorageComponent = OwnerCharacter ? OwnerCharacter->GetPalStorageComponent() : nullptr;
+	if (!PalStorageComponent || !PalStorageComponent->RegisterCapturedPal(TargetPal))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWCapture] Capture succeeded but pal registration failed. Projectile=%s Owner=%s Target=%s"),
+			*GetName(),
+			*GetNameSafe(OwnerCharacter),
+			*GetNameSafe(TargetPal));
+
+		SetHitTargetSuppressed(false);
+		return;
+	}
+
+	// 등록이 끝난 야생 팰만 월드에서 제거한다. 실패 시에는 위에서 다시 복구한다.
 	TargetPal->Destroy();
 	HitTarget = nullptr;
 }
@@ -685,6 +698,7 @@ bool APWCaptureSphereProjectile::IsCaptureTarget(AActor* OtherActor) const
 	const APWPalBase* TargetPal = Cast<APWPalBase>(OtherActor);
 	return IsValid(TargetPal)
 		&& !TargetPal->IsActorBeingDestroyed()
+		&& !TargetPal->IsPlayerOwnedPal()
 		&& !TargetPal->IsCaptureInteractionDisabled()
 		&& !TargetPal->IsHidden()
 		&& TargetPal->GetActorEnableCollision();
