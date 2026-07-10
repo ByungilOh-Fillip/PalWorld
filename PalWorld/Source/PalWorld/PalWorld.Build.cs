@@ -39,6 +39,7 @@ public class PalWorld : ModuleRules
 				System.IO.Path.Combine(ModuleDirectory, "OBI/Data"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/AI/Evaluators/public"),
 				System.IO.Path.Combine(ModuleDirectory, "OBI/AI/Tasks/public"),
+				System.IO.Path.Combine(ModuleDirectory, "OBI/Skill/public"),
 				System.IO.Path.Combine(ModuleDirectory, "PJH/public"),
 				System.IO.Path.Combine(ModuleDirectory, "Global/Log/public"),
 				System.IO.Path.Combine(ModuleDirectory, "Global/Components/public"),

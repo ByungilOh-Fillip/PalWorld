@@ -38,6 +38,7 @@ struct PALWORLD_API FPWStateTreeEvaluator_WorkFinder : public FStateTreeEvaluato
     typedef FPW_Eval_WorkFinderInstanceData InstanceDataType;
     
     virtual const UStruct* GetInstanceDataType() const override;
+    void TreeStart(FStateTreeExecutionContext& Context) const;
 
     virtual void Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
 };

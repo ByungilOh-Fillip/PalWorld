@@ -27,6 +27,9 @@ public:
     UFUNCTION(BlueprintPure, Category = "Pal|Components")
     UPWSkillComponent* GetSkillComponent() const { return SkillComponent; }
 
+    UFUNCTION(BlueprintPure, Category = "Pal|Components")
+    UStatusComponent* GetStatusComponent() const { return StatusComponent; }
+
     // 1. 엔진이 이 캐릭터의 태그를 물어볼 때 대답해주는 필수 인터페이스 함수
     virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;
 

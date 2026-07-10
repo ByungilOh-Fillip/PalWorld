@@ -1,4 +1,5 @@
 #include "PW_Task_CalcFleeLocation.h"
+#include "PW_ST_Log.h"
 #include "NavigationSystem.h"
 
 const UStruct* FPWStateTreeTask_CalcFleeLocation::GetInstanceDataType() const
@@ -8,6 +9,8 @@ const UStruct* FPWStateTreeTask_CalcFleeLocation::GetInstanceDataType() const
 
 EStateTreeRunStatus FPWStateTreeTask_CalcFleeLocation::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
+    UE_LOG(LogPalStateTree, Log, TEXT("[PW_Task_CalcFleeLocation] EnterState 진입"));
+
     FPW_Task_CalcFleeLocationInstanceData& InstanceData = Context.GetInstanceData<FPW_Task_CalcFleeLocationInstanceData>(*this);
 
     if (InstanceData.OwnerActor && InstanceData.AttackerActor)

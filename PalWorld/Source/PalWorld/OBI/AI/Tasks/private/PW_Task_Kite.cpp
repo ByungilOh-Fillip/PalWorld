@@ -1,4 +1,5 @@
 #include "PW_Task_Kite.h"
+#include "PW_ST_Log.h"
 #include "PWPalCharacter.h"
 #include "Animation/AnimMontage.h"
 
@@ -9,6 +10,8 @@ const UStruct* FPWStateTreeTask_Kite::GetInstanceDataType() const
 
 EStateTreeRunStatus FPWStateTreeTask_Kite::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
+    UE_LOG(LogPalStateTree, Log, TEXT("[PW_Task_Kite] EnterState 진입"));
+
     FPW_Task_KiteInstanceData& InstanceData = Context.GetInstanceData<FPW_Task_KiteInstanceData>(*this);
     InstanceData.TimeSinceLastJump = 0.0f;
     InstanceData.MontageDuration = 0.0f;

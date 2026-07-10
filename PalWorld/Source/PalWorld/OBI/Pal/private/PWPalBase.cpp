@@ -25,6 +25,12 @@ void APWPalBase::BeginPlay()
 
     // 태그 변화에 따른 내부 속도 동기화 이벤트 바인딩
     OnStateTagChangedDelegate.AddDynamic(this, &APWPalBase::HandleStateTagChanged);
+
+    // 기본 이동 속도를 배회(Wander) 속도로 초기화 (StateTree가 태그로 속도를 바꾸기 전까지의 기본값)
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+    {
+        MoveComp->MaxWalkSpeed = 250.f;
+    }
 }
 
 void APWPalBase::Tick(float DeltaTime)

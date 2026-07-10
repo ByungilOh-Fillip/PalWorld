@@ -72,6 +72,14 @@ struct PALWORLD_API FPWSkillData
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
     class UAnimMontage* SkillMontage = nullptr;
 
+    // 사거리 (이 거리 이내로 접근해야 시전 가능)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
+    float MaxRange = 1000.0f;
+
+    // 스킬 액터 클래스 (실제 스킬의 콜리전, 이펙트, 투사체 로직을 담당하는 액터)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
+    TSubclassOf<class APWSkillBase> SkillActorClass;
+
     // 재사용 대기시간 (초) - 기획자 조정 (시전 시간/위력에 비례)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill")
     float Cooldown = 5.0f;

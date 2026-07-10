@@ -4,6 +4,8 @@ namespace PW_ST_EventsTags
 {
     // 이벤트 태그
     UE_DEFINE_GAMEPLAY_TAG(Event_SenseThreat, "Event.SenseThreat");
+    UE_DEFINE_GAMEPLAY_TAG(Event_Hit, "Event.Hit");
+    UE_DEFINE_GAMEPLAY_TAG(Event_TargetLost, "Event.TargetLost");
 
     // 상태(State) 애니메이션 동기화 태그
     UE_DEFINE_GAMEPLAY_TAG(State_Peaceful_Wander, "State.Peaceful.Wander");
