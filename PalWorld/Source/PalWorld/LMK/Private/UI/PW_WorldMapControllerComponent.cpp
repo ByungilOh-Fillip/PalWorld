@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Map/PW_MapSubsystem.h"
 #include "Map/PW_TeleportPointActor.h"
+#include "Base/PW_BaseCampActor.h"
 #include "TimerManager.h"
 #include "UI/PW_WorldMapWidget.h"
 
@@ -173,6 +174,18 @@ void UPW_WorldMapControllerComponent::SetActiveTeleportSource(APW_TeleportPointA
 	}
 
 	ActiveTeleportSource = TeleportSource;
+	ActiveBaseCampTeleportSource = nullptr;
+}
+
+void UPW_WorldMapControllerComponent::SetActiveBaseCampTeleportSource(APW_BaseCampActor* BaseCampSource)
+{
+	if (GetOwner() == nullptr || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	ActiveBaseCampTeleportSource = BaseCampSource;
+	ActiveTeleportSource = nullptr;
 }
 
 void UPW_WorldMapControllerComponent::ClientShowTeleportMap_Implementation()
@@ -304,11 +317,29 @@ void UPW_WorldMapControllerComponent::ApplyHideInputMode()
 bool UPW_WorldMapControllerComponent::CanUseActiveTeleportSource() const
 {
 	const APawn* Pawn = GetControlledPawn();
-	return ActiveTeleportSource != nullptr
-		&& IsValid(ActiveTeleportSource)
-		&& ActiveTeleportSource->IsDiscovered()
-		&& ActiveTeleportSource->CanTeleport()
-		&& ActiveTeleportSource->CanUseAsTeleportSource(const_cast<APawn*>(Pawn));
+	
+	if (ActiveTeleportSource != nullptr && IsValid(ActiveTeleportSource))
+	{
+		return ActiveTeleportSource->IsDiscovered()
+			&& ActiveTeleportSource->CanTeleport()
+			&& ActiveTeleportSource->CanUseAsTeleportSource(const_cast<APawn*>(Pawn));
+	}
+	
+	if (ActiveBaseCampTeleportSource != nullptr && IsValid(ActiveBaseCampTeleportSource))
+	{
+		if (Pawn == nullptr)
+		{
+			return false;
+		}
+
+		float Radius = ActiveBaseCampTeleportSource->GetCampRadius();
+		FVector Center = ActiveBaseCampTeleportSource->GetActorLocation();
+		FVector PawnLoc = Pawn->GetActorLocation();
+
+		return FVector::DistSquaredXY(Center, PawnLoc) <= (Radius * Radius);
+	}
+
+	return false;
 }
 
 void UPW_WorldMapControllerComponent::ServerRequestTeleportToMarker_Implementation(EPW_MapMarkerType MarkerType, FName MarkerId)
@@ -360,4 +391,5 @@ void UPW_WorldMapControllerComponent::ServerRequestTeleportToMarker_Implementati
 	}
 
 	ActiveTeleportSource = nullptr;
+	ActiveBaseCampTeleportSource = nullptr;
 }

@@ -23,8 +23,11 @@ public class PalWorld : ModuleRules
 			"AIModule",
 			"NavigationSystem",
 			"StateTreeModule",
-			"StateTreeEditorModule",
-			"GameplayStateTreeModule"
+			"GameplayStateTreeModule",
+			"OnlineSubsystem",
+			"OnlineSubsystemSteam",
+			"OnlineSubsystemUtils",
+			"SteamSockets"
 		});
 		
 		// 팀원 ROLE에 따라 나뉜 파트를 한번에 빌드할 때 사용
