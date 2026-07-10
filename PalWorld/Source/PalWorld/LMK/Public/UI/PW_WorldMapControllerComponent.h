@@ -8,6 +8,7 @@
 class UPW_WorldMapWidget;
 class UPW_MapSubsystem;
 class APW_TeleportPointActor;
+class APW_BaseCampActor;
 
 UCLASS(ClassGroup = (PW), meta = (BlueprintSpawnableComponent))
 class PALWORLD_API UPW_WorldMapControllerComponent : public UActorComponent
@@ -42,6 +43,7 @@ public:
 	void RequestTeleportToMarker(EPW_MapMarkerType MarkerType, FName MarkerId);
 
 	void SetActiveTeleportSource(APW_TeleportPointActor* TeleportSource);
+	void SetActiveBaseCampTeleportSource(APW_BaseCampActor* BaseCampSource);
 
 	UFUNCTION(Client, Reliable)
 	void ClientShowTeleportMap();
@@ -110,6 +112,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<APW_TeleportPointActor> ActiveTeleportSource;
+
+	UPROPERTY(Transient)
+	TObjectPtr<APW_BaseCampActor> ActiveBaseCampTeleportSource;
 
 	FTimerHandle RevealTimerHandle;
 	bool bPreviousShowMouseCursor = false;
