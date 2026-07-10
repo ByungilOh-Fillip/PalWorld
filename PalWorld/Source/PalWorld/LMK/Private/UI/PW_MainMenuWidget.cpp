@@ -50,6 +50,11 @@ void UPW_MainMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	if (SessionSlotWidgetClass == nullptr)
+	{
+		SessionSlotWidgetClass = UPW_SessionSlotWidget::StaticClass();
+	}
+
 	BindButtonEvents();
 	BindSessionEvents();
 

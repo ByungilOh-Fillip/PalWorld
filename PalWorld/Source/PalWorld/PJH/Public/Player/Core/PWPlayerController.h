@@ -108,6 +108,8 @@ private:
 	void HandlePrimaryActionCompleted(const FInputActionValue& Value);
 	void HandleInteractPressed();
 	void HandleInteractReleased();
+	void HandleTeleportPressed();
+	void HandleAutoBasePlacementPressed();
 	void HandlePalSummonPressed();
 	void HandlePalPreviousPressed();
 	void HandlePalNextPressed();

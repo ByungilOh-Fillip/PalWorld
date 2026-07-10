@@ -1,6 +1,7 @@
 #include "Base/PW_WorkBuildingBase.h"
 
 #include "Base/PW_BaseCampActor.h"
+#include "PW_GameplayTags.h"
 #include "Base/PW_BaseCampSubsystem.h"
 #include "Base/PW_BaseInventoryAggregatorComponent.h"
 #include "Base/PW_BaseWorkTargetRegistryComponent.h"
@@ -109,12 +110,29 @@ int32 APW_WorkBuildingBase::GetInteractionPriority_Implementation() const
 
 bool APW_WorkBuildingBase::CanBeginHoldInteraction_Implementation(AActor* Interactor) const
 {
-	return CanInteract_Implementation(Interactor) && WorkBuildingComponent != nullptr && WorkBuildingComponent->CanBeginWork(Interactor);
+	if (!CanInteract_Implementation(Interactor) || WorkBuildingComponent == nullptr)
+	{
+		return false;
+	}
+
+	if (WorkBuildingComponent->CanBeginWork(Interactor))
+	{
+		return true;
+	}
+
+	return WorkBuildingComponent->GetRequiredWorkTag().MatchesTagExact(PW_GameplayTags::Work_Mining)
+		&& WorkBuildingComponent->GetWorkState() == EPW_WorkBuildingState::Idle;
 }
 
 bool APW_WorkBuildingBase::BeginHoldInteraction_Implementation(AActor* Interactor)
 {
 	if (!HasAuthority() || WorkBuildingComponent == nullptr || !CanBeginHoldInteraction_Implementation(Interactor))
+	{
+		return false;
+	}
+
+	if (!WorkBuildingComponent->CanBeginWork(Interactor)
+		&& !WorkBuildingComponent->ReserveWork(TEXT("DirectMining")))
 	{
 		return false;
 	}

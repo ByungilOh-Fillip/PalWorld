@@ -5,6 +5,7 @@
 #include "PW_BuildingInputComponent.generated.h"
 
 class UPW_BuildingRadialMenuWidget;
+class UPW_PlayerBasePlacementComponent;
 class UPW_PlayerBuildingPlacementComponent;
 class APlayerController;
 
@@ -17,6 +18,7 @@ public:
 	UPW_BuildingInputComponent();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UFUNCTION(BlueprintCallable, Category = "PW|Building|Input")
 	void ToggleBuildingMenu();
@@ -51,6 +53,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PW|Building|Input")
 	UPW_PlayerBuildingPlacementComponent* GetPlacementComponent() const;
 
+	UFUNCTION(BlueprintPure, Category = "PW|Building|Input")
+	UPW_PlayerBasePlacementComponent* GetBasePlacementComponent() const;
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Building|UI")
 	TSubclassOf<UPW_BuildingRadialMenuWidget> BuildingRadialMenuWidgetClass;
@@ -67,16 +72,19 @@ protected:
 private:
 	bool bInputBound = false;
 	uint64 LastToggleFrame = 0;
+	FTimerHandle InputBindingRetryTimerHandle;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPW_BuildingRadialMenuWidget> BuildingRadialMenuWidget;
 
 	APlayerController* GetOwningPlayerController() const;
 	UPW_BuildingRadialMenuWidget* GetOrCreateBuildingRadialMenu();
+	void TryBindInputKeys();
 	void BindInputKeys();
 
 	void HandleAutoPrimaryPressed();
 	void HandleAutoSecondaryPressed();
 	void HandleAutoWheelNext();
 	void HandleAutoWheelPrevious();
+	void HandleAutoBasePlacementPressed();
 };

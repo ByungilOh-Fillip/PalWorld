@@ -153,6 +153,13 @@ bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
 		return false;
 	}
 
+	if (LastPrimaryInteractionFrame == GFrameCounter)
+	{
+		return true;
+	}
+
+	LastPrimaryInteractionFrame = GFrameCounter;
+
 	const bool bCanBeginHold = InteractableActor->GetClass()->ImplementsInterface(UPWHoldInteractable::StaticClass())
 		&& IPWHoldInteractable::Execute_CanBeginHoldInteraction(InteractableActor, Owner);
 	if (Owner->HasAuthority())
@@ -163,7 +170,9 @@ bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
 			return ExecuteBeginHoldInteraction(InteractableActor);
 		}
 
-		return ExecuteLocalInteraction(InteractableActor) || ExecuteInteraction(InteractableActor);
+		return ExecuteLocalInteraction(InteractableActor)
+			|| ExecuteInteractionByKey(InteractableActor, EKeys::F.GetFName())
+			|| ExecuteInteraction(InteractableActor);
 	}
 
 	if (bCanBeginHold)
@@ -173,7 +182,19 @@ bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
 		return true;
 	}
 
-	return ExecuteLocalInteraction(InteractableActor) || TryInteract();
+	if (ExecuteLocalInteraction(InteractableActor))
+	{
+		return true;
+	}
+
+	FPWInteractionGuideAction PrimaryGuideAction;
+	if (FindGuideActionByKey(InteractableActor, EKeys::F.GetFName(), PrimaryGuideAction))
+	{
+		ServerTryInteractByKey(EKeys::F.GetFName());
+		return true;
+	}
+
+	return TryInteract();
 }
 
 void UPWInteractionScannerComponent::EndHoldInteraction()

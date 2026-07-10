@@ -65,6 +65,7 @@ private:
 	float CurrentHoldGuideElapsedSeconds = 0.0f;
 	float CurrentHoldGuideDurationSeconds = 1.0f;
 	bool bHoldGuideProgressActive = false;
+	uint64 LastPrimaryInteractionFrame = MAX_uint64;
 
 	float TimeUntilNextScan = 0.0f;
 

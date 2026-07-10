@@ -10,6 +10,8 @@
 
 const FName UPW_SessionSubsystem::RoomNameSettingKey(TEXT("ROOM_NAME"));
 const FName UPW_SessionSubsystem::HostNicknameSettingKey(TEXT("HOST_NICKNAME"));
+const FName UPW_SessionSubsystem::ProjectSettingKey(TEXT("PW_GAME_ID"));
+const FString UPW_SessionSubsystem::ProjectSettingValue(TEXT("PALWORLD_PROJECT"));
 
 void UPW_SessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -64,9 +66,11 @@ void UPW_SessionSubsystem::FindSessions()
 	}
 
 	SessionSearch = MakeShared<FOnlineSessionSearch>();
-	SessionSearch->MaxSearchResults = 50;
+	SessionSearch->MaxSearchResults = 10000;
 	SessionSearch->bIsLanQuery = IsLanSession();
 	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+	SessionSearch->QuerySettings.Set(ProjectSettingKey, ProjectSettingValue, EOnlineComparisonOp::Equals);
+	SessionSearch->QuerySettings.Set(FName(TEXT("LobbyDistanceFilter")), (int32)3, EOnlineComparisonOp::Equals); // 3 = Worldwide
 
 	OnSessionSearchStateChanged.Broadcast(true);
 	if (!SessionInterface->FindSessions(0, SessionSearch.ToSharedRef()))
@@ -158,6 +162,12 @@ void UPW_SessionSubsystem::BindSessionDelegates()
 	{
 		DestroySessionDelegateHandle = SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UPW_SessionSubsystem::HandleDestroySessionComplete);
 	}
+
+	if (!SessionUserInviteAcceptedDelegateHandle.IsValid())
+	{
+		SessionUserInviteAcceptedDelegateHandle = SessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(
+			FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &UPW_SessionSubsystem::HandleSessionUserInviteAccepted));
+	}
 }
 
 void UPW_SessionSubsystem::ClearSessionDelegates()
@@ -189,6 +199,12 @@ void UPW_SessionSubsystem::ClearSessionDelegates()
 	{
 		SessionInterface->OnDestroySessionCompleteDelegates.Remove(DestroySessionDelegateHandle);
 		DestroySessionDelegateHandle.Reset();
+	}
+
+	if (SessionUserInviteAcceptedDelegateHandle.IsValid())
+	{
+		SessionInterface->ClearOnSessionUserInviteAcceptedDelegate_Handle(SessionUserInviteAcceptedDelegateHandle);
+		SessionUserInviteAcceptedDelegateHandle.Reset();
 	}
 }
 
@@ -231,10 +247,13 @@ void UPW_SessionSubsystem::CreateListenSessionInternal(const FString& RoomName, 
 	SessionSettings.bUsesPresence = true;
 	SessionSettings.bUseLobbiesIfAvailable = true;
 	SessionSettings.bAllowJoinInProgress = true;
+	SessionSettings.bAllowInvites = true;
 	SessionSettings.bAllowJoinViaPresence = true;
+	SessionSettings.bAllowJoinViaPresenceFriendsOnly = false;
 	SessionSettings.NumPublicConnections = FMath::Max(2, MaxPlayers);
 	SessionSettings.Set(RoomNameSettingKey, RoomName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	SessionSettings.Set(HostNicknameSettingKey, HostNickname, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	SessionSettings.Set(ProjectSettingKey, ProjectSettingValue, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
 	if (!SessionInterface->CreateSession(0, NAME_GameSession, SessionSettings))
 	{
@@ -293,11 +312,23 @@ void UPW_SessionSubsystem::HandleFindSessionsComplete(bool bWasSuccessful)
 		OnSessionSearchResult.Broadcast(Result);
 	}
 
-	BroadcastOperationFinished(EPW_SessionOperation::Find, true, NSLOCTEXT("PWSession", "FindSucceeded", "Session search completed."));
+	BroadcastOperationFinished(
+		EPW_SessionOperation::Find,
+		true,
+		FText::Format(
+			NSLOCTEXT("PWSession", "FindSucceeded", "Session search completed. {0} room(s) found."),
+			FText::AsNumber(SessionSearch->SearchResults.Num())));
 }
 
 void UPW_SessionSubsystem::HandleJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
 {
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[PWSession] Join completed. Session=%s Result=%d"),
+		*SessionName.ToString(),
+		static_cast<int32>(Result));
+
 	if (!SessionInterface.IsValid() || Result != EOnJoinSessionCompleteResult::Success)
 	{
 		BroadcastOperationFinished(EPW_SessionOperation::Join, false, NSLOCTEXT("PWSession", "JoinFailed", "Failed to join session."));
@@ -310,6 +341,8 @@ void UPW_SessionSubsystem::HandleJoinSessionComplete(FName SessionName, EOnJoinS
 		BroadcastOperationFinished(EPW_SessionOperation::Join, false, NSLOCTEXT("PWSession", "JoinNoUrl", "Failed to resolve session travel URL."));
 		return;
 	}
+
+	UE_LOG(LogTemp, Log, TEXT("[PWSession] Resolved travel URL: %s"), *TravelUrl);
 
 	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
 	if (PlayerController == nullptr)
@@ -344,4 +377,44 @@ void UPW_SessionSubsystem::HandleDestroySessionComplete(FName SessionName, bool 
 		EPW_SessionOperation::Destroy,
 		bWasSuccessful,
 		bWasSuccessful ? NSLOCTEXT("PWSession", "DestroySucceeded", "Session destroyed.") : NSLOCTEXT("PWSession", "DestroyFailed", "Failed to destroy session."));
+}
+
+void UPW_SessionSubsystem::HandleSessionUserInviteAccepted(
+	bool bWasSuccessful,
+	int32 ControllerId,
+	FUniqueNetIdPtr UserId,
+	const FOnlineSessionSearchResult& InviteResult)
+{
+	if (!bWasSuccessful || !SessionInterface.IsValid() || !InviteResult.IsValid())
+	{
+		BroadcastOperationFinished(
+			EPW_SessionOperation::Join,
+			false,
+			NSLOCTEXT("PWSession", "InviteInvalid", "The Steam session invite is invalid."));
+		return;
+	}
+
+	if (SessionInterface->GetNamedSession(NAME_GameSession) != nullptr)
+	{
+		BroadcastOperationFinished(
+			EPW_SessionOperation::Join,
+			false,
+			NSLOCTEXT("PWSession", "InviteSessionExists", "Leave the current session before accepting an invite."));
+		return;
+	}
+
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[PWSession] Accepted Steam invite. Controller=%d User=%s"),
+		ControllerId,
+		UserId.IsValid() ? *UserId->ToDebugString() : TEXT("Invalid"));
+
+	if (!SessionInterface->JoinSession(ControllerId, NAME_GameSession, InviteResult))
+	{
+		BroadcastOperationFinished(
+			EPW_SessionOperation::Join,
+			false,
+			NSLOCTEXT("PWSession", "InviteJoinStartFailed", "Failed to join the invited Steam session."));
+	}
 }

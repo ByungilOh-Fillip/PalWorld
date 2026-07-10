@@ -3,6 +3,7 @@
 #include "Player/Core/PWPlayerCharacter.h"
 
 #include "Camera/CameraComponent.h"
+#include "Base/PW_PlayerBasePlacementComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Merchant/PWPlayerTradeComponent.h"
@@ -58,6 +59,7 @@ APWPlayerCharacter::APWPlayerCharacter()
 	PalStorageComponent = CreateDefaultSubobject<UPWPlayerPalStorageComponent>(TEXT("PalStorageComponent"));
 	TradeComponent = CreateDefaultSubobject<UPWPlayerTradeComponent>(TEXT("TradeComponent"));
 	InteractionComponent = CreateDefaultSubobject<UPWPlayerInteractionComponent>(TEXT("InteractionComponent"));
+	BasePlacementComponent = CreateDefaultSubobject<UPW_PlayerBasePlacementComponent>(TEXT("BasePlacementComponent"));
 	InventoryLinkComponent = CreateDefaultSubobject<UPWPlayerInventoryLinkComponent>(TEXT("InventoryLinkComponent"));
 	CaptureComponent = CreateDefaultSubobject<UPWPlayerCaptureComponent>(TEXT("CaptureComponent"));
 	MountComponent = CreateDefaultSubobject<UPWPlayerMountComponent>(TEXT("MountComponent"));
@@ -277,6 +279,14 @@ void APWPlayerCharacter::StopInteract()
 	if (UPWInteractionScannerComponent* ScannerComponent = FindComponentByClass<UPWInteractionScannerComponent>())
 	{
 		ScannerComponent->EndHoldInteraction();
+	}
+}
+
+void APWPlayerCharacter::StartTeleportInteraction()
+{
+	if (UPWInteractionScannerComponent* ScannerComponent = FindComponentByClass<UPWInteractionScannerComponent>())
+	{
+		ScannerComponent->TryInteractByActionId(TEXT("Teleport"));
 	}
 }
 

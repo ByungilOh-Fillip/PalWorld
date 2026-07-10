@@ -36,7 +36,7 @@ public:
 	bool IsPlacementModeActive() const { return bPlacementModeActive; }
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Base|Placement")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Base|Placement", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<APW_BaseCampActor> BaseCampClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Base|Placement", meta = (ClampMin = "1.0"))

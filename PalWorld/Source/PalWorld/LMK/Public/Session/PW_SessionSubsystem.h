@@ -82,6 +82,8 @@ public:
 private:
 	static const FName RoomNameSettingKey;
 	static const FName HostNicknameSettingKey;
+	static const FName ProjectSettingKey;
+	static const FString ProjectSettingValue;
 
 	IOnlineSessionPtr SessionInterface;
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
@@ -90,6 +92,7 @@ private:
 	FDelegateHandle FindSessionsDelegateHandle;
 	FDelegateHandle JoinSessionDelegateHandle;
 	FDelegateHandle DestroySessionDelegateHandle;
+	FDelegateHandle SessionUserInviteAcceptedDelegateHandle;
 
 	FString GameMapPath = TEXT("/Game/_Private/LMK/Levels/Palworld");
 	FString PendingRoomName;
@@ -109,4 +112,5 @@ private:
 	void HandleFindSessionsComplete(bool bWasSuccessful);
 	void HandleJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void HandleDestroySessionComplete(FName SessionName, bool bWasSuccessful);
+	void HandleSessionUserInviteAccepted(bool bWasSuccessful, int32 ControllerId, FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult);
 };

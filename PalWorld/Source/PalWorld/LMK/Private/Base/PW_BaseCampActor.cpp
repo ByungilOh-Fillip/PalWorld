@@ -14,6 +14,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 #include "NavigationInvokerComponent.h"
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
@@ -42,6 +43,15 @@ APW_BaseCampActor::APW_BaseCampActor()
 	InteractableTargetComponent->SetInteractionRadius(350.0f);
 	InteractableTargetComponent->SetPromptText(NSLOCTEXT("PWInteraction", "BaseCampPrompt", "Open Base Camp"));
 	InteractableTargetComponent->SetPriority(50);
+
+	FPWInteractionGuideAction TeleportAction;
+	TeleportAction.ActionId = TEXT("Teleport");
+	TeleportAction.Key = EKeys::V;
+	TeleportAction.Label = NSLOCTEXT("PWInteraction", "BaseCampTeleportPrompt", "Fast Travel");
+	TeleportAction.SortOrder = 1;
+	TArray<FPWInteractionGuideAction> GuideActions;
+	GuideActions.Add(TeleportAction);
+	InteractableTargetComponent->SetInteractionGuideActions(GuideActions);
 }
 
 void APW_BaseCampActor::BeginPlay()

@@ -68,12 +68,11 @@
 			]
 		},
 		{
-			"Name": "MCPClientToolset",
-			"Enabled": true
-		},
-		{
-			"Name": "ModelContextProtocol",
-			"Enabled": true
+			"Name": "UnrealMCP",
+			"Enabled": false,
+			"TargetAllowList": [
+				"Editor"
+			]
 		},
 		{
 			"Name": "UMGToolSet",

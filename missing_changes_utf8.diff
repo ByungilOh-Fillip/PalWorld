@@ -1,0 +1,488 @@
+﻿diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/MF/D2UXBYFF4PM6HK93NZGJTK.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/MF/D2UXBYFF4PM6HK93NZGJTK.uasset
+deleted file mode 100644
+index fe8a6ae..0000000
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/MF/D2UXBYFF4PM6HK93NZGJTK.uasset
++++ /dev/null
+@@ -1,3 +0,0 @@
+-version https://git-lfs.github.com/spec/v1
+-oid sha256:a4efc9412916f1d2e2f400ccbf2593ba79a17f8dbac347d48ae892814b3bb2db
+-size 6006
+diff --git a/PalWorld/Source/PalWorld/Global/Components/private/PWInteractionScannerComponent.cpp b/PalWorld/Source/PalWorld/Global/Components/private/PWInteractionScannerComponent.cpp
+index 64285a0..348ea76 100644
+--- a/PalWorld/Source/PalWorld/Global/Components/private/PWInteractionScannerComponent.cpp
++++ b/PalWorld/Source/PalWorld/Global/Components/private/PWInteractionScannerComponent.cpp
+@@ -153,6 +153,13 @@ bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
+ 		return false;
+ 	}
+ 
++	if (LastPrimaryInteractionFrame == GFrameCounter)
++	{
++		return true;
++	}
++
++	LastPrimaryInteractionFrame = GFrameCounter;
++
+ 	const bool bCanBeginHold = InteractableActor->GetClass()->ImplementsInterface(UPWHoldInteractable::StaticClass())
+ 		&& IPWHoldInteractable::Execute_CanBeginHoldInteraction(InteractableActor, Owner);
+ 	if (Owner->HasAuthority())
+@@ -163,7 +170,9 @@ bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
+ 			return ExecuteBeginHoldInteraction(InteractableActor);
+ 		}
+ 
+-		return ExecuteLocalInteraction(InteractableActor) || ExecuteInteraction(InteractableActor);
++		return ExecuteLocalInteraction(InteractableActor)
++			|| ExecuteInteractionByKey(InteractableActor, EKeys::F.GetFName())
++			|| ExecuteInteraction(InteractableActor);
+ 	}
+ 
+ 	if (bCanBeginHold)
+@@ -173,7 +182,19 @@ bool UPWInteractionScannerComponent::TryBeginHoldInteraction()
+ 		return true;
+ 	}
+ 
+-	return ExecuteLocalInteraction(InteractableActor) || TryInteract();
++	if (ExecuteLocalInteraction(InteractableActor))
++	{
++		return true;
++	}
++
++	FPWInteractionGuideAction PrimaryGuideAction;
++	if (FindGuideActionByKey(InteractableActor, EKeys::F.GetFName(), PrimaryGuideAction))
++	{
++		ServerTryInteractByKey(EKeys::F.GetFName());
++		return true;
++	}
++
++	return TryInteract();
+ }
+ 
+ void UPWInteractionScannerComponent::EndHoldInteraction()
+diff --git a/PalWorld/Source/PalWorld/Global/Components/public/PWInteractionScannerComponent.h b/PalWorld/Source/PalWorld/Global/Components/public/PWInteractionScannerComponent.h
+index f3c3286..d78a421 100644
+--- a/PalWorld/Source/PalWorld/Global/Components/public/PWInteractionScannerComponent.h
++++ b/PalWorld/Source/PalWorld/Global/Components/public/PWInteractionScannerComponent.h
+@@ -65,6 +65,7 @@ private:
+ 	float CurrentHoldGuideElapsedSeconds = 0.0f;
+ 	float CurrentHoldGuideDurationSeconds = 1.0f;
+ 	bool bHoldGuideProgressActive = false;
++	uint64 LastPrimaryInteractionFrame = MAX_uint64;
+ 
+ 	float TimeUntilNextScan = 0.0f;
+ 
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_BaseCampActor.cpp b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_BaseCampActor.cpp
+index 5fbef36..318d5f4 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_BaseCampActor.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_BaseCampActor.cpp
+@@ -14,6 +14,7 @@
+ #include "Engine/World.h"
+ #include "GameFramework/Pawn.h"
+ #include "GameFramework/PlayerController.h"
++#include "InputCoreTypes.h"
+ #include "NavigationInvokerComponent.h"
+ #include "TimerManager.h"
+ #include "Net/UnrealNetwork.h"
+@@ -42,6 +43,15 @@ APW_BaseCampActor::APW_BaseCampActor()
+ 	InteractableTargetComponent->SetInteractionRadius(350.0f);
+ 	InteractableTargetComponent->SetPromptText(NSLOCTEXT("PWInteraction", "BaseCampPrompt", "Open Base Camp"));
+ 	InteractableTargetComponent->SetPriority(50);
++
++	FPWInteractionGuideAction TeleportAction;
++	TeleportAction.ActionId = TEXT("Teleport");
++	TeleportAction.Key = EKeys::V;
++	TeleportAction.Label = NSLOCTEXT("PWInteraction", "BaseCampTeleportPrompt", "Fast Travel");
++	TeleportAction.SortOrder = 1;
++	TArray<FPWInteractionGuideAction> GuideActions;
++	GuideActions.Add(TeleportAction);
++	InteractableTargetComponent->SetInteractionGuideActions(GuideActions);
+ }
+ 
+ void APW_BaseCampActor::BeginPlay()
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_PlayerBasePlacementComponent.cpp b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_PlayerBasePlacementComponent.cpp
+index acdeee4..3cac9b8 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_PlayerBasePlacementComponent.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_PlayerBasePlacementComponent.cpp
+@@ -14,6 +14,7 @@ UPW_PlayerBasePlacementComponent::UPW_PlayerBasePlacementComponent()
+ 	PrimaryComponentTick.bCanEverTick = true;
+ 	PrimaryComponentTick.bStartWithTickEnabled = false;
+ 	SetIsReplicatedByDefault(true);
++	BaseCampClass = APW_BaseCampActor::StaticClass();
+ }
+ 
+ void UPW_PlayerBasePlacementComponent::BeginPlay()
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingBase.cpp b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingBase.cpp
+index bb4c3e1..bf4e10b 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingBase.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingBase.cpp
+@@ -1,6 +1,7 @@
+ #include "Base/PW_WorkBuildingBase.h"
+ 
+ #include "Base/PW_BaseCampActor.h"
++#include "PW_GameplayTags.h"
+ #include "Base/PW_BaseCampSubsystem.h"
+ #include "Base/PW_BaseInventoryAggregatorComponent.h"
+ #include "Base/PW_BaseWorkTargetRegistryComponent.h"
+@@ -109,7 +110,18 @@ int32 APW_WorkBuildingBase::GetInteractionPriority_Implementation() const
+ 
+ bool APW_WorkBuildingBase::CanBeginHoldInteraction_Implementation(AActor* Interactor) const
+ {
+-	return CanInteract_Implementation(Interactor) && WorkBuildingComponent != nullptr && WorkBuildingComponent->CanBeginWork(Interactor);
++	if (!CanInteract_Implementation(Interactor) || WorkBuildingComponent == nullptr)
++	{
++		return false;
++	}
++
++	if (WorkBuildingComponent->CanBeginWork(Interactor))
++	{
++		return true;
++	}
++
++	return WorkBuildingComponent->GetRequiredWorkTag().MatchesTagExact(PW_GameplayTags::Work_Mining)
++		&& WorkBuildingComponent->GetWorkState() == EPW_WorkBuildingState::Idle;
+ }
+ 
+ bool APW_WorkBuildingBase::BeginHoldInteraction_Implementation(AActor* Interactor)
+@@ -119,6 +131,12 @@ bool APW_WorkBuildingBase::BeginHoldInteraction_Implementation(AActor* Interacto
+ 		return false;
+ 	}
+ 
++	if (!WorkBuildingComponent->CanBeginWork(Interactor)
++		&& !WorkBuildingComponent->ReserveWork(TEXT("DirectMining")))
++	{
++		return false;
++	}
++
+ 	if (!WorkBuildingComponent->BeginWork(Interactor))
+ 	{
+ 		return false;
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingComponent.cpp b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingComponent.cpp
+index 52de1b3..4e1c66b 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingComponent.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingComponent.cpp
+@@ -316,7 +316,20 @@ void UPW_WorkBuildingComponent::RefreshInteractionGuideProgress() const
+ 		return;
+ 	}
+ 
+-	TargetComponent->SetInteractionGuideActionProgress(TEXT("Default"), GetWorkProgressRatio());
++	TArray<FPWInteractionGuideAction> GuideActions;
++	TargetComponent->GetInteractionGuideActions(GuideActions);
++
++	FName ProgressActionId = TEXT("Default");
++	for (const FPWInteractionGuideAction& GuideAction : GuideActions)
++	{
++		if (GuideAction.bShowProgress)
++		{
++			ProgressActionId = GuideAction.ActionId;
++			break;
++		}
++	}
++
++	TargetComponent->SetInteractionGuideActionProgress(ProgressActionId, GetWorkProgressRatio());
+ }
+ 
+ bool UPW_WorkBuildingComponent::IsWorkerInRange(AActor* Worker) const
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/UI/PW_BuildingInputComponent.cpp b/PalWorld/Source/PalWorld/LMK/Private/UI/PW_BuildingInputComponent.cpp
+index 54df8f9..4ee52d0 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/UI/PW_BuildingInputComponent.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/UI/PW_BuildingInputComponent.cpp
+@@ -1,11 +1,14 @@
+ #include "UI/PW_BuildingInputComponent.h"
+ 
+ #include "Base/PW_PlayerBuildingPlacementComponent.h"
++#include "Base/PW_PlayerBasePlacementComponent.h"
+ #include "Blueprint/UserWidget.h"
+ #include "Components/InputComponent.h"
++#include "Engine/World.h"
+ #include "GameFramework/Pawn.h"
+ #include "GameFramework/PlayerController.h"
+ #include "InputCoreTypes.h"
++#include "TimerManager.h"
+ #include "UI/PW_BuildingRadialMenuWidget.h"
+ 
+ UPW_BuildingInputComponent::UPW_BuildingInputComponent()
+@@ -20,10 +23,20 @@ void UPW_BuildingInputComponent::BeginPlay()
+ 
+ 	if (bAutoBindInput)
+ 	{
+-		BindInputKeys();
++		TryBindInputKeys();
+ 	}
+ }
+ 
++void UPW_BuildingInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
++{
++	if (UWorld* World = GetWorld())
++	{
++		World->GetTimerManager().ClearTimer(InputBindingRetryTimerHandle);
++	}
++
++	Super::EndPlay(EndPlayReason);
++}
++
+ void UPW_BuildingInputComponent::ToggleBuildingMenu()
+ {
+ 	if (LastToggleFrame == GFrameCounter)
+@@ -193,6 +206,24 @@ UPW_PlayerBuildingPlacementComponent* UPW_BuildingInputComponent::GetPlacementCo
+ 	return Owner ? Owner->FindComponentByClass<UPW_PlayerBuildingPlacementComponent>() : nullptr;
+ }
+ 
++UPW_PlayerBasePlacementComponent* UPW_BuildingInputComponent::GetBasePlacementComponent() const
++{
++	AActor* Owner = GetOwner();
++	if (APawn* OwnerPawn = Cast<APawn>(Owner))
++	{
++		return OwnerPawn->FindComponentByClass<UPW_PlayerBasePlacementComponent>();
++	}
++
++	APlayerController* PlayerController = Cast<APlayerController>(Owner);
++	APawn* ControlledPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
++	if (ControlledPawn)
++	{
++		return ControlledPawn->FindComponentByClass<UPW_PlayerBasePlacementComponent>();
++	}
++
++	return Owner ? Owner->FindComponentByClass<UPW_PlayerBasePlacementComponent>() : nullptr;
++}
++
+ APlayerController* UPW_BuildingInputComponent::GetOwningPlayerController() const
+ {
+ 	AActor* Owner = GetOwner();
+@@ -242,6 +273,34 @@ UPW_BuildingRadialMenuWidget* UPW_BuildingInputComponent::GetOrCreateBuildingRad
+ 	return BuildingRadialMenuWidget;
+ }
+ 
++void UPW_BuildingInputComponent::TryBindInputKeys()
++{
++	BindInputKeys();
++
++	UWorld* World = GetWorld();
++	if (World == nullptr)
++	{
++		return;
++	}
++
++	APlayerController* PlayerController = GetOwningPlayerController();
++	if (bInputBound || (PlayerController != nullptr && !PlayerController->IsLocalController()))
++	{
++		World->GetTimerManager().ClearTimer(InputBindingRetryTimerHandle);
++		return;
++	}
++
++	if (!World->GetTimerManager().IsTimerActive(InputBindingRetryTimerHandle))
++	{
++		World->GetTimerManager().SetTimer(
++			InputBindingRetryTimerHandle,
++			this,
++			&UPW_BuildingInputComponent::TryBindInputKeys,
++			0.1f,
++			true);
++	}
++}
++
+ void UPW_BuildingInputComponent::BindInputKeys()
+ {
+ 	if (bInputBound)
+@@ -261,6 +320,9 @@ void UPW_BuildingInputComponent::BindInputKeys()
+ 	FInputKeyBinding& DismantleBinding = PlayerController->InputComponent->BindKey(EKeys::C, IE_Pressed, this, &UPW_BuildingInputComponent::ToggleDismantleMode);
+ 	DismantleBinding.bConsumeInput = bConsumeAutoBoundInput;
+ 
++	FInputKeyBinding& BasePlacementBinding = PlayerController->InputComponent->BindKey(EKeys::G, IE_Pressed, this, &UPW_BuildingInputComponent::HandleAutoBasePlacementPressed);
++	BasePlacementBinding.bConsumeInput = bConsumeAutoBoundInput;
++
+ 	FInputKeyBinding& PrimaryBinding = PlayerController->InputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &UPW_BuildingInputComponent::HandleAutoPrimaryPressed);
+ 	PrimaryBinding.bConsumeInput = bConsumeAutoBoundInput;
+ 
+@@ -296,3 +358,32 @@ void UPW_BuildingInputComponent::HandleAutoWheelPrevious()
+ {
+ 	HandleWheelPrevious();
+ }
++
++void UPW_BuildingInputComponent::HandleAutoBasePlacementPressed()
++{
++	UPW_PlayerBasePlacementComponent* BasePlacementComponent = GetBasePlacementComponent();
++	if (BasePlacementComponent == nullptr)
++	{
++		return;
++	}
++
++	if (!BasePlacementComponent->IsPlacementModeActive())
++	{
++		if (!IsBuildingMenuVisible() && !IsBuildingPlacementActive())
++		{
++			return;
++		}
++
++		if (UPW_PlayerBuildingPlacementComponent* PlacementComponent = GetPlacementComponent())
++		{
++			PlacementComponent->CancelPlacement();
++		}
++
++		if (IsBuildingMenuVisible())
++		{
++			SetBuildingMenuVisible(false);
++		}
++	}
++
++	BasePlacementComponent->TogglePlacementMode();
++}
+diff --git a/PalWorld/Source/PalWorld/LMK/Public/UI/PW_BuildingInputComponent.h b/PalWorld/Source/PalWorld/LMK/Public/UI/PW_BuildingInputComponent.h
+index 8f127d5..ff4cc0d 100644
+--- a/PalWorld/Source/PalWorld/LMK/Public/UI/PW_BuildingInputComponent.h
++++ b/PalWorld/Source/PalWorld/LMK/Public/UI/PW_BuildingInputComponent.h
+@@ -5,6 +5,7 @@
+ #include "PW_BuildingInputComponent.generated.h"
+ 
+ class UPW_BuildingRadialMenuWidget;
++class UPW_PlayerBasePlacementComponent;
+ class UPW_PlayerBuildingPlacementComponent;
+ class APlayerController;
+ 
+@@ -17,6 +18,7 @@ public:
+ 	UPW_BuildingInputComponent();
+ 
+ 	virtual void BeginPlay() override;
++	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+ 
+ 	UFUNCTION(BlueprintCallable, Category = "PW|Building|Input")
+ 	void ToggleBuildingMenu();
+@@ -51,6 +53,9 @@ public:
+ 	UFUNCTION(BlueprintPure, Category = "PW|Building|Input")
+ 	UPW_PlayerBuildingPlacementComponent* GetPlacementComponent() const;
+ 
++	UFUNCTION(BlueprintPure, Category = "PW|Building|Input")
++	UPW_PlayerBasePlacementComponent* GetBasePlacementComponent() const;
++
+ protected:
+ 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Building|UI")
+ 	TSubclassOf<UPW_BuildingRadialMenuWidget> BuildingRadialMenuWidgetClass;
+@@ -67,16 +72,19 @@ protected:
+ private:
+ 	bool bInputBound = false;
+ 	uint64 LastToggleFrame = 0;
++	FTimerHandle InputBindingRetryTimerHandle;
+ 
+ 	UPROPERTY(Transient)
+ 	TObjectPtr<UPW_BuildingRadialMenuWidget> BuildingRadialMenuWidget;
+ 
+ 	APlayerController* GetOwningPlayerController() const;
+ 	UPW_BuildingRadialMenuWidget* GetOrCreateBuildingRadialMenu();
++	void TryBindInputKeys();
+ 	void BindInputKeys();
+ 
+ 	void HandleAutoPrimaryPressed();
+ 	void HandleAutoSecondaryPressed();
+ 	void HandleAutoWheelNext();
+ 	void HandleAutoWheelPrevious();
++	void HandleAutoBasePlacementPressed();
+ };
+diff --git a/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerCharacter.cpp b/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerCharacter.cpp
+index a098487..c1514d3 100644
+--- a/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerCharacter.cpp
++++ b/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerCharacter.cpp
+@@ -3,6 +3,7 @@
+ #include "Player/Core/PWPlayerCharacter.h"
+ 
+ #include "Camera/CameraComponent.h"
++#include "Base/PW_PlayerBasePlacementComponent.h"
+ #include "GameFramework/CharacterMovementComponent.h"
+ #include "GameFramework/SpringArmComponent.h"
+ #include "Merchant/PWPlayerTradeComponent.h"
+@@ -58,6 +59,7 @@ APWPlayerCharacter::APWPlayerCharacter()
+ 	PalStorageComponent = CreateDefaultSubobject<UPWPlayerPalStorageComponent>(TEXT("PalStorageComponent"));
+ 	TradeComponent = CreateDefaultSubobject<UPWPlayerTradeComponent>(TEXT("TradeComponent"));
+ 	InteractionComponent = CreateDefaultSubobject<UPWPlayerInteractionComponent>(TEXT("InteractionComponent"));
++	BasePlacementComponent = CreateDefaultSubobject<UPW_PlayerBasePlacementComponent>(TEXT("BasePlacementComponent"));
+ 	InventoryLinkComponent = CreateDefaultSubobject<UPWPlayerInventoryLinkComponent>(TEXT("InventoryLinkComponent"));
+ 	CaptureComponent = CreateDefaultSubobject<UPWPlayerCaptureComponent>(TEXT("CaptureComponent"));
+ 	MountComponent = CreateDefaultSubobject<UPWPlayerMountComponent>(TEXT("MountComponent"));
+@@ -280,6 +282,14 @@ void APWPlayerCharacter::StopInteract()
+ 	}
+ }
+ 
++void APWPlayerCharacter::StartTeleportInteraction()
++{
++	if (UPWInteractionScannerComponent* ScannerComponent = FindComponentByClass<UPWInteractionScannerComponent>())
++	{
++		ScannerComponent->TryInteractByActionId(TEXT("Teleport"));
++	}
++}
++
+ void APWPlayerCharacter::ToggleSummonPartyPal()
+ {
+ 	if (IsRolling() || IsWallClimbing() || IsWallClimbTopOut())
+diff --git a/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerController.cpp b/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerController.cpp
+index 5de2aef..6885d64 100644
+--- a/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerController.cpp
++++ b/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerController.cpp
+@@ -70,6 +70,7 @@ void APWPlayerController::SetupInputComponent()
+ 		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &APWPlayerController::ToggleInventoryMenu);
+ 		InputComponent->BindKey(EKeys::F, IE_Pressed, this, &APWPlayerController::HandleInteractPressed);
+ 		InputComponent->BindKey(EKeys::F, IE_Released, this, &APWPlayerController::HandleInteractReleased);
++		InputComponent->BindKey(EKeys::V, IE_Pressed, this, &APWPlayerController::HandleTeleportPressed);
+ 
+ 		if (bEnableDebugStatHotkeys)
+ 		{
+@@ -295,6 +296,14 @@ void APWPlayerController::HandleInteractReleased()
+ 	}
+ }
+ 
++void APWPlayerController::HandleTeleportPressed()
++{
++	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
++	{
++		PlayerCharacter->StartTeleportInteraction();
++	}
++}
++
+ void APWPlayerController::HandlePalSummonPressed()
+ {
+ 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+diff --git a/PalWorld/Source/PalWorld/PJH/Public/Player/Core/PWPlayerCharacter.h b/PalWorld/Source/PalWorld/PJH/Public/Player/Core/PWPlayerCharacter.h
+index 11e0a33..51825f6 100644
+--- a/PalWorld/Source/PalWorld/PJH/Public/Player/Core/PWPlayerCharacter.h
++++ b/PalWorld/Source/PalWorld/PJH/Public/Player/Core/PWPlayerCharacter.h
+@@ -12,6 +12,7 @@ class UCameraComponent;
+ class USpringArmComponent;
+ class UPWPalCommandComponent;
+ class UPWPlayerActionComponent;
++class UPW_PlayerBasePlacementComponent;
+ class UPWPlayerCaptureComponent;
+ class UPWPlayerClimbComponent;
+ class UPWPlayerEquipmentComponent;
+@@ -47,6 +48,7 @@ public:
+ 	void Interact();
+ 	void StartInteract();
+ 	void StopInteract();
++	void StartTeleportInteraction();
+ 	void ToggleSummonPartyPal();
+ 	void SelectPreviousPartyPal();
+ 	void SelectNextPartyPal();
+@@ -114,6 +116,7 @@ public:
+ 	UPWPlayerCaptureComponent* GetCaptureComponent() const { return CaptureComponent; }
+ 	UPWPlayerPalStorageComponent* GetPalStorageComponent() const { return PalStorageComponent; }
+ 	UPWPlayerTradeComponent* GetTradeComponent() const { return TradeComponent; }
++	UPW_PlayerBasePlacementComponent* GetBasePlacementComponent() const { return BasePlacementComponent; }
+ 
+ private:
+ 	UPROPERTY(VisibleAnywhere, Category = "Player|Camera")
+@@ -149,6 +152,9 @@ private:
+ 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+ 	TObjectPtr<UPWPlayerInteractionComponent> InteractionComponent;
+ 
++	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
++	TObjectPtr<UPW_PlayerBasePlacementComponent> BasePlacementComponent;
++
+ 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+ 	TObjectPtr<UPWPlayerInventoryLinkComponent> InventoryLinkComponent;
+ 
+diff --git a/PalWorld/Source/PalWorld/PJH/Public/Player/Core/PWPlayerController.h b/PalWorld/Source/PalWorld/PJH/Public/Player/Core/PWPlayerController.h
+index af59886..997fc8a 100644
+--- a/PalWorld/Source/PalWorld/PJH/Public/Player/Core/PWPlayerController.h
++++ b/PalWorld/Source/PalWorld/PJH/Public/Player/Core/PWPlayerController.h
+@@ -108,6 +108,7 @@ private:
+ 	void HandlePrimaryActionCompleted(const FInputActionValue& Value);
+ 	void HandleInteractPressed();
+ 	void HandleInteractReleased();
++	void HandleTeleportPressed();
+ 	void HandlePalSummonPressed();
+ 	void HandlePalPreviousPressed();
+ 	void HandlePalNextPressed();

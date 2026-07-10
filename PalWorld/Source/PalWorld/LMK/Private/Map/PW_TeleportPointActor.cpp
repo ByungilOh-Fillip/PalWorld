@@ -15,7 +15,9 @@ APW_TeleportPointActor::APW_TeleportPointActor()
 	bAlwaysRelevant = true;
 	SetNetUpdateFrequency(1.0f);
 	SetMinNetUpdateFrequency(0.2f);
-	SetIsSpatiallyLoaded(false);
+#if WITH_EDITOR
+	bIsSpatiallyLoaded = false;
+#endif
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);

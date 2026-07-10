@@ -12,6 +12,7 @@ class UCameraComponent;
 class USpringArmComponent;
 class UPWPalCommandComponent;
 class UPWPlayerActionComponent;
+class UPW_PlayerBasePlacementComponent;
 class UPWPlayerCaptureComponent;
 class UPWPlayerClimbComponent;
 class UPWPlayerEquipmentComponent;
@@ -47,6 +48,7 @@ public:
 	void Interact();
 	void StartInteract();
 	void StopInteract();
+	void StartTeleportInteraction();
 	void ToggleSummonPartyPal();
 	void SelectPreviousPartyPal();
 	void SelectNextPartyPal();
@@ -114,6 +116,7 @@ public:
 	UPWPlayerCaptureComponent* GetCaptureComponent() const { return CaptureComponent; }
 	UPWPlayerPalStorageComponent* GetPalStorageComponent() const { return PalStorageComponent; }
 	UPWPlayerTradeComponent* GetTradeComponent() const { return TradeComponent; }
+	UPW_PlayerBasePlacementComponent* GetBasePlacementComponent() const { return BasePlacementComponent; }
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Player|Camera")
@@ -148,6 +151,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerInteractionComponent> InteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPW_PlayerBasePlacementComponent> BasePlacementComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerInventoryLinkComponent> InventoryLinkComponent;

@@ -1,11 +1,14 @@
 #include "UI/PW_BuildingInputComponent.h"
 
 #include "Base/PW_PlayerBuildingPlacementComponent.h"
+#include "Base/PW_PlayerBasePlacementComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/InputComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
+#include "TimerManager.h"
 #include "UI/PW_BuildingRadialMenuWidget.h"
 
 UPW_BuildingInputComponent::UPW_BuildingInputComponent()
@@ -20,8 +23,18 @@ void UPW_BuildingInputComponent::BeginPlay()
 
 	if (bAutoBindInput)
 	{
-		BindInputKeys();
+		TryBindInputKeys();
 	}
+}
+
+void UPW_BuildingInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(InputBindingRetryTimerHandle);
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void UPW_BuildingInputComponent::ToggleBuildingMenu()
@@ -193,6 +206,24 @@ UPW_PlayerBuildingPlacementComponent* UPW_BuildingInputComponent::GetPlacementCo
 	return Owner ? Owner->FindComponentByClass<UPW_PlayerBuildingPlacementComponent>() : nullptr;
 }
 
+UPW_PlayerBasePlacementComponent* UPW_BuildingInputComponent::GetBasePlacementComponent() const
+{
+	AActor* Owner = GetOwner();
+	if (APawn* OwnerPawn = Cast<APawn>(Owner))
+	{
+		return OwnerPawn->FindComponentByClass<UPW_PlayerBasePlacementComponent>();
+	}
+
+	APlayerController* PlayerController = Cast<APlayerController>(Owner);
+	APawn* ControlledPawn = PlayerController ? PlayerController->GetPawn() : nullptr;
+	if (ControlledPawn)
+	{
+		return ControlledPawn->FindComponentByClass<UPW_PlayerBasePlacementComponent>();
+	}
+
+	return Owner ? Owner->FindComponentByClass<UPW_PlayerBasePlacementComponent>() : nullptr;
+}
+
 APlayerController* UPW_BuildingInputComponent::GetOwningPlayerController() const
 {
 	AActor* Owner = GetOwner();
@@ -242,6 +273,34 @@ UPW_BuildingRadialMenuWidget* UPW_BuildingInputComponent::GetOrCreateBuildingRad
 	return BuildingRadialMenuWidget;
 }
 
+void UPW_BuildingInputComponent::TryBindInputKeys()
+{
+	BindInputKeys();
+
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = GetOwningPlayerController();
+	if (bInputBound || (PlayerController != nullptr && !PlayerController->IsLocalController()))
+	{
+		World->GetTimerManager().ClearTimer(InputBindingRetryTimerHandle);
+		return;
+	}
+
+	if (!World->GetTimerManager().IsTimerActive(InputBindingRetryTimerHandle))
+	{
+		World->GetTimerManager().SetTimer(
+			InputBindingRetryTimerHandle,
+			this,
+			&UPW_BuildingInputComponent::TryBindInputKeys,
+			0.1f,
+			true);
+	}
+}
+
 void UPW_BuildingInputComponent::BindInputKeys()
 {
 	if (bInputBound)
@@ -260,6 +319,9 @@ void UPW_BuildingInputComponent::BindInputKeys()
 
 	FInputKeyBinding& DismantleBinding = PlayerController->InputComponent->BindKey(EKeys::C, IE_Pressed, this, &UPW_BuildingInputComponent::ToggleDismantleMode);
 	DismantleBinding.bConsumeInput = bConsumeAutoBoundInput;
+
+	FInputKeyBinding& BasePlacementBinding = PlayerController->InputComponent->BindKey(EKeys::G, IE_Pressed, this, &UPW_BuildingInputComponent::HandleAutoBasePlacementPressed);
+	BasePlacementBinding.bConsumeInput = bConsumeAutoBoundInput;
 
 	FInputKeyBinding& PrimaryBinding = PlayerController->InputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &UPW_BuildingInputComponent::HandleAutoPrimaryPressed);
 	PrimaryBinding.bConsumeInput = bConsumeAutoBoundInput;
@@ -295,4 +357,33 @@ void UPW_BuildingInputComponent::HandleAutoWheelNext()
 void UPW_BuildingInputComponent::HandleAutoWheelPrevious()
 {
 	HandleWheelPrevious();
+}
+
+void UPW_BuildingInputComponent::HandleAutoBasePlacementPressed()
+{
+	UPW_PlayerBasePlacementComponent* BasePlacementComponent = GetBasePlacementComponent();
+	if (BasePlacementComponent == nullptr)
+	{
+		return;
+	}
+
+	if (!BasePlacementComponent->IsPlacementModeActive())
+	{
+		if (!IsBuildingMenuVisible() && !IsBuildingPlacementActive())
+		{
+			return;
+		}
+
+		if (UPW_PlayerBuildingPlacementComponent* PlacementComponent = GetPlacementComponent())
+		{
+			PlacementComponent->CancelPlacement();
+		}
+
+		if (IsBuildingMenuVisible())
+		{
+			SetBuildingMenuVisible(false);
+		}
+	}
+
+	BasePlacementComponent->TogglePlacementMode();
 }

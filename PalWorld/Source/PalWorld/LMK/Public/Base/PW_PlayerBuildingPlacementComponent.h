@@ -59,7 +59,7 @@ public:
 	EPW_BuildingMaterialType GetSelectedMaterialType() const { return SelectedMaterialType; }
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Building|Placement")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Building|Placement", meta = (AllowPrivateAccess = "true"))
 	TArray<FPW_BuildingPieceDefinition> PieceDefinitions;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Building|Placement")

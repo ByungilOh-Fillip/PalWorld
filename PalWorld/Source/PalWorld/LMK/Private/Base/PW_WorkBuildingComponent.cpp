@@ -316,7 +316,20 @@ void UPW_WorkBuildingComponent::RefreshInteractionGuideProgress() const
 		return;
 	}
 
-	TargetComponent->SetInteractionGuideActionProgress(TEXT("Default"), GetWorkProgressRatio());
+	TArray<FPWInteractionGuideAction> GuideActions;
+	TargetComponent->GetInteractionGuideActions(GuideActions);
+
+	FName ProgressActionId = TEXT("Default");
+	for (const FPWInteractionGuideAction& GuideAction : GuideActions)
+	{
+		if (GuideAction.bShowProgress)
+		{
+			ProgressActionId = GuideAction.ActionId;
+			break;
+		}
+	}
+
+	TargetComponent->SetInteractionGuideActionProgress(ProgressActionId, GetWorkProgressRatio());
 }
 
 bool UPW_WorkBuildingComponent::IsWorkerInRange(AActor* Worker) const

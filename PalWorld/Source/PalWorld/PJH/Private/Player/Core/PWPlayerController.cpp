@@ -70,6 +70,7 @@ void APWPlayerController::SetupInputComponent()
 		InputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &APWPlayerController::ToggleInventoryMenu);
 		InputComponent->BindKey(EKeys::F, IE_Pressed, this, &APWPlayerController::HandleInteractPressed);
 		InputComponent->BindKey(EKeys::F, IE_Released, this, &APWPlayerController::HandleInteractReleased);
+		InputComponent->BindKey(EKeys::V, IE_Pressed, this, &APWPlayerController::HandleTeleportPressed);
 
 		if (bEnableDebugStatHotkeys)
 		{
@@ -292,6 +293,14 @@ void APWPlayerController::HandleInteractReleased()
 	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
 	{
 		PlayerCharacter->StopInteract();
+	}
+}
+
+void APWPlayerController::HandleTeleportPressed()
+{
+	if (APWPlayerCharacter* PlayerCharacter = GetPWPlayerCharacter())
+	{
+		PlayerCharacter->StartTeleportInteraction();
 	}
 }
 
