@@ -1,0 +1,2054 @@
+{
+  "/Game/EasyBuildingSystem/Blueprints/BuildingObjects/Modular/BP_EBS_Building_Foundation.BP_EBS_Building_Foundation": {
+    "asset_path": "/Game/EasyBuildingSystem/Blueprints/BuildingObjects/Modular/BP_EBS_Building_Foundation.BP_EBS_Building_Foundation",
+    "class": "BP_EBS_Building_Foundation_C",
+    "cdo": "Default__BP_EBS_Building_Foundation_C",
+    "components": [],
+    "properties": {},
+    "scs_error": "Blueprint: Failed to find property 'simple_construction_script' for attribute 'simple_construction_script' on 'Blueprint'",
+    "subobject_components": [
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      }
+    ],
+    "subobject_debug": {
+      "subsystem_methods": [
+        "_wrapper_meta_data",
+        "add_new_subobject",
+        "attach_subobject",
+        "can_copy_subobjects",
+        "can_paste_subobjects",
+        "change_subobject_class",
+        "copy_subobjects",
+        "delete_subobject",
+        "delete_subobjects",
+        "detach_subobject",
+        "duplicate_subobjects",
+        "k2_delete_subobject_from_instance",
+        "k2_delete_subobjects_from_instance",
+        "k2_find_subobject_data_from_handle",
+        "k2_gather_subobject_data_for_blueprint",
+        "k2_gather_subobject_data_for_instance",
+        "paste_subobjects",
+        "rename_subobject",
+        "rename_subobject_member_variable",
+        "reparent_subobject",
+        "reparent_subobjects"
+      ],
+      "handle_count": 62
+    }
+  },
+  "/Game/EasyBuildingSystem/Blueprints/BuildingObjects/Modular/BP_EBS_Building_Wall.BP_EBS_Building_Wall": {
+    "asset_path": "/Game/EasyBuildingSystem/Blueprints/BuildingObjects/Modular/BP_EBS_Building_Wall.BP_EBS_Building_Wall",
+    "class": "BP_EBS_Building_Wall_C",
+    "cdo": "Default__BP_EBS_Building_Wall_C",
+    "components": [],
+    "properties": {},
+    "scs_error": "Blueprint: Failed to find property 'simple_construction_script' for attribute 'simple_construction_script' on 'Blueprint'",
+    "subobject_components": [
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      }
+    ],
+    "subobject_debug": {
+      "subsystem_methods": [
+        "_wrapper_meta_data",
+        "add_new_subobject",
+        "attach_subobject",
+        "can_copy_subobjects",
+        "can_paste_subobjects",
+        "change_subobject_class",
+        "copy_subobjects",
+        "delete_subobject",
+        "delete_subobjects",
+        "detach_subobject",
+        "duplicate_subobjects",
+        "k2_delete_subobject_from_instance",
+        "k2_delete_subobjects_from_instance",
+        "k2_find_subobject_data_from_handle",
+        "k2_gather_subobject_data_for_blueprint",
+        "k2_gather_subobject_data_for_instance",
+        "paste_subobjects",
+        "rename_subobject",
+        "rename_subobject_member_variable",
+        "reparent_subobject",
+        "reparent_subobjects"
+      ],
+      "handle_count": 27
+    }
+  },
+  "/Game/EasyBuildingSystem/Blueprints/BuildingObjects/Modular/BP_EBS_Building_Roof.BP_EBS_Building_Roof": {
+    "asset_path": "/Game/EasyBuildingSystem/Blueprints/BuildingObjects/Modular/BP_EBS_Building_Roof.BP_EBS_Building_Roof",
+    "class": "BP_EBS_Building_Roof_C",
+    "cdo": "Default__BP_EBS_Building_Roof_C",
+    "components": [],
+    "properties": {},
+    "scs_error": "Blueprint: Failed to find property 'simple_construction_script' for attribute 'simple_construction_script' on 'Blueprint'",
+    "subobject_components": [
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      }
+    ],
+    "subobject_debug": {
+      "subsystem_methods": [
+        "_wrapper_meta_data",
+        "add_new_subobject",
+        "attach_subobject",
+        "can_copy_subobjects",
+        "can_paste_subobjects",
+        "change_subobject_class",
+        "copy_subobjects",
+        "delete_subobject",
+        "delete_subobjects",
+        "detach_subobject",
+        "duplicate_subobjects",
+        "k2_delete_subobject_from_instance",
+        "k2_delete_subobjects_from_instance",
+        "k2_find_subobject_data_from_handle",
+        "k2_gather_subobject_data_for_blueprint",
+        "k2_gather_subobject_data_for_instance",
+        "paste_subobjects",
+        "rename_subobject",
+        "rename_subobject_member_variable",
+        "reparent_subobject",
+        "reparent_subobjects"
+      ],
+      "handle_count": 13
+    }
+  },
+  "/Game/EasyBuildingSystem/Blueprints/BuildingObjects/Base/BP_EBS_Building_BaseObject.BP_EBS_Building_BaseObject": {
+    "asset_path": "/Game/EasyBuildingSystem/Blueprints/BuildingObjects/Base/BP_EBS_Building_BaseObject.BP_EBS_Building_BaseObject",
+    "class": "BP_EBS_Building_BaseObject_C",
+    "cdo": "Default__BP_EBS_Building_BaseObject_C",
+    "components": [],
+    "properties": {},
+    "scs_error": "Blueprint: Failed to find property 'simple_construction_script' for attribute 'simple_construction_script' on 'Blueprint'",
+    "subobject_components": [
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      },
+      {
+        "data_methods": [
+          "assign",
+          "cast",
+          "copy",
+          "export_text",
+          "get_editor_property",
+          "import_text",
+          "set_editor_properties",
+          "set_editor_property",
+          "static_struct",
+          "to_dict",
+          "to_tuple"
+        ],
+        "data_dict": {},
+        "object": null,
+        "object_class": null
+      }
+    ],
+    "subobject_debug": {
+      "subsystem_methods": [
+        "_wrapper_meta_data",
+        "add_new_subobject",
+        "attach_subobject",
+        "can_copy_subobjects",
+        "can_paste_subobjects",
+        "change_subobject_class",
+        "copy_subobjects",
+        "delete_subobject",
+        "delete_subobjects",
+        "detach_subobject",
+        "duplicate_subobjects",
+        "k2_delete_subobject_from_instance",
+        "k2_delete_subobjects_from_instance",
+        "k2_find_subobject_data_from_handle",
+        "k2_gather_subobject_data_for_blueprint",
+        "k2_gather_subobject_data_for_instance",
+        "paste_subobjects",
+        "rename_subobject",
+        "rename_subobject_member_variable",
+        "reparent_subobject",
+        "reparent_subobjects"
+      ],
+      "handle_count": 4
+    }
+  }
+}

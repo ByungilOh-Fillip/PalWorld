@@ -14,6 +14,7 @@ UPW_PlayerBasePlacementComponent::UPW_PlayerBasePlacementComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	SetIsReplicatedByDefault(true);
+	BaseCampClass = APW_BaseCampActor::StaticClass();
 }
 
 void UPW_PlayerBasePlacementComponent::BeginPlay()

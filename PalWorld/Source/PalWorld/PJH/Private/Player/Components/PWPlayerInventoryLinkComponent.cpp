@@ -3,7 +3,9 @@
 #include "Player/Components/PWPlayerInventoryLinkComponent.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Player/Components/PWPlayerStatComponent.h"
 #include "Player/Data/PWItemDataAsset.h"
+#include "World/PWWorldItemDropLibrary.h"
 
 UPWPlayerInventoryLinkComponent::UPWPlayerInventoryLinkComponent()
 {
@@ -18,12 +20,15 @@ void UPWPlayerInventoryLinkComponent::BeginPlay()
 	EnsureDefaultItemDefinitions();
 
 	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor || !OwnerActor->HasAuthority() || Items.Num() > 0)
+	if (!OwnerActor || !OwnerActor->HasAuthority())
 	{
 		return;
 	}
 
-	GrantStarterItemsAuthority();
+	if (Items.Num() <= 0)
+	{
+		GrantStarterItemsAuthority();
+	}
 }
 
 void UPWPlayerInventoryLinkComponent::EnsureDefaultItemDefinitions()
@@ -38,14 +43,15 @@ void UPWPlayerInventoryLinkComponent::EnsureDefaultItemDefinitions()
 		TEXT("/Game/PJH/Data/Items/DA_Item_Stone.DA_Item_Stone"),
 		TEXT("/Game/PJH/Data/Items/DA_Item_Pickaxe.DA_Item_Pickaxe"),
 		TEXT("/Game/PJH/Data/Items/DA_Item_Axe.DA_Item_Axe"),
+		TEXT("/Game/PJH/Data/Items/DA_Item_Crossbow.DA_Item_Crossbow"),
+		TEXT("/Game/PJH/Data/Items/DA_Item_Helmet.DA_Item_Helmet"),
+		TEXT("/Game/PJH/Data/Items/DA_Item_Armor.DA_Item_Armor"),
+		TEXT("/Game/PJH/Data/Items/DA_Item_Shield.DA_Item_Shield"),
+		TEXT("/Game/PJH/Data/Items/DA_Item_Glider.DA_Item_Glider"),
+		TEXT("/Game/PJH/Data/Items/DA_Item_Accessory.DA_Item_Accessory"),
+		TEXT("/Game/PJH/Data/Items/DA_Item_SphereModule.DA_Item_SphereModule"),
 		TEXT("/Game/PJH/Data/Items/DA_Item_PalSphere.DA_Item_PalSphere"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestHelmet.DA_Item_TestHelmet"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestArmor.DA_Item_TestArmor"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestShield.DA_Item_TestShield"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestGlider.DA_Item_TestGlider"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestSphereModule.DA_Item_TestSphereModule"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestAccessory.DA_Item_TestAccessory"),
-		TEXT("/Game/PJH/Data/Items/DA_Item_TestFood.DA_Item_TestFood")
+		TEXT("/Game/PJH/Data/Items/DA_Item_Food.DA_Item_Food")
 	};
 
 	for (const TCHAR* DefaultItemPath : DefaultItemPaths)
@@ -80,35 +86,43 @@ void UPWPlayerInventoryLinkComponent::GrantStarterItemsAuthority()
 		}
 	}
 
-	if (!bGrantDefaultStarterItems || StarterItems.Num() > 0)
+	if (!bGrantDefaultStarterItems)
 	{
 		return;
 	}
 
 	struct FDefaultStarterItem
 	{
-		FName ItemId;
+		const TCHAR* ItemPath = nullptr;
 		int32 Count = 1;
 	};
 
 	const FDefaultStarterItem DefaultStarterItems[] = {
-		{ TEXT("Wood"), 50 },
-		{ TEXT("Stone"), 50 },
-		{ TEXT("Pickaxe"), 1 },
-		{ TEXT("Axe"), 1 },
-		{ TEXT("PalSphere"), 10 },
-		{ TEXT("TestHelmet"), 1 },
-		{ TEXT("TestArmor"), 1 },
-		{ TEXT("TestShield"), 1 },
-		{ TEXT("TestGlider"), 1 },
-		{ TEXT("TestSphereModule"), 1 },
-		{ TEXT("TestAccessory"), 1 },
-		{ TEXT("TestFood"), 10 }
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Wood.DA_Item_Wood"), 50 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Stone.DA_Item_Stone"), 50 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Pickaxe.DA_Item_Pickaxe"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Axe.DA_Item_Axe"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Crossbow.DA_Item_Crossbow"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Helmet.DA_Item_Helmet"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Armor.DA_Item_Armor"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Shield.DA_Item_Shield"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Glider.DA_Item_Glider"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Accessory.DA_Item_Accessory"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_SphereModule.DA_Item_SphereModule"), 1 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_PalSphere.DA_Item_PalSphere"), 10 },
+		{ TEXT("/Game/PJH/Data/Items/DA_Item_Food.DA_Item_Food"), 10 }
 	};
 
 	for (const FDefaultStarterItem& DefaultStarterItem : DefaultStarterItems)
 	{
-		AddItemAuthority(DefaultStarterItem.ItemId, DefaultStarterItem.Count);
+		UPWItemDataAsset* ItemData = LoadObject<UPWItemDataAsset>(nullptr, DefaultStarterItem.ItemPath);
+		if (!ItemData)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[PWInventory] Failed to load default starter item. Path=%s"), DefaultStarterItem.ItemPath);
+			continue;
+		}
+
+		AddItemAuthority(ItemData->GetItemId(), DefaultStarterItem.Count);
 	}
 }
 
@@ -121,6 +135,7 @@ void UPWPlayerInventoryLinkComponent::GetLifetimeReplicatedProps(TArray<FLifetim
 
 bool UPWPlayerInventoryLinkComponent::AddItem(FName ItemId, int32 Count)
 {
+	ItemId = NormalizeItemId(ItemId);
 	if (ItemId.IsNone() || Count <= 0)
 	{
 		return false;
@@ -162,7 +177,40 @@ bool UPWPlayerInventoryLinkComponent::DropItemFromSlot(int32 SlotIndex, int32 Co
 		return true;
 	}
 
-	return RemoveItemFromSlotAuthority(SlotIndex, Count);
+	const FPWInventoryItemStack* SourceStack = FindStackBySlot(SlotIndex);
+	if (!SourceStack || SourceStack->ItemId.IsNone() || SourceStack->Count <= 0)
+	{
+		return false;
+	}
+
+	const int32 DropCount = Count <= 0 ? SourceStack->Count : FMath::Min(Count, SourceStack->Count);
+	UPWItemDataAsset* ItemData = GetItemDefinition(SourceStack->ItemId);
+	if (!UPWWorldItemDropLibrary::CanSpawnWorldItem(ItemData))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PWInventory] Drop rejected. Item has no world mesh. Slot=%d Item=%s ItemData=%s"),
+			SlotIndex,
+			*SourceStack->ItemId.ToString(),
+			*GetNameSafe(ItemData));
+		return false;
+	}
+
+	FPWInventoryItemStack RemovedStack;
+	if (!RemoveItemFromSlotAuthority(SlotIndex, DropCount, &RemovedStack))
+	{
+		return false;
+	}
+
+	if (DropItemStackToWorldAuthority(RemovedStack))
+	{
+		return true;
+	}
+
+	// 월드 스폰에 실패하면 아이템이 증발하지 않도록 원래 슬롯 복구를 먼저 시도한다.
+	if (!AddItemToSlotAuthority(RemovedStack.ItemId, RemovedStack.Count, RemovedStack.SlotIndex))
+	{
+		AddItemAuthority(RemovedStack.ItemId, RemovedStack.Count);
+	}
+	return false;
 }
 
 bool UPWPlayerInventoryLinkComponent::DestroyItemFromSlot(int32 SlotIndex, int32 Count)
@@ -177,8 +225,40 @@ bool UPWPlayerInventoryLinkComponent::DestroyItemFromSlot(int32 SlotIndex, int32
 	return RemoveItemFromSlotAuthority(SlotIndex, Count);
 }
 
+bool UPWPlayerInventoryLinkComponent::UseItemFromSlot(int32 SlotIndex)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority())
+	{
+		ServerUseItemFromSlot(SlotIndex);
+		return true;
+	}
+
+	return UseItemFromSlotAuthority(SlotIndex);
+}
+
+bool UPWPlayerInventoryLinkComponent::ConsumeItem(FName ItemId, int32 Count)
+{
+	ItemId = NormalizeItemId(ItemId);
+	if (ItemId.IsNone() || Count <= 0)
+	{
+		return false;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority())
+	{
+		ServerConsumeItem(ItemId, Count);
+		return true;
+	}
+
+	return ConsumeItemAuthority(ItemId, Count);
+}
+
 int32 UPWPlayerInventoryLinkComponent::GetItemCount(FName ItemId) const
 {
+	ItemId = NormalizeItemId(ItemId);
+
 	int32 TotalCount = 0;
 	for (const FPWInventoryItemStack& Stack : Items)
 	{
@@ -224,6 +304,7 @@ TArray<FPWInventorySlotView> UPWPlayerInventoryLinkComponent::GetSlotViews() con
 
 UPWItemDataAsset* UPWPlayerInventoryLinkComponent::GetItemDefinition(FName ItemId) const
 {
+	ItemId = NormalizeItemId(ItemId);
 	if (ItemId.IsNone())
 	{
 		return nullptr;
@@ -277,6 +358,7 @@ bool UPWPlayerInventoryLinkComponent::IsInventoryFull() const
 
 void UPWPlayerInventoryLinkComponent::ServerAddItem_Implementation(FName ItemId, int32 Count)
 {
+	ItemId = NormalizeItemId(ItemId);
 	AddItemAuthority(ItemId, Count);
 }
 
@@ -287,12 +369,22 @@ void UPWPlayerInventoryLinkComponent::ServerMoveItemSlot_Implementation(int32 Fr
 
 void UPWPlayerInventoryLinkComponent::ServerDropItemFromSlot_Implementation(int32 SlotIndex, int32 Count)
 {
-	RemoveItemFromSlotAuthority(SlotIndex, Count);
+	DropItemFromSlot(SlotIndex, Count);
 }
 
 void UPWPlayerInventoryLinkComponent::ServerDestroyItemFromSlot_Implementation(int32 SlotIndex, int32 Count)
 {
 	RemoveItemFromSlotAuthority(SlotIndex, Count);
+}
+
+void UPWPlayerInventoryLinkComponent::ServerUseItemFromSlot_Implementation(int32 SlotIndex)
+{
+	UseItemFromSlotAuthority(SlotIndex);
+}
+
+void UPWPlayerInventoryLinkComponent::ServerConsumeItem_Implementation(FName ItemId, int32 Count)
+{
+	ConsumeItemAuthority(ItemId, Count);
 }
 
 void UPWPlayerInventoryLinkComponent::OnRep_Items()
@@ -302,6 +394,7 @@ void UPWPlayerInventoryLinkComponent::OnRep_Items()
 
 bool UPWPlayerInventoryLinkComponent::AddItemAuthority(FName ItemId, int32 Count)
 {
+	ItemId = NormalizeItemId(ItemId);
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor || !OwnerActor->HasAuthority() || ItemId.IsNone() || Count <= 0)
 	{
@@ -348,16 +441,62 @@ bool UPWPlayerInventoryLinkComponent::AddItemAuthority(FName ItemId, int32 Count
 	const int32 AddedCount = Count - RemainingCount;
 	if (AddedCount <= 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[PWInventory] Inventory is full. Owner=%s Item=%s Count=%d"),
-			*OwnerActor->GetName(),
-			*ItemId.ToString(),
-			Count);
 		return false;
 	}
 
 	OnInventoryChanged.Broadcast();
 	OwnerActor->ForceNetUpdate();
 	return RemainingCount <= 0;
+}
+
+bool UPWPlayerInventoryLinkComponent::AddItemToSlotAuthority(FName ItemId, int32 Count, int32 TargetSlotIndex)
+{
+	ItemId = NormalizeItemId(ItemId);
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority()
+		|| ItemId.IsNone()
+		|| Count <= 0
+		|| TargetSlotIndex < 0
+		|| TargetSlotIndex >= InventorySlotCount)
+	{
+		return false;
+	}
+
+	FPWInventoryItemStack* TargetStack = FindStackBySlot(TargetSlotIndex);
+	if (!TargetStack)
+	{
+		const int32 MaxStack = GetMaxStackForItem(ItemId);
+		if (Count > MaxStack)
+		{
+			return false;
+		}
+
+		FPWInventoryItemStack NewStack;
+		NewStack.SlotIndex = TargetSlotIndex;
+		NewStack.ItemId = ItemId;
+		NewStack.Count = Count;
+		Items.Add(NewStack);
+
+		OnInventoryChanged.Broadcast();
+		OwnerActor->ForceNetUpdate();
+		return true;
+	}
+
+	if (TargetStack->ItemId != ItemId)
+	{
+		return false;
+	}
+
+	const int32 MaxStack = GetMaxStackForItem(ItemId);
+	if (TargetStack->Count + Count > MaxStack)
+	{
+		return false;
+	}
+
+	TargetStack->Count += Count;
+	OnInventoryChanged.Broadcast();
+	OwnerActor->ForceNetUpdate();
+	return true;
 }
 
 bool UPWPlayerInventoryLinkComponent::MoveItemSlotAuthority(int32 FromSlotIndex, int32 ToSlotIndex)
@@ -415,6 +554,49 @@ bool UPWPlayerInventoryLinkComponent::MoveItemSlotAuthority(int32 FromSlotIndex,
 	return true;
 }
 
+bool UPWPlayerInventoryLinkComponent::ConsumeItemAuthority(FName ItemId, int32 Count)
+{
+	ItemId = NormalizeItemId(ItemId);
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority() || ItemId.IsNone() || Count <= 0)
+	{
+		return false;
+	}
+
+	if (GetItemCount(ItemId) < Count)
+	{
+		return false;
+	}
+
+	int32 RemainingCount = Count;
+	for (int32 StackIndex = Items.Num() - 1; StackIndex >= 0 && RemainingCount > 0; --StackIndex)
+	{
+		FPWInventoryItemStack& Stack = Items[StackIndex];
+		if (Stack.ItemId != ItemId || Stack.Count <= 0)
+		{
+			continue;
+		}
+
+		const int32 RemoveCount = FMath::Min(Stack.Count, RemainingCount);
+		Stack.Count -= RemoveCount;
+		RemainingCount -= RemoveCount;
+
+		if (Stack.Count <= 0)
+		{
+			Items.RemoveAt(StackIndex);
+		}
+	}
+
+	if (RemainingCount > 0)
+	{
+		return false;
+	}
+
+	OnInventoryChanged.Broadcast();
+	OwnerActor->ForceNetUpdate();
+	return true;
+}
+
 bool UPWPlayerInventoryLinkComponent::RemoveItemFromSlotAuthority(int32 SlotIndex, int32 Count, FPWInventoryItemStack* OutRemovedStack)
 {
 	AActor* OwnerActor = GetOwner();
@@ -456,6 +638,95 @@ bool UPWPlayerInventoryLinkComponent::RemoveItemFromSlotAuthority(int32 SlotInde
 	OnInventoryChanged.Broadcast();
 	OwnerActor->ForceNetUpdate();
 	return true;
+}
+
+bool UPWPlayerInventoryLinkComponent::UseItemFromSlotAuthority(int32 SlotIndex)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority()
+		|| SlotIndex < 0 || SlotIndex >= InventorySlotCount)
+	{
+		return false;
+	}
+
+	const FPWInventoryItemStack* Stack = FindStackBySlot(SlotIndex);
+	if (!Stack || Stack->ItemId.IsNone() || Stack->Count <= 0)
+	{
+		return false;
+	}
+
+	UPWItemDataAsset* ItemData = GetItemDefinition(Stack->ItemId);
+	if (!ItemData || ItemData->GetItemType() != EPWItemType::Consumable)
+	{
+		return false;
+	}
+
+	if (!ApplyConsumableItemAuthority(ItemData))
+	{
+		return false;
+	}
+
+	return RemoveItemFromSlotAuthority(SlotIndex, 1);
+}
+
+bool UPWPlayerInventoryLinkComponent::ApplyConsumableItemAuthority(UPWItemDataAsset* ItemData)
+{
+	AActor* OwnerActor = GetOwner();
+	UPWPlayerStatComponent* StatComponent = OwnerActor ? OwnerActor->FindComponentByClass<UPWPlayerStatComponent>() : nullptr;
+	if (!OwnerActor || !OwnerActor->HasAuthority() || !ItemData || !StatComponent)
+	{
+		return false;
+	}
+
+	bool bAppliedAnyEffect = false;
+	const float HungerRestoreAmount = ItemData->GetHungerRestoreAmount();
+	if (HungerRestoreAmount > 0.f && StatComponent->GetCurrentHunger() < StatComponent->GetMaxHunger())
+	{
+		bAppliedAnyEffect |= StatComponent->RestoreHunger(HungerRestoreAmount);
+	}
+
+	const float HealthRestoreAmount = ItemData->GetHealthRestoreAmount();
+	if (HealthRestoreAmount > 0.f && StatComponent->GetCurrentHealth() < StatComponent->GetMaxHealth())
+	{
+		bAppliedAnyEffect |= StatComponent->RestoreHealth(HealthRestoreAmount);
+	}
+
+	return bAppliedAnyEffect;
+}
+
+bool UPWPlayerInventoryLinkComponent::DropItemStackToWorldAuthority(const FPWInventoryItemStack& ItemStack)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority() || ItemStack.ItemId.IsNone() || ItemStack.Count <= 0)
+	{
+		return false;
+	}
+
+	UPWItemDataAsset* ItemData = GetItemDefinition(ItemStack.ItemId);
+	if (!UPWWorldItemDropLibrary::CanSpawnWorldItem(ItemData))
+	{
+		return false;
+	}
+
+	const FVector Forward = OwnerActor->GetActorForwardVector();
+	FPWWorldItemDropRequest DropRequest;
+	DropRequest.ItemData = ItemData;
+	DropRequest.ItemId = ItemStack.ItemId;
+	DropRequest.Count = ItemStack.Count;
+	DropRequest.SourceActor = OwnerActor;
+	DropRequest.SourceLocation = OwnerActor->GetActorLocation() + Forward * 120.f + FVector(0.f, 0.f, 45.f);
+	DropRequest.TargetLocation = OwnerActor->GetActorLocation() + Forward * 260.f;
+	DropRequest.TowardTargetMinAlpha = 0.75f;
+	DropRequest.TowardTargetMaxAlpha = 1.f;
+	DropRequest.ScatterRadius = 35.f;
+	DropRequest.bIgnoreSourceActorInGroundTrace = true;
+	DropRequest.MinHorizontalImpulse = 90.f;
+	DropRequest.MaxHorizontalImpulse = 160.f;
+	DropRequest.MinUpwardImpulse = 140.f;
+	DropRequest.MaxUpwardImpulse = 230.f;
+	DropRequest.bStartAutoCollect = false;
+
+	return UPWWorldItemDropLibrary::SpawnWorldItemDrop(this, DropRequest) != nullptr;
 }
 
 FPWInventoryItemStack* UPWPlayerInventoryLinkComponent::FindStack(FName ItemId)
@@ -509,6 +780,23 @@ int32 UPWPlayerInventoryLinkComponent::FindFirstEmptySlotIndex() const
 
 int32 UPWPlayerInventoryLinkComponent::GetMaxStackForItem(FName ItemId) const
 {
+	ItemId = NormalizeItemId(ItemId);
 	const UPWItemDataAsset* ItemDefinition = GetItemDefinition(ItemId);
 	return ItemDefinition ? FMath::Max(1, ItemDefinition->GetMaxStack()) : 999;
+}
+
+FName UPWPlayerInventoryLinkComponent::NormalizeItemId(FName ItemId) const
+{
+	if (ItemId.IsNone())
+	{
+		return NAME_None;
+	}
+
+	const FString ItemIdString = ItemId.ToString();
+	if (ItemIdString.Contains(TEXT("Rock")) || ItemIdString.Contains(TEXT("Ore")))
+	{
+		return TEXT("Stone");
+	}
+
+	return ItemId;
 }

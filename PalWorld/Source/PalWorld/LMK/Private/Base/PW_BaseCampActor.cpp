@@ -7,22 +7,27 @@
 #include "Base/PW_BasePalAssignmentComponent.h"
 #include "Base/PW_BaseWorkSimulationComponent.h"
 #include "Base/PW_BaseWorkTargetRegistryComponent.h"
+#include "Base/PW_WorkBuildingComponent.h"
 #include "Components/SceneComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "InputCoreTypes.h"
 #include "NavigationInvokerComponent.h"
+#include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "PWInteractableTargetComponent.h"
+#include "PWSkillComponent.h"
+#include "UI/PW_WorldMapControllerComponent.h"
 
 APW_BaseCampActor::APW_BaseCampActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	SetNetCullDistanceSquared(FMath::Square(12000.0f));
-	NetUpdateFrequency = 2.0f;
+	SetNetUpdateFrequency(2.0f);
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
@@ -38,6 +43,15 @@ APW_BaseCampActor::APW_BaseCampActor()
 	InteractableTargetComponent->SetInteractionRadius(350.0f);
 	InteractableTargetComponent->SetPromptText(NSLOCTEXT("PWInteraction", "BaseCampPrompt", "Open Base Camp"));
 	InteractableTargetComponent->SetPriority(50);
+
+	FPWInteractionGuideAction TeleportAction;
+	TeleportAction.ActionId = TEXT("Teleport");
+	TeleportAction.Key = EKeys::V;
+	TeleportAction.Label = NSLOCTEXT("PWInteraction", "BaseCampTeleportPrompt", "Fast Travel");
+	TeleportAction.SortOrder = 1;
+	TArray<FPWInteractionGuideAction> GuideActions;
+	GuideActions.Add(TeleportAction);
+	InteractableTargetComponent->SetInteractionGuideActions(GuideActions);
 }
 
 void APW_BaseCampActor::BeginPlay()
@@ -149,6 +163,53 @@ int32 APW_BaseCampActor::GetInteractionPriority_Implementation() const
 bool APW_BaseCampActor::ContainsLocation(const FVector& Location) const
 {
 	return FVector::DistSquared2D(GetActorLocation(), Location) <= FMath::Square(CampRadius);
+}
+
+bool APW_BaseCampActor::TryAssignIdlePalToWorkTargetByTag(FGameplayTag RequiredWorkTag, FPW_AssignedPalSlot& OutAssignedSlot, FPW_WorkTargetEntry& OutWorkTarget)
+{
+	if (!HasAuthority() || PalAssignmentComponent == nullptr || WorkTargetRegistryComponent == nullptr || !RequiredWorkTag.IsValid())
+	{
+		return false;
+	}
+
+	TArray<FPW_WorkTargetEntry> CandidateTargets;
+	WorkTargetRegistryComponent->GetWorkTargetsByTag(RequiredWorkTag, CandidateTargets);
+	if (CandidateTargets.Num() <= 0)
+	{
+		return false;
+	}
+
+	for (const FPW_AssignedPalSlot& Slot : PalAssignmentComponent->GetAssignedPalSlots())
+	{
+		AActor* PalActor = Slot.SpawnedPalActor.Get();
+		const UPWSkillComponent* SkillComponent = PalActor != nullptr ? PalActor->FindComponentByClass<UPWSkillComponent>() : nullptr;
+		if (Slot.AssignedState != TEXT("Idle") || !Slot.CurrentWorkTargetId.IsNone() || SkillComponent == nullptr || !SkillComponent->CanWork(RequiredWorkTag))
+		{
+			continue;
+		}
+
+		for (const FPW_WorkTargetEntry& CandidateTarget : CandidateTargets)
+		{
+			const AActor* TargetActor = CandidateTarget.TargetActor.Get();
+			const UPW_WorkBuildingComponent* WorkBuildingComponent = TargetActor != nullptr ? TargetActor->FindComponentByClass<UPW_WorkBuildingComponent>() : nullptr;
+			if (WorkBuildingComponent == nullptr || !WorkBuildingComponent->IsWorkAvailable())
+			{
+				continue;
+			}
+
+			if (PalAssignmentComponent->TryAssignPalToWorkTarget(Slot.SlotIndex, CandidateTarget.WorkTargetId))
+			{
+				OutAssignedSlot = Slot;
+				OutAssignedSlot.CurrentWorkTargetId = CandidateTarget.WorkTargetId;
+				OutAssignedSlot.AssignedState = TEXT("MovingToWork");
+				OutWorkTarget = CandidateTarget;
+				ForceNetUpdate();
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 void APW_BaseCampActor::RegisterWithSubsystem()
@@ -289,4 +350,34 @@ void APW_BaseCampActor::SetBaseActiveState(bool bNewHasActiveVisitor)
 	{
 		BaseNavigationComponent->SetBaseNavigationActive(bHasActiveVisitor);
 	}
+}
+
+bool APW_BaseCampActor::CanInteractAction_Implementation(AActor* Interactor, FName ActionId) const
+{
+	return CanInteract_Implementation(Interactor);
+}
+
+bool APW_BaseCampActor::InteractAction_Implementation(AActor* Interactor, FName ActionId)
+{
+	if (!CanInteractAction_Implementation(Interactor, ActionId))
+	{
+		return false;
+	}
+
+	if (ActionId == TEXT("Teleport"))
+	{
+		const APawn* InteractingPawn = Cast<APawn>(Interactor);
+		APlayerController* PlayerController = InteractingPawn != nullptr ? Cast<APlayerController>(InteractingPawn->GetController()) : Cast<APlayerController>(Interactor);
+		UPW_WorldMapControllerComponent* WorldMapController = PlayerController != nullptr ? PlayerController->FindComponentByClass<UPW_WorldMapControllerComponent>() : nullptr;
+		if (WorldMapController == nullptr)
+		{
+			return false;
+		}
+
+		WorldMapController->SetActiveBaseCampTeleportSource(this);
+		WorldMapController->ClientShowTeleportMap();
+		return true;
+	}
+
+	return Interact_Implementation(Interactor);
 }

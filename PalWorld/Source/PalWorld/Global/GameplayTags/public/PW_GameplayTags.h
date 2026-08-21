@@ -1,0 +1,63 @@
+#pragma once
+
+#include "NativeGameplayTags.h"
+
+namespace PW_GameplayTags
+{
+	// Work Attitude
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Kindling);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Watering);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Planting);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_GeneratingElectricity);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Handiwork);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Gathering);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Lumbering);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Mining);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_MedicineProduction);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Cooling);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Transporting);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Work_Farming);
+
+	// Skills
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Combat);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Mount_Ground);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Mount_Flying);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Mount_Water);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Utility);
+
+	// Status Combat
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Combat_Burn);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Combat_Freeze);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Combat_Poison);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Combat_Darkness);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Combat_Paralysis);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Combat_Wet);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Combat_Entangled);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Combat_Quicksand);
+
+	// Status Health
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Hungry);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Starvation);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Cold);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Sprain);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Overeating);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Ulcer);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Fracture);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Weakness);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Depression);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Health_Homesick);
+
+	// Status Explo
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Explo_Cold);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Explo_Heat);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Explo_Drowning);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Explo_Encumbered1);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Explo_Encumbered2);
+
+	// Element
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Element_None);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Element_Water);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Element_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Element_Grass);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Element_Electric);
+}

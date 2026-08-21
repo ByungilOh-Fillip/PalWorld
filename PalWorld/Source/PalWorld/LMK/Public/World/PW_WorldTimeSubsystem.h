@@ -24,7 +24,7 @@ protected:
 
 private:
 	FTimerHandle TimeUpdateTimerHandle;
-	float CurrentTimeOfDay = 6.0f;
+	float CurrentTimeOfDay = 9.0f;
 	int32 CurrentDay = 1;
 
 	bool CanRunAuthorityTime() const;

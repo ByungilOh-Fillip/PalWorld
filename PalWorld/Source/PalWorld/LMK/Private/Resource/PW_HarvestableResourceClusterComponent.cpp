@@ -1,14 +1,25 @@
 #include "Resource/PW_HarvestableResourceClusterComponent.h"
 
 #include "Engine/World.h"
+
+
+#include "Engine/StaticMesh.h"
+
+#include "PW_GameplayTags.h"
 #include "Interfaces/PW_ItemReceiver.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/Components/PWPlayerInventoryLinkComponent.h"
+#include "Player/Data/PWItemDataAsset.h"
+#include "Resource/PW_HarvestableResourceCluster.h"
 #include "TimerManager.h"
+#include "World/PWWorldItemDropLibrary.h"
+#include "World/PWWorldItemActor.h"
 
 UPW_HarvestableResourceClusterComponent::UPW_HarvestableResourceClusterComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
+	WorldItemActorClass = APWWorldItemActor::StaticClass();
 }
 
 void UPW_HarvestableResourceClusterComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -65,9 +76,10 @@ bool UPW_HarvestableResourceClusterComponent::ApplyHarvestDamageToInstance(
 	const float AppliedDamage = PreviousHealth - CurrentHealth;
 	const int32 RewardMultiplier = ConsumeRewardIntervals(InstanceIndex, AppliedDamage);
 	const int32 GrantedRewardAmount = RewardMultiplier * RewardAmount;
+	const FName GrantedRewardName = ResolveRewardName();
 
-	GrantReward(InstigatorActor, RewardMultiplier);
-	OnInstanceDamaged.Broadcast(InstanceIndex, InstigatorActor, AppliedDamage, RewardName, GrantedRewardAmount);
+	GrantReward(InstigatorActor, RewardMultiplier, InstanceIndex);
+	OnInstanceDamaged.Broadcast(InstanceIndex, InstigatorActor, AppliedDamage, GrantedRewardName, GrantedRewardAmount);
 
 	UE_LOG(
 		LogTemp,
@@ -77,7 +89,7 @@ bool UPW_HarvestableResourceClusterComponent::ApplyHarvestDamageToInstance(
 		InstanceIndex,
 		AppliedDamage,
 		CurrentHealth,
-		*RewardName.ToString(),
+		*GrantedRewardName.ToString(),
 		GrantedRewardAmount);
 
 	if (CurrentHealth <= 0.0f)
@@ -145,12 +157,39 @@ bool UPW_HarvestableResourceClusterComponent::IsValidInstanceIndex(int32 Instanc
 	return CurrentHealthByInstance.IsValidIndex(InstanceIndex);
 }
 
+FName UPW_HarvestableResourceClusterComponent::ResolveRewardName() const
+{
+	if (!RewardName.IsNone())
+	{
+		const FString RewardString = RewardName.ToString();
+		if (RewardString.Contains(TEXT("Rock")) || RewardString.Contains(TEXT("Ore")))
+		{
+			return TEXT("Stone");
+		}
+
+		return RewardName;
+	}
+
+	if (RequiredWorkTag.MatchesTagExact(PW_GameplayTags::Work_Mining))
+	{
+		return TEXT("Stone");
+	}
+
+	if (RequiredWorkTag.MatchesTagExact(PW_GameplayTags::Work_Lumbering))
+	{
+		return TEXT("Wood");
+	}
+
+	return NAME_None;
+}
+
 int32 UPW_HarvestableResourceClusterComponent::ConsumeRewardIntervals(int32 InstanceIndex, float AppliedDamage)
 {
+	const FName GrantedRewardName = ResolveRewardName();
 	if (!RewardDamageProgressByInstance.IsValidIndex(InstanceIndex)
 		|| AppliedDamage <= 0.f
 		|| RewardAmount <= 0
-		|| RewardName.IsNone())
+		|| GrantedRewardName.IsNone())
 	{
 		return 0;
 	}
@@ -172,16 +211,146 @@ int32 UPW_HarvestableResourceClusterComponent::ConsumeRewardIntervals(int32 Inst
 	return RewardMultiplier;
 }
 
-void UPW_HarvestableResourceClusterComponent::GrantReward(AActor* InstigatorActor, int32 RewardMultiplier) const
+AActor* UPW_HarvestableResourceClusterComponent::ResolveRewardReceiver(AActor* InstigatorActor) const
 {
-	const int32 GrantedRewardAmount = RewardMultiplier * RewardAmount;
-	if (!InstigatorActor || GrantedRewardAmount <= 0 || RewardName.IsNone())
+	for (AActor* Candidate = InstigatorActor; Candidate != nullptr; Candidate = Candidate->GetOwner())
+	{
+		if (Candidate->GetClass()->ImplementsInterface(UPW_ItemReceiver::StaticClass()))
+		{
+			return Candidate;
+		}
+	}
+
+	return nullptr;
+}
+
+UPWItemDataAsset* UPW_HarvestableResourceClusterComponent::ResolveRewardItemData(AActor* RewardReceiver, FName GrantedRewardName) const
+{
+	const UPWPlayerInventoryLinkComponent* InventoryComponent = RewardReceiver ? RewardReceiver->FindComponentByClass<UPWPlayerInventoryLinkComponent>() : nullptr;
+	return InventoryComponent ? InventoryComponent->GetItemDefinition(GrantedRewardName) : nullptr;
+}
+
+FVector UPW_HarvestableResourceClusterComponent::GetRewardDropLocation(int32 InstanceIndex) const
+{
+	const AActor* Owner = GetOwner();
+	const APW_HarvestableResourceCluster* ClusterOwner = Cast<APW_HarvestableResourceCluster>(Owner);
+
+	FTransform InstanceTransform;
+	if (ClusterOwner && ClusterOwner->GetInstanceWorldTransform(InstanceIndex, InstanceTransform))
+	{
+		return InstanceTransform.GetLocation() + DropLocationOffset;
+	}
+
+	return Owner ? Owner->GetActorLocation() + DropLocationOffset : DropLocationOffset;
+}
+
+void UPW_HarvestableResourceClusterComponent::GrantRewardDirectDelayed(AActor* RewardReceiver, FName GrantedRewardName, int32 GrantedRewardAmount)
+{
+	if (!RewardReceiver || GrantedRewardName.IsNone() || GrantedRewardAmount <= 0)
 	{
 		return;
 	}
 
-	if (InstigatorActor->GetClass()->ImplementsInterface(UPW_ItemReceiver::StaticClass()))
+	UWorld* World = GetWorld();
+	const float MinDelay = FMath::Max(0.f, AutoCollectMinDelay);
+	const float MaxDelay = FMath::Max(MinDelay, AutoCollectMaxDelay);
+	const float CollectDelay = MaxDelay > 0.f ? FMath::FRandRange(MinDelay, MaxDelay) : 0.f;
+	TWeakObjectPtr<AActor> WeakRewardReceiver = RewardReceiver;
+
+	auto GrantRewardNow = [WeakRewardReceiver, GrantedRewardName, GrantedRewardAmount]()
 	{
-		IPW_ItemReceiver::Execute_ReceiveItem(InstigatorActor, RewardName, GrantedRewardAmount);
+		AActor* Receiver = WeakRewardReceiver.Get();
+		if (Receiver && Receiver->GetClass()->ImplementsInterface(UPW_ItemReceiver::StaticClass()))
+		{
+			IPW_ItemReceiver::Execute_ReceiveItem(Receiver, GrantedRewardName, GrantedRewardAmount);
+		}
+	};
+
+	if (!World || CollectDelay <= 0.f)
+	{
+		GrantRewardNow();
+		return;
 	}
+
+	FTimerHandle AutoCollectTimerHandle;
+	World->GetTimerManager().SetTimer(
+		AutoCollectTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, MoveTemp(GrantRewardNow)),
+		CollectDelay,
+		false);
+}
+
+void UPW_HarvestableResourceClusterComponent::GrantReward(AActor* InstigatorActor, int32 RewardMultiplier, int32 InstanceIndex)
+{
+	const int32 GrantedRewardAmount = RewardMultiplier * RewardAmount;
+	const FName GrantedRewardName = ResolveRewardName();
+	if (!InstigatorActor || GrantedRewardAmount <= 0 || GrantedRewardName.IsNone())
+	{
+		return;
+	}
+
+	AActor* RewardReceiver = ResolveRewardReceiver(InstigatorActor);
+	if (!RewardReceiver)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Harvest cluster reward has no receiver. Instigator=%s Reward=%s x%d"),
+			*InstigatorActor->GetName(),
+			*GrantedRewardName.ToString(),
+			GrantedRewardAmount);
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!bSpawnWorldDrop || !World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Harvest cluster reward uses direct collect fallback. SpawnWorldDrop=%s World=%s"),
+			bSpawnWorldDrop ? TEXT("true") : TEXT("false"),
+			World ? TEXT("valid") : TEXT("none"));
+		GrantRewardDirectDelayed(RewardReceiver, GrantedRewardName, GrantedRewardAmount);
+		return;
+	}
+
+	const FVector ResourceDropLocation = GetRewardDropLocation(InstanceIndex);
+	UPWItemDataAsset* RewardItemData = ResolveRewardItemData(RewardReceiver, GrantedRewardName);
+	if (!UPWWorldItemDropLibrary::CanSpawnWorldItem(RewardItemData))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Harvest cluster reward has no valid world item data. Reward=%s ItemData=%s WorldMesh=%s. Use direct collect fallback."),
+			*GrantedRewardName.ToString(),
+			*GetNameSafe(RewardItemData),
+			RewardItemData && RewardItemData->GetWorldMesh() ? *RewardItemData->GetWorldMesh()->GetName() : TEXT("None"));
+		GrantRewardDirectDelayed(RewardReceiver, GrantedRewardName, GrantedRewardAmount);
+		return;
+	}
+
+	FPWWorldItemDropRequest DropRequest;
+	DropRequest.ItemData = RewardItemData;
+	DropRequest.ItemId = GrantedRewardName;
+	DropRequest.Count = GrantedRewardAmount;
+	DropRequest.PreferredReceiver = RewardReceiver;
+	DropRequest.SourceActor = GetOwner();
+	DropRequest.SourceLocation = ResourceDropLocation;
+	DropRequest.TargetActor = InstigatorActor;
+	DropRequest.TowardTargetMinAlpha = DropTowardInstigatorMinAlpha;
+	DropRequest.TowardTargetMaxAlpha = DropTowardInstigatorMaxAlpha;
+	DropRequest.ScatterRadius = DropScatterRadius;
+	DropRequest.WorldItemActorClass = WorldItemActorClass;
+	DropRequest.bStartAutoCollect = true;
+	DropRequest.AutoCollectMinDelay = AutoCollectMinDelay;
+	DropRequest.AutoCollectMaxDelay = AutoCollectMaxDelay;
+	DropRequest.AutoCollectRadius = AutoCollectRadius;
+
+	APWWorldItemActor* WorldItem = UPWWorldItemDropLibrary::SpawnWorldItemDrop(this, DropRequest);
+	if (!WorldItem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Harvest cluster reward failed to spawn world item. Reward=%s x%d"),
+			*GrantedRewardName.ToString(),
+			GrantedRewardAmount);
+		GrantRewardDirectDelayed(RewardReceiver, GrantedRewardName, GrantedRewardAmount);
+		return;
+	}
+
+	UE_LOG(LogTemp, Verbose, TEXT("Harvest cluster reward spawned world item. Reward=%s x%d Receiver=%s ReceiverDistance=%.1f"),
+		*GrantedRewardName.ToString(),
+		GrantedRewardAmount,
+		*GetNameSafe(RewardReceiver),
+		FVector::Dist(RewardReceiver->GetActorLocation(), WorldItem->GetActorLocation()));
 }

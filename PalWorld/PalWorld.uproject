@@ -26,10 +26,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "UnrealMCP",
-			"Enabled": false
-		},
-		{
 			"Name": "IKRig",
 			"Enabled": true
 		},
@@ -38,11 +34,52 @@
 			"Enabled": true
 		},
 		{
-			"Name": "MCPClientToolset",
+			"Name": "StateTree",
 			"Enabled": true
 		},
 		{
-			"Name": "ModelContextProtocol",
+			"Name": "GameplayStateTree",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemSteam",
+			"Enabled": true
+		},
+		{
+			"Name": "SocketSubsystemSteamIP",
+			"Enabled": true
+		},
+		{
+			"Name": "SteamSockets",
+			"Enabled": true
+		},
+		{
+			"Name": "PythonScriptPlugin",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		},
+		{
+			"Name": "EditorScriptingUtilities",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		},
+		{
+			"Name": "UnrealMCP",
+			"Enabled": false,
+			"TargetAllowList": [
+				"Editor"
+			]
+		},
+		{
+			"Name": "UMGToolSet",
+			"Enabled": true
+		},
+		{
+			"Name": "EditorToolset",
 			"Enabled": true
 		}
 	]

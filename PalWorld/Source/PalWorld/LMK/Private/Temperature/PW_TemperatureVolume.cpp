@@ -1,7 +1,7 @@
 #include "Temperature/PW_TemperatureVolume.h"
 
 #include "Components/BoxComponent.h"
-#include "GameplayTags/PW_GameplayTags.h"
+#include "PW_GameplayTags.h"
 #include "Interfaces/PW_GameplayTagStatusTarget.h"
 #include "World/PW_WorldGameState.h"
 

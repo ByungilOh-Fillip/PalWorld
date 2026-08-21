@@ -12,15 +12,18 @@ class UCameraComponent;
 class USpringArmComponent;
 class UPWPalCommandComponent;
 class UPWPlayerActionComponent;
+class UPW_PlayerBasePlacementComponent;
 class UPWPlayerCaptureComponent;
 class UPWPlayerClimbComponent;
 class UPWPlayerEquipmentComponent;
 class UPWPlayerInteractionComponent;
 class UPWPlayerInventoryLinkComponent;
 class UPWPlayerMountComponent;
+class UPWPlayerPalStorageComponent;
 class UPWPlayerPrimaryActionComponent;
 class UPWPlayerSkillComponent;
 class UPWPlayerStatComponent;
+class UPWPlayerTradeComponent;
 
 UCLASS()
 class PALWORLD_API APWPlayerCharacter : public ACharacter, public IPW_ItemReceiver
@@ -41,8 +44,18 @@ public:
 	void StopCrouch();
 	void StartRoll();
 	void StartPrimaryAction();
+	void StopPrimaryAction();
+	void Interact();
+	void StartInteract();
+	void StopInteract();
+	void StartTeleportInteraction();
+	void ToggleSummonPartyPal();
+	void SelectPreviousPartyPal();
+	void SelectNextPartyPal();
 	bool StartAim();
 	void StopAim();
+	bool StartSphereAim();
+	void ReleaseSphereAim();
 	void SelectNextEquipmentSlot();
 	void SelectPreviousEquipmentSlot();
 
@@ -63,6 +76,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Player|Aim")
 	bool IsAiming() const { return bIsAiming; }
+
+	UFUNCTION(BlueprintPure, Category = "Player|Capture")
+	bool IsSphereAiming() const { return bIsSphereAiming; }
 
 	UFUNCTION(BlueprintPure, Category = "Player|Movement|Climb")
 	bool IsWallClimbing() const;
@@ -97,6 +113,10 @@ public:
 	UPWPlayerEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
 	UPWPlayerInventoryLinkComponent* GetInventoryLinkComponent() const { return InventoryLinkComponent; }
 	UPWPlayerClimbComponent* GetClimbComponent() const { return ClimbComponent; }
+	UPWPlayerCaptureComponent* GetCaptureComponent() const { return CaptureComponent; }
+	UPWPlayerPalStorageComponent* GetPalStorageComponent() const { return PalStorageComponent; }
+	UPWPlayerTradeComponent* GetTradeComponent() const { return TradeComponent; }
+	UPW_PlayerBasePlacementComponent* GetBasePlacementComponent() const { return BasePlacementComponent; }
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Player|Camera")
@@ -124,7 +144,16 @@ private:
 	TObjectPtr<UPWPalCommandComponent> PalCommandComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPWPlayerPalStorageComponent> PalStorageComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPWPlayerTradeComponent> TradeComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerInteractionComponent> InteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
+	TObjectPtr<UPW_PlayerBasePlacementComponent> BasePlacementComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Player|Components")
 	TObjectPtr<UPWPlayerInventoryLinkComponent> InventoryLinkComponent;
@@ -146,6 +175,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement")
 	float CrouchedWalkSpeed = 220.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement")
+	float SphereAimWalkSpeed = 260.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Movement", meta = (ClampMin = "0.0"))
 	float MinSprintActiveSpeed = 10.f;
@@ -171,6 +203,9 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_IsAiming)
 	bool bIsAiming = false;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsSphereAiming)
+	bool bIsSphereAiming = false;
+
 	// 달리기는 커스텀 속도 상태라 CharacterMovement 기본 이동과 별도로 복제한다.
 	UFUNCTION()
 	void OnRep_IsSprinting();
@@ -178,16 +213,25 @@ private:
 	UFUNCTION()
 	void OnRep_IsAiming();
 
+	UFUNCTION()
+	void OnRep_IsSphereAiming();
+
 	UFUNCTION(Server, Reliable)
 	void ServerSetSprinting(bool bNewIsSprinting);
 
 	UFUNCTION(Server, Reliable)
 	void ServerSetAiming(bool bNewIsAiming);
 
+	UFUNCTION(Server, Reliable)
+	void ServerSetSphereAiming(bool bNewIsSphereAiming);
+
 	bool CanStartSprint() const;
 	void SetSprinting(bool bNewIsSprinting);
 	bool CanStartAim() const;
 	void SetAiming(bool bNewIsAiming);
+	bool CanStartSphereAim() const;
+	void SetSphereAiming(bool bNewIsSphereAiming);
+	bool ShouldUseAimCamera() const;
 	bool IsSprintMovementActive() const;
 	void ApplyMovementSpeed();
 	void ApplyRotationMode();

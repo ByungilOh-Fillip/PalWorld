@@ -65,6 +65,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Movement")
 	bool bIsRolling = false;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Capture")
+	bool bIsSphereAiming = false;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Player|Animation|Climb")
 	bool bIsClimbing = false;
 

@@ -1,0 +1,890 @@
+﻿commit 3f1880234477bed533c25c44564ac07a609dcf58
+Author: LuNa <lunau1f320@gmail.com>
+Date:   Fri Jul 10 11:38:35 2026 +0900
+
+    feat(ui): Add BaseCamp teleportation and update UI logic
+    
+    - WorldMapController에 BaseCamp 반경 내 텔레포트 기능(ActiveBaseCampTeleportSource) 추가
+    - APW_BaseCampActor에 IPWMultiInteractable 인터페이스 구현하여 다중 상호작용 지원
+    - MainMenuWidget 최대 플레이어 수 제한 변경(64->20) 및 ShowMultiplayerMenu 로직 추가
+    - PWPlayerController BeginPlay 시 마우스 숨김 및 GameOnly 입력 모드 설정
+    - PalWorld.Build.cs에서 불필요한 StateTreeEditorModule 모듈 종속성 제거
+    - 관련 블루프린트 및 레벨 변경사항 적용
+
+diff --git a/PalWorld/Config/DefaultEngine.ini b/PalWorld/Config/DefaultEngine.ini
+index c0001fc..a33c660 100644
+--- a/PalWorld/Config/DefaultEngine.ini
++++ b/PalWorld/Config/DefaultEngine.ini
+@@ -18,9 +18,9 @@ r.ReflectionMethod=1
+ 
+ r.SkinCache.CompileShaders=True
+ 
+-r.RayTracing=True
++r.RayTracing=False
+ 
+-r.RayTracing.RayTracingProxies.ProjectEnabled=True
++r.RayTracing.RayTracingProxies.ProjectEnabled=False
+ 
+ r.Substrate=True
+ 
+@@ -40,7 +40,7 @@ DefaultGraphicsRHI=DefaultGraphicsRHI_DX11
+ -D3D11TargetedShaderFormats=PCD3D_SM5
+ +D3D11TargetedShaderFormats=PCD3D_SM5
+ bGenerateNaniteFallbackMeshes=True
+-RayTracingMode=Full
++RayTracingMode=Disabled
+ Compiler=Default
+ AudioSampleRate=48000
+ AudioCallbackBufferFrameSize=1024
+diff --git a/PalWorld/Config/DefaultGame.ini b/PalWorld/Config/DefaultGame.ini
+index 8ed6a22..71dae22 100644
+--- a/PalWorld/Config/DefaultGame.ini
++++ b/PalWorld/Config/DefaultGame.ini
+@@ -16,7 +16,6 @@ ProjectID=9F76E62B4F817FF19F09BBB32552A0E3
+ -PrimaryAssetTypesToScan=(PrimaryAssetType="PrimaryAssetLabel",AssetBaseClass=/Script/Engine.PrimaryAssetLabel,bHasBlueprintClasses=False,bIsEditorOnly=True,Directories=((Path="/Game")),SpecificAssets=,Rules=(Priority=-1,ChunkId=-1,bApplyRecursively=True,CookRule=Unknown))
+ +PrimaryAssetTypesToScan=(PrimaryAssetType="Map",AssetBaseClass="/Script/Engine.World",bHasBlueprintClasses=False,bIsEditorOnly=True,Directories=((Path="/Game/Maps")),SpecificAssets=,Rules=(Priority=-1,ChunkId=-1,bApplyRecursively=True,CookRule=Unknown))
+ +PrimaryAssetTypesToScan=(PrimaryAssetType="PrimaryAssetLabel",AssetBaseClass="/Script/Engine.PrimaryAssetLabel",bHasBlueprintClasses=False,bIsEditorOnly=True,Directories=((Path="/Game")),SpecificAssets=,Rules=(Priority=-1,ChunkId=-1,bApplyRecursively=True,CookRule=Unknown))
+-+PrimaryAssetTypesToScan=(PrimaryAssetType="GameFeatureData",AssetBaseClass="/Script/GameFeatures.GameFeatureData",bHasBlueprintClasses=False,bIsEditorOnly=False,Directories=,SpecificAssets=,Rules=(Priority=-1,ChunkId=-1,bApplyRecursively=True,CookRule=AlwaysCook))
+ bOnlyCookProductionAssets=False
+ bShouldManagerDetermineTypeAndName=False
+ bShouldGuessTypeAndNameInEditor=True
+@@ -24,3 +23,15 @@ bShouldAcquireMissingChunksOnLoad=False
+ bShouldWarnAboutInvalidAssets=True
+ MetaDataTagsForAssetRegistry=()
+ 
++[/Script/UnrealEd.ProjectPackagingSettings]
++BuildConfiguration=PPBC_Development
++FullRebuild=True
++UsePakFile=True
++bUseIoStore=True
++IncludePrerequisites=True
+++MapsToCook=(FilePath="/Game/_Private/LMK/Menu/MenuMap")
+++MapsToCook=(FilePath="/Game/_Private/LMK/Levels/Palworld")
+++DirectoriesToAlwaysCook=(Path="/Game/_Private/LMK/UI")
+++DirectoriesToAlwaysCook=(Path="/Game/_Private/LMK/Asset/EasyBuildingSystem")
+++DirectoriesToAlwaysCook=(Path="/Game/PJH/Data")
++
+diff --git a/PalWorld/Content/PJH/Blueprints/BP_GameMode.uasset b/PalWorld/Content/PJH/Blueprints/BP_GameMode.uasset
+deleted file mode 100644
+index 673ca3d..0000000
+--- a/PalWorld/Content/PJH/Blueprints/BP_GameMode.uasset
++++ /dev/null
+@@ -1,3 +0,0 @@
+-version https://git-lfs.github.com/spec/v1
+-oid sha256:e70b2ae27c09ac8b665da8c72fff942bf2328ebb22a41d3fec7d5b12ddc6ba48
+-size 250
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material.uasset b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material.uasset
+new file mode 100644
+index 0000000..dab27d4
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:08572a423eb2c2665b05458914a26d7b170166046558b289ba25e7fd34e82965
++size 85192
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material_011.uasset b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material_011.uasset
+new file mode 100644
+index 0000000..377152e
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material_011.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:70626081208621e23f9b902ad207aba5c335ba3c194184f6b63ad2f2798967fb
++size 68180
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material_013.uasset b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material_013.uasset
+new file mode 100644
+index 0000000..4e82317
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Materials/Material_013.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:0d565a565b1d24a8339894a1d25b811bd73acc1a1472927efee5dd72a6e36b2c
++size 61871
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/StaticMeshes/Display_Textured_Blender.uasset b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/StaticMeshes/Display_Textured_Blender.uasset
+new file mode 100644
+index 0000000..07643d8
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/StaticMeshes/Display_Textured_Blender.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:081c2f550d77dd168c945b3357fd486c304b02d12171aee93443c9bf13b6627f
++size 661721
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/360_F_277713893_hbXp4VviXLvR9dl3NN0RDURilsxfKu3s.uasset b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/360_F_277713893_hbXp4VviXLvR9dl3NN0RDURilsxfKu3s.uasset
+new file mode 100644
+index 0000000..5d01720
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/360_F_277713893_hbXp4VviXLvR9dl3NN0RDURilsxfKu3s.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:22ca20b05c212548ab3bb548397074fafb6b3906de761bac58012069af0d64c5
++size 384914
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_diffuse.uasset b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_diffuse.uasset
+new file mode 100644
+index 0000000..3fad988
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_diffuse.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:9b76e105f49910d0dea7c9e1cfe7eae3cdce7bc9335cc7d0ee80af0574e0d3e4
++size 1764050
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_metalness-Display_tesxtured_from_3d_coat_roughness.uasset b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_metalness-Display_tesxtured_from_3d_coat_roughness.uasset
+new file mode 100644
+index 0000000..1b60b06
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_metalness-Display_tesxtured_from_3d_coat_roughness.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:ebe58957c8d68e8c836f7201bfdc9973c397b6f3616b60caeaeb5a8d1b903702
++size 1250167
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_normalmap.uasset b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_normalmap.uasset
+new file mode 100644
+index 0000000..4c8ceb5
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Display_Terminal/Display_Textured_Blender/Textures/Display_tesxtured_from_3d_coat_normalmap.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:187787a722d5fc10798b40a8fe04bff7f1655c8e6ca3e44ee49648fe2d9d572a
++size 632568
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/Materials/SwellTorStones02.uasset b/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/Materials/SwellTorStones02.uasset
+new file mode 100644
+index 0000000..5da7430
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/Materials/SwellTorStones02.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:d8c5ae3c7f033733a7f4f33672b8f1f89cf2764bc55ca1df945cb820b42c9dec
++size 67579
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/StaticMeshes/swell_tor_london_bridge_stones.uasset b/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/StaticMeshes/swell_tor_london_bridge_stones.uasset
+new file mode 100644
+index 0000000..8dbe937
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/StaticMeshes/swell_tor_london_bridge_stones.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:c8ce1b88cc7a62b119b6c55b8aae376cbbb5afc584e07ccf5c164634610dc141
++size 39906403
+diff --git a/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/Textures/swell_tor_london_bridge_stones_texture_0.uasset b/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/Textures/swell_tor_london_bridge_stones_texture_0.uasset
+new file mode 100644
+index 0000000..d1c7633
+--- /dev/null
++++ b/PalWorld/Content/_Private/LMK/Asset/Swell_Tor_London_Bridge_Stones/swell_tor_london_bridge_stones/Textures/swell_tor_london_bridge_stones_texture_0.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:2185cef8d8c09788e1c476b70c584821fc7e8d3089c3a5f85613af9c6fef4b18
++size 73420042
+diff --git a/PalWorld/Content/_Private/LMK/BluePrints/BP_PWGameMode.uasset b/PalWorld/Content/_Private/LMK/BluePrints/BP_PWGameMode.uasset
+index 5ba91b7..603b4d8 100644
+--- a/PalWorld/Content/_Private/LMK/BluePrints/BP_PWGameMode.uasset
++++ b/PalWorld/Content/_Private/LMK/BluePrints/BP_PWGameMode.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:b2470b0deb799592ca84941a1a8ebee6fdd3f4d270a4b861136d2dbb257ddcdf
+-size 21970
++oid sha256:4935d7465a42cfbc2e704099b4cb7da9458a9e5de9eac3289302f0eb5b7c5bbe
++size 21969
+diff --git a/PalWorld/Content/_Private/LMK/BluePrints/BP_PW_BaseCamp.uasset b/PalWorld/Content/_Private/LMK/BluePrints/BP_PW_BaseCamp.uasset
+index 5a84965..06c1c50 100644
+--- a/PalWorld/Content/_Private/LMK/BluePrints/BP_PW_BaseCamp.uasset
++++ b/PalWorld/Content/_Private/LMK/BluePrints/BP_PW_BaseCamp.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:21511206b52f91b7ba8d3f5c39dad51e701a1c2f11e1399f7389f43c0363bd07
+-size 31956
++oid sha256:c0bf2c8624f9aeab185e3f5649a38ff6c3bbc93d3c2557bd1fa6878ad1d08801
++size 36745
+diff --git a/PalWorld/Content/_Private/LMK/BluePrints/BP_PW_WildPalSpawner.uasset b/PalWorld/Content/_Private/LMK/BluePrints/BP_PW_WildPalSpawner.uasset
+index 26277b1..71308ed 100644
+--- a/PalWorld/Content/_Private/LMK/BluePrints/BP_PW_WildPalSpawner.uasset
++++ b/PalWorld/Content/_Private/LMK/BluePrints/BP_PW_WildPalSpawner.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:1b9c935a31e2c4f693b67769b24b09db7d56ecc57c97a304f308c22602d03164
+-size 23808
++oid sha256:826f9f9d20ba92d7d3277a6c19bfdc2eaefd94b0d0e8574b98e64dd9401fb8f7
++size 24924
+diff --git a/PalWorld/Content/_Private/LMK/BluePrints/BP_PlayerCharacter_Test_LMK.uasset b/PalWorld/Content/_Private/LMK/BluePrints/BP_PlayerCharacter_Test_LMK.uasset
+index 107ed6d..ccfb2f7 100644
+--- a/PalWorld/Content/_Private/LMK/BluePrints/BP_PlayerCharacter_Test_LMK.uasset
++++ b/PalWorld/Content/_Private/LMK/BluePrints/BP_PlayerCharacter_Test_LMK.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:961956bea14103409215eddd9ab4747174fdf5349421317b5df1dab8a676ee63
+-size 66474
++oid sha256:5d6f8dcafd22b228e8073d58690acca91e0d3b26752472f0231ecdc81c20a1fc
++size 66477
+diff --git a/PalWorld/Content/_Private/LMK/BluePrints/BP_TestMining.uasset b/PalWorld/Content/_Private/LMK/BluePrints/BP_TestMining.uasset
+index 293cc1e..6b2c2ef 100644
+--- a/PalWorld/Content/_Private/LMK/BluePrints/BP_TestMining.uasset
++++ b/PalWorld/Content/_Private/LMK/BluePrints/BP_TestMining.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:55e6fe16d65dd87161dcd80cb2f40a082164e017e56825b1f5274b1b270a8a7d
+-size 39642
++oid sha256:91fa434447bc30f4e017610c934f180db2a9f7b6ed2862de9c2961c736da2fff
++size 38834
+diff --git a/PalWorld/Content/_Private/LMK/BluePrints/BP_TestWildPal.uasset b/PalWorld/Content/_Private/LMK/BluePrints/BP_TestWildPal.uasset
+deleted file mode 100644
+index a8a5f83..0000000
+--- a/PalWorld/Content/_Private/LMK/BluePrints/BP_TestWildPal.uasset
++++ /dev/null
+@@ -1,3 +0,0 @@
+-version https://git-lfs.github.com/spec/v1
+-oid sha256:0ad0f493982b3d5a38784eb5309568b9e139af6108d01dc6f87b57800ed07a8e
+-size 31327
+diff --git a/PalWorld/Content/_Private/LMK/UI/Menu/T_MainMenu_Background.uasset b/PalWorld/Content/_Private/LMK/UI/Menu/T_MainMenu_Background.uasset
+index 73a91bb..5d02dbf 100644
+--- a/PalWorld/Content/_Private/LMK/UI/Menu/T_MainMenu_Background.uasset
++++ b/PalWorld/Content/_Private/LMK/UI/Menu/T_MainMenu_Background.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:1d671a5b7c8a8126dce547b4f64dbb604f7cd81315f798beee0c4474ff4b180b
+-size 3001641
++oid sha256:974aed3c05783f1f978f8fb2a91182da5d28ebf3597f4d8e5dec7ecb390fa5cd
++size 3001783
+diff --git a/PalWorld/Content/_Private/LMK/UI/Menu/T_MainMenu_Background_Source.uasset b/PalWorld/Content/_Private/LMK/UI/Menu/T_MainMenu_Background_Source.uasset
+index f2ef036..5ef09a2 100644
+--- a/PalWorld/Content/_Private/LMK/UI/Menu/T_MainMenu_Background_Source.uasset
++++ b/PalWorld/Content/_Private/LMK/UI/Menu/T_MainMenu_Background_Source.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:62fdc59ced106bf2bb2be43a6161541c867d7919c34cf8b71dc58a22362cd3bd
+-size 3001711
++oid sha256:784f8583b8492f49b8758e3f39b05f241866c3ab5c6ca2d04b4b19b584ea05ad
++size 3001846
+diff --git a/PalWorld/Content/_Private/LMK/UI/Menu/WBP_MainMenu.uasset b/PalWorld/Content/_Private/LMK/UI/Menu/WBP_MainMenu.uasset
+index 2134394..c87e875 100644
+--- a/PalWorld/Content/_Private/LMK/UI/Menu/WBP_MainMenu.uasset
++++ b/PalWorld/Content/_Private/LMK/UI/Menu/WBP_MainMenu.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:2d2d6d0840b08eb0de53c20a2ea7c7fdffcb152367a289081812254421651a36
+-size 20091
++oid sha256:eb446f26e3642b1f8072862cb09945bd94644f24022fd94a199570060f527c24
++size 174074
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/1/O7/MFGD6ELFDEWNM51ZCMEZJF.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/1/O7/MFGD6ELFDEWNM51ZCMEZJF.uasset
+index 4bdd9ca..de77bba 100644
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/1/O7/MFGD6ELFDEWNM51ZCMEZJF.uasset
++++ b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/1/O7/MFGD6ELFDEWNM51ZCMEZJF.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:afe5eadc578246ed784a3586d291ca7ea7b9d40626ba52195890a492c7a4656c
++oid sha256:9e4220077451c5cf35458e520e62aaf5a14eb362131307912fe6a4088babac4a
+ size 6981
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/2/KG/DZM6IRPB5HG7MX0E70FQLN.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/2/KG/DZM6IRPB5HG7MX0E70FQLN.uasset
+deleted file mode 100644
+index b758d7a..0000000
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/2/KG/DZM6IRPB5HG7MX0E70FQLN.uasset
++++ /dev/null
+@@ -1,3 +0,0 @@
+-version https://git-lfs.github.com/spec/v1
+-oid sha256:a5d5bfe72d9d4f623f6aeca4a258747cf7ecd5d787096b9917367098ab33272f
+-size 4464
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/2/X5/1JL39KMS0TQWJWMN8QU6N2.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/2/X5/1JL39KMS0TQWJWMN8QU6N2.uasset
+index 8f4ff24..d2a2693 100644
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/2/X5/1JL39KMS0TQWJWMN8QU6N2.uasset
++++ b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/2/X5/1JL39KMS0TQWJWMN8QU6N2.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:389acf15226fb4dfd8e55b2de2acc48ed357efb6e6ea15c9f2f669de1600c642
++oid sha256:954f40812c163b092a31112aedd3e3c95261d377501361098c3b35806e7846dd
+ size 4172
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/MF/D2UXBYFF4PM6HK93NZGJTK.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/MF/D2UXBYFF4PM6HK93NZGJTK.uasset
+new file mode 100644
+index 0000000..fe8a6ae
+--- /dev/null
++++ b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/MF/D2UXBYFF4PM6HK93NZGJTK.uasset
+@@ -0,0 +1,3 @@
++version https://git-lfs.github.com/spec/v1
++oid sha256:a4efc9412916f1d2e2f400ccbf2593ba79a17f8dbac347d48ae892814b3bb2db
++size 6006
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/N4/B3U5HJQ611U567TE84B2GT.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/N4/B3U5HJQ611U567TE84B2GT.uasset
+index 305cde8..a34fd2c 100644
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/N4/B3U5HJQ611U567TE84B2GT.uasset
++++ b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/3/N4/B3U5HJQ611U567TE84B2GT.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:27b82c4815446e4a65396ea831173e2c314d8d8203aedac062a5cdded4402ced
+-size 5586
++oid sha256:d67e14a6c737c6578b74a0caca18dbce19aa5d3f2f13497033ca34113668dec3
++size 5700
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/6/TZ/MCHYNLP4SS4JDA9UTRV21Z.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/6/TZ/MCHYNLP4SS4JDA9UTRV21Z.uasset
+index 2e85724..3793bff 100644
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/6/TZ/MCHYNLP4SS4JDA9UTRV21Z.uasset
++++ b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/6/TZ/MCHYNLP4SS4JDA9UTRV21Z.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:00a81a5183bc088e240b7421d6a91730b19587f591c833c5264d52cf9d577439
++oid sha256:4e1736208ae86db2edf822f8530f97cf50e838b62387b7d4e571d370e0aee3ad
+ size 5542
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/8/M9/K33YEDCBJRZUV7RBIDBMJX.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/8/M9/K33YEDCBJRZUV7RBIDBMJX.uasset
+index 0bb7dcb..1073a60 100644
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/8/M9/K33YEDCBJRZUV7RBIDBMJX.uasset
++++ b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/8/M9/K33YEDCBJRZUV7RBIDBMJX.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:5b03b1b1504fb5f01542f947a60a41baee762bbff6f18c04a55972651ec16567
+-size 5768
++oid sha256:936e91c072e06a814c16135377aeb8cb0562a28f2177a61e974d49917cbb5a03
++size 5882
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/C/SN/R4HMJZHDJ70V1KGKEP7L3L.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/C/SN/R4HMJZHDJ70V1KGKEP7L3L.uasset
+index cde3927..bf22dda 100644
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/C/SN/R4HMJZHDJ70V1KGKEP7L3L.uasset
++++ b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/C/SN/R4HMJZHDJ70V1KGKEP7L3L.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:3d1d5c5fc66b818cb105b60296d38e1d84d2b6ac79ab7fd5ff8a8fb94c8bbbba
+-size 4288
++oid sha256:334fb40a1e6a9753249ccd974f3f4aa1368e63799545c8012a7fcdd4cfaa9b59
++size 4277
+diff --git a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/D/6T/D08OPCFZWH6UJ4CECV8MLB.uasset b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/D/6T/D08OPCFZWH6UJ4CECV8MLB.uasset
+index e03571b..95253a2 100644
+--- a/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/D/6T/D08OPCFZWH6UJ4CECV8MLB.uasset
++++ b/PalWorld/Content/__ExternalActors__/_Private/LMK/Levels/Palworld/D/6T/D08OPCFZWH6UJ4CECV8MLB.uasset
+@@ -1,3 +1,3 @@
+ version https://git-lfs.github.com/spec/v1
+-oid sha256:63fd27ccd7bb530ff35f5049fb7d624e577b8476088cb23a88c6b5c52484c7f8
+-size 6731
++oid sha256:79963e4cf82faf707cce8932045551d3b735220c88353798c314a56d634c34ef
++size 6845
+diff --git a/PalWorld/PalWorld.uproject b/PalWorld/PalWorld.uproject
+index a235836..6fba611 100644
+--- a/PalWorld/PalWorld.uproject
++++ b/PalWorld/PalWorld.uproject
+@@ -74,6 +74,14 @@
+ 		{
+ 			"Name": "ModelContextProtocol",
+ 			"Enabled": true
++		},
++		{
++			"Name": "UMGToolSet",
++			"Enabled": true
++		},
++		{
++			"Name": "EditorToolset",
++			"Enabled": true
+ 		}
+ 	]
+ }
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_BaseCampActor.cpp b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_BaseCampActor.cpp
+index ad465ca..5fbef36 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_BaseCampActor.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_BaseCampActor.cpp
+@@ -19,6 +19,7 @@
+ #include "Net/UnrealNetwork.h"
+ #include "PWInteractableTargetComponent.h"
+ #include "PWSkillComponent.h"
++#include "UI/PW_WorldMapControllerComponent.h"
+ 
+ APW_BaseCampActor::APW_BaseCampActor()
+ {
+@@ -340,3 +341,33 @@ void APW_BaseCampActor::SetBaseActiveState(bool bNewHasActiveVisitor)
+ 		BaseNavigationComponent->SetBaseNavigationActive(bHasActiveVisitor);
+ 	}
+ }
++
++bool APW_BaseCampActor::CanInteractAction_Implementation(AActor* Interactor, FName ActionId) const
++{
++	return CanInteract_Implementation(Interactor);
++}
++
++bool APW_BaseCampActor::InteractAction_Implementation(AActor* Interactor, FName ActionId)
++{
++	if (!CanInteractAction_Implementation(Interactor, ActionId))
++	{
++		return false;
++	}
++
++	if (ActionId == TEXT("Teleport"))
++	{
++		const APawn* InteractingPawn = Cast<APawn>(Interactor);
++		APlayerController* PlayerController = InteractingPawn != nullptr ? Cast<APlayerController>(InteractingPawn->GetController()) : Cast<APlayerController>(Interactor);
++		UPW_WorldMapControllerComponent* WorldMapController = PlayerController != nullptr ? PlayerController->FindComponentByClass<UPW_WorldMapControllerComponent>() : nullptr;
++		if (WorldMapController == nullptr)
++		{
++			return false;
++		}
++
++		WorldMapController->SetActiveBaseCampTeleportSource(this);
++		WorldMapController->ClientShowTeleportMap();
++		return true;
++	}
++
++	return Interact_Implementation(Interactor);
++}
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingBase.cpp b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingBase.cpp
+index 62c6865..bb4c3e1 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingBase.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/Base/PW_WorkBuildingBase.cpp
+@@ -6,10 +6,14 @@
+ #include "Base/PW_BaseWorkTargetRegistryComponent.h"
+ #include "Base/PW_InventoryComponent.h"
+ #include "Base/PW_WorkBuildingComponent.h"
++#include "Components/SceneComponent.h"
+ #include "Components/StaticMeshComponent.h"
+ #include "Engine/Engine.h"
+ #include "Net/UnrealNetwork.h"
+ #include "PWInteractableTargetComponent.h"
++#include "Kismet/GameplayStatics.h"
++#include "GameFramework/Character.h"
++#include "Player/Components/PWPlayerInventoryLinkComponent.h"
+ 
+ APW_WorkBuildingBase::APW_WorkBuildingBase()
+ {
+@@ -18,8 +22,11 @@ APW_WorkBuildingBase::APW_WorkBuildingBase()
+ 	SetNetCullDistanceSquared(FMath::Square(8000.0f));
+ 	SetNetUpdateFrequency(2.0f);
+ 
++	USceneComponent* SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
++	SetRootComponent(SceneRoot);
++
+ 	BuildingMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BuildingMesh"));
+-	SetRootComponent(BuildingMesh);
++	BuildingMesh->SetupAttachment(SceneRoot);
+ 	BuildingMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+ 	BuildingMesh->SetCanEverAffectNavigation(true);
+ 
+@@ -224,11 +231,15 @@ void APW_WorkBuildingBase::HandleWorkCompleted()
+ 		return;
+ 	}
+ 
+-	const FPW_WorkRecipe* Recipe = FindRecipe(WorkBuildingComponent->GetWorkId());
++	FName CompletedWorkId = WorkBuildingComponent->GetWorkId();
++	const FPW_WorkRecipe* Recipe = FindRecipe(CompletedWorkId);
+ 	if (Recipe != nullptr)
+ 	{
+ 		AddCraftResult(*Recipe);
+ 	}
++
++	// Reset the work progress so it can be repeated
++	WorkBuildingComponent->ReserveWork(CompletedWorkId);
+ }
+ 
+ void APW_WorkBuildingBase::RegisterWithBaseCamp()
+@@ -373,6 +384,17 @@ void APW_WorkBuildingBase::AddCraftResult(const FPW_WorkRecipe& Recipe)
+ 		return;
+ 	}
+ 
++	ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(this, 0);
++	if (PlayerCharacter != nullptr)
++	{
++		UPWPlayerInventoryLinkComponent* PlayerInventory = PlayerCharacter->FindComponentByClass<UPWPlayerInventoryLinkComponent>();
++		if (PlayerInventory != nullptr)
++		{
++			PlayerInventory->AddItem(Recipe.ResultItem.ItemId, 1);
++			return; // Successfully added to player inventory
++		}
++	}
++
+ 	UPW_BaseInventoryAggregatorComponent* InventoryAggregator = OwningBaseCamp != nullptr
+ 		? OwningBaseCamp->GetInventoryAggregatorComponent()
+ 		: nullptr;
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/Session/PW_SessionSubsystem.cpp b/PalWorld/Source/PalWorld/LMK/Private/Session/PW_SessionSubsystem.cpp
+index 34195bf..40e8759 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/Session/PW_SessionSubsystem.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/Session/PW_SessionSubsystem.cpp
+@@ -41,7 +41,14 @@ void UPW_SessionSubsystem::CreateListenSession(const FString& RoomName, const FS
+ 	if (SessionInterface->GetNamedSession(NAME_GameSession) != nullptr)
+ 	{
+ 		bCreateSessionAfterDestroy = true;
+-		SessionInterface->DestroySession(NAME_GameSession);
++		if (!SessionInterface->DestroySession(NAME_GameSession))
++		{
++			bCreateSessionAfterDestroy = false;
++			BroadcastOperationFinished(
++				EPW_SessionOperation::Create,
++				false,
++				NSLOCTEXT("PWSession", "CreateDestroyStartFailed", "Failed to destroy the existing session before creating a new one."));
++		}
+ 		return;
+ 	}
+ 
+@@ -325,6 +332,12 @@ void UPW_SessionSubsystem::HandleDestroySessionComplete(FName SessionName, bool
+ 			CreateListenSessionInternal(PendingRoomName, PendingHostNickname, PendingMaxPlayers);
+ 			return;
+ 		}
++
++		BroadcastOperationFinished(
++			EPW_SessionOperation::Create,
++			false,
++			NSLOCTEXT("PWSession", "CreateDestroyFailed", "Failed to destroy the existing session before creating a new one."));
++		return;
+ 	}
+ 
+ 	BroadcastOperationFinished(
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/UI/PW_MainMenuWidget.cpp b/PalWorld/Source/PalWorld/LMK/Private/UI/PW_MainMenuWidget.cpp
+index 2c70004..4295b38 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/UI/PW_MainMenuWidget.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/UI/PW_MainMenuWidget.cpp
+@@ -33,6 +33,7 @@ namespace
+ 	constexpr int32 FindRoomPageIndex = 3;
+ 	constexpr int32 DedicatedUnavailablePageIndex = 4;
+ 	constexpr int32 OptionsPageIndex = 5;
++	constexpr int32 MaxListenServerPlayers = 20;
+ }
+ 
+ TSharedRef<SWidget> UPW_MainMenuWidget::RebuildWidget()
+@@ -60,7 +61,13 @@ void UPW_MainMenuWidget::NativeConstruct()
+ 	if (SpinBox_MaxPlayers)
+ 	{
+ 		SpinBox_MaxPlayers->SetMinValue(2.0f);
+-		SpinBox_MaxPlayers->SetMaxValue(64.0f);
++		SpinBox_MaxPlayers->SetMaxValue(MaxListenServerPlayers);
++		SpinBox_MaxPlayers->SetMinSliderValue(2.0f);
++		SpinBox_MaxPlayers->SetMaxSliderValue(MaxListenServerPlayers);
++		SpinBox_MaxPlayers->SetDelta(1.0f);
++		SpinBox_MaxPlayers->SetMinFractionalDigits(0);
++		SpinBox_MaxPlayers->SetMaxFractionalDigits(0);
++		SpinBox_MaxPlayers->SetAlwaysUsesDeltaSnap(true);
+ 		SpinBox_MaxPlayers->SetValue(DefaultMaxPlayers);
+ 	}
+ 
+@@ -83,8 +90,8 @@ void UPW_MainMenuWidget::ShowMainTitle()
+ 
+ void UPW_MainMenuWidget::ShowPlayModeSelect()
+ {
++	SetMultiplayerEnabled(false);
+ 	SetPageIndex(PlayModeSelectPageIndex);
+-	RefreshPlayModeControls();
+ }
+ 
+ void UPW_MainMenuWidget::ShowCreateRoom()
+@@ -155,11 +162,6 @@ void UPW_MainMenuWidget::BindButtonEvents()
+ 		Button_MultiplayerOn->OnClicked.AddUniqueDynamic(this, &UPW_MainMenuWidget::HandleMultiplayerOnClicked);
+ 	}
+ 
+-	if (Button_PlayStart)
+-	{
+-		Button_PlayStart->OnClicked.AddUniqueDynamic(this, &UPW_MainMenuWidget::HandlePlayStartClicked);
+-	}
+-
+ 	if (Button_PlayBack)
+ 	{
+ 		Button_PlayBack->OnClicked.AddUniqueDynamic(this, &UPW_MainMenuWidget::HandlePlayBackClicked);
+@@ -248,11 +250,6 @@ void UPW_MainMenuWidget::UnbindButtonEvents()
+ 		Button_MultiplayerOn->OnClicked.RemoveDynamic(this, &UPW_MainMenuWidget::HandleMultiplayerOnClicked);
+ 	}
+ 
+-	if (Button_PlayStart)
+-	{
+-		Button_PlayStart->OnClicked.RemoveDynamic(this, &UPW_MainMenuWidget::HandlePlayStartClicked);
+-	}
+-
+ 	if (Button_PlayBack)
+ 	{
+ 		Button_PlayBack->OnClicked.RemoveDynamic(this, &UPW_MainMenuWidget::HandlePlayBackClicked);
+@@ -347,9 +344,14 @@ void UPW_MainMenuWidget::SetPageIndex(int32 PageIndex)
+ void UPW_MainMenuWidget::RefreshPlayModeControls()
+ {
+ 	const bool bHasNickname = !GetNickname().IsEmpty();
+-	if (Button_PlayStart)
++	if (Button_MultiplayerOff)
+ 	{
+-		Button_PlayStart->SetVisibility(bMultiplayerEnabled ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
++		Button_MultiplayerOff->SetVisibility(bMultiplayerEnabled ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
++	}
++
++	if (Button_MultiplayerOn)
++	{
++		Button_MultiplayerOn->SetVisibility(bMultiplayerEnabled ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+ 	}
+ 
+ 	if (Button_CreateRoom)
+@@ -370,6 +372,12 @@ void UPW_MainMenuWidget::RefreshPlayModeControls()
+ 	}
+ }
+ 
++void UPW_MainMenuWidget::ShowMultiplayerMenu()
++{
++	SetMultiplayerEnabled(true);
++	SetPageIndex(PlayModeSelectPageIndex);
++}
++
+ void UPW_MainMenuWidget::RefreshRoomDefaults()
+ {
+ 	if (Edit_RoomName && Edit_RoomName->GetText().IsEmpty())
+@@ -402,6 +410,11 @@ void UPW_MainMenuWidget::SetSessionButtonsEnabled(bool bEnabled)
+ 		Button_RefreshSessions->SetIsEnabled(bEnabled);
+ 	}
+ 
++	if (Scroll_RoomList)
++	{
++		Scroll_RoomList->SetIsEnabled(bEnabled);
++	}
++
+ 	RefreshPlayModeControls();
+ }
+ 
+@@ -556,7 +569,6 @@ UWidget* UPW_MainMenuWidget::BuildPlayModeSelectPage()
+ 	PageBox->AddChildToVerticalBox(MakeMenuText(NSLOCTEXT("PWMainMenu", "FallbackPlayMode", "플레이 방식"), 30));
+ 	Button_MultiplayerOff = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackSolo", "싱글 플레이"));
+ 	Button_MultiplayerOn = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackMulti", "멀티 플레이"));
+-	Button_PlayStart = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackStartWorld", "월드 시작"));
+ 	Button_CreateRoom = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackCreateRoom", "방 만들기"));
+ 	Button_FindRoom = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackFindRoom", "방 찾기"));
+ 	Button_PlayBack = MakeMenuButton(NSLOCTEXT("PWMainMenu", "FallbackBack", "뒤로"));
+@@ -565,7 +577,6 @@ UWidget* UPW_MainMenuWidget::BuildPlayModeSelectPage()
+ 	PageBox->AddChildToVerticalBox(Button_MultiplayerOff);
+ 	PageBox->AddChildToVerticalBox(Button_MultiplayerOn);
+ 	PageBox->AddChildToVerticalBox(Edit_Nickname);
+-	PageBox->AddChildToVerticalBox(Button_PlayStart);
+ 	PageBox->AddChildToVerticalBox(Button_CreateRoom);
+ 	PageBox->AddChildToVerticalBox(Button_FindRoom);
+ 	PageBox->AddChildToVerticalBox(Button_PlayBack);
+@@ -682,20 +693,22 @@ void UPW_MainMenuWidget::HandleQuitGameClicked()
+ void UPW_MainMenuWidget::HandleMultiplayerOffClicked()
+ {
+ 	SetMultiplayerEnabled(false);
++	UGameplayStatics::OpenLevel(this, GameMapName, true, GameMapTravelOptions);
+ }
+ 
+ void UPW_MainMenuWidget::HandleMultiplayerOnClicked()
+ {
+-	SetMultiplayerEnabled(true);
+-}
+-
+-void UPW_MainMenuWidget::HandlePlayStartClicked()
+-{
+-	UGameplayStatics::OpenLevel(this, GameMapName, true, GameMapTravelOptions);
++	ShowMultiplayerMenu();
+ }
+ 
+ void UPW_MainMenuWidget::HandlePlayBackClicked()
+ {
++	if (bMultiplayerEnabled)
++	{
++		ShowPlayModeSelect();
++		return;
++	}
++
+ 	ShowMainTitle();
+ }
+ 
+@@ -732,7 +745,7 @@ void UPW_MainMenuWidget::HandleCreateRoomStartClicked()
+ 
+ void UPW_MainMenuWidget::HandleCreateRoomBackClicked()
+ {
+-	ShowPlayModeSelect();
++	ShowMultiplayerMenu();
+ }
+ 
+ void UPW_MainMenuWidget::HandleRefreshSessionsClicked()
+@@ -755,7 +768,7 @@ void UPW_MainMenuWidget::HandleRefreshSessionsClicked()
+ 
+ void UPW_MainMenuWidget::HandleFindRoomBackClicked()
+ {
+-	ShowPlayModeSelect();
++	ShowMultiplayerMenu();
+ }
+ 
+ void UPW_MainMenuWidget::HandleDedicatedBackClicked()
+@@ -811,6 +824,11 @@ void UPW_MainMenuWidget::HandleSessionSearchStateChanged(bool bSearching)
+ 
+ void UPW_MainMenuWidget::HandleSessionSlotJoinRequested(int32 SearchIndex)
+ {
++	if (bSessionOperationInProgress)
++	{
++		return;
++	}
++
+ 	if (GetNickname().IsEmpty())
+ 	{
+ 		SetStatusMessage(NSLOCTEXT("PWMainMenu", "JoinNicknameRequired", "Enter a nickname first."));
+diff --git a/PalWorld/Source/PalWorld/LMK/Private/UI/PW_WorldMapControllerComponent.cpp b/PalWorld/Source/PalWorld/LMK/Private/UI/PW_WorldMapControllerComponent.cpp
+index 9c1f71a..3cee7c6 100644
+--- a/PalWorld/Source/PalWorld/LMK/Private/UI/PW_WorldMapControllerComponent.cpp
++++ b/PalWorld/Source/PalWorld/LMK/Private/UI/PW_WorldMapControllerComponent.cpp
+@@ -6,6 +6,7 @@
+ #include "GameFramework/PlayerController.h"
+ #include "Map/PW_MapSubsystem.h"
+ #include "Map/PW_TeleportPointActor.h"
++#include "Base/PW_BaseCampActor.h"
+ #include "TimerManager.h"
+ #include "UI/PW_WorldMapWidget.h"
+ 
+@@ -173,6 +174,18 @@ void UPW_WorldMapControllerComponent::SetActiveTeleportSource(APW_TeleportPointA
+ 	}
+ 
+ 	ActiveTeleportSource = TeleportSource;
++	ActiveBaseCampTeleportSource = nullptr;
++}
++
++void UPW_WorldMapControllerComponent::SetActiveBaseCampTeleportSource(APW_BaseCampActor* BaseCampSource)
++{
++	if (GetOwner() == nullptr || !GetOwner()->HasAuthority())
++	{
++		return;
++	}
++
++	ActiveBaseCampTeleportSource = BaseCampSource;
++	ActiveTeleportSource = nullptr;
+ }
+ 
+ void UPW_WorldMapControllerComponent::ClientShowTeleportMap_Implementation()
+@@ -304,11 +317,29 @@ void UPW_WorldMapControllerComponent::ApplyHideInputMode()
+ bool UPW_WorldMapControllerComponent::CanUseActiveTeleportSource() const
+ {
+ 	const APawn* Pawn = GetControlledPawn();
+-	return ActiveTeleportSource != nullptr
+-		&& IsValid(ActiveTeleportSource)
+-		&& ActiveTeleportSource->IsDiscovered()
+-		&& ActiveTeleportSource->CanTeleport()
+-		&& ActiveTeleportSource->CanUseAsTeleportSource(const_cast<APawn*>(Pawn));
++	
++	if (ActiveTeleportSource != nullptr && IsValid(ActiveTeleportSource))
++	{
++		return ActiveTeleportSource->IsDiscovered()
++			&& ActiveTeleportSource->CanTeleport()
++			&& ActiveTeleportSource->CanUseAsTeleportSource(const_cast<APawn*>(Pawn));
++	}
++	
++	if (ActiveBaseCampTeleportSource != nullptr && IsValid(ActiveBaseCampTeleportSource))
++	{
++		if (Pawn == nullptr)
++		{
++			return false;
++		}
++
++		float Radius = ActiveBaseCampTeleportSource->GetCampRadius();
++		FVector Center = ActiveBaseCampTeleportSource->GetActorLocation();
++		FVector PawnLoc = Pawn->GetActorLocation();
++
++		return FVector::DistSquaredXY(Center, PawnLoc) <= (Radius * Radius);
++	}
++
++	return false;
+ }
+ 
+ void UPW_WorldMapControllerComponent::ServerRequestTeleportToMarker_Implementation(EPW_MapMarkerType MarkerType, FName MarkerId)
+@@ -360,4 +391,5 @@ void UPW_WorldMapControllerComponent::ServerRequestTeleportToMarker_Implementati
+ 	}
+ 
+ 	ActiveTeleportSource = nullptr;
++	ActiveBaseCampTeleportSource = nullptr;
+ }
+diff --git a/PalWorld/Source/PalWorld/LMK/Public/Base/PW_BaseCampActor.h b/PalWorld/Source/PalWorld/LMK/Public/Base/PW_BaseCampActor.h
+index 2cf6a8d..d33d3b1 100644
+--- a/PalWorld/Source/PalWorld/LMK/Public/Base/PW_BaseCampActor.h
++++ b/PalWorld/Source/PalWorld/LMK/Public/Base/PW_BaseCampActor.h
+@@ -4,6 +4,7 @@
+ #include "Base/PW_BaseTypes.h"
+ #include "GameFramework/Actor.h"
+ #include "PWInteractable.h"
++#include "PWMultiInteractable.h"
+ #include "PW_BaseCampActor.generated.h"
+ 
+ class UPW_BaseInventoryAggregatorComponent;
+@@ -17,7 +18,7 @@ class UNavigationInvokerComponent;
+ class USceneComponent;
+ 
+ UCLASS(Blueprintable)
+-class PALWORLD_API APW_BaseCampActor : public AActor, public IPWInteractable
++class PALWORLD_API APW_BaseCampActor : public AActor, public IPWInteractable, public IPWMultiInteractable
+ {
+ 	GENERATED_BODY()
+ 
+@@ -32,6 +33,8 @@ public:
+ 	virtual bool Interact_Implementation(AActor* Interactor) override;
+ 	virtual FText GetInteractionPrompt_Implementation() const override;
+ 	virtual int32 GetInteractionPriority_Implementation() const override;
++	virtual bool CanInteractAction_Implementation(AActor* Interactor, FName ActionId) const override;
++	virtual bool InteractAction_Implementation(AActor* Interactor, FName ActionId) override;
+ 
+ 	UFUNCTION(BlueprintPure, Category = "PW|Base")
+ 	FPW_BaseCampId GetBaseCampId() const { return BaseCampId; }
+diff --git a/PalWorld/Source/PalWorld/LMK/Public/UI/PW_MainMenuWidget.h b/PalWorld/Source/PalWorld/LMK/Public/UI/PW_MainMenuWidget.h
+index 8b4fc39..19a41ef 100644
+--- a/PalWorld/Source/PalWorld/LMK/Public/UI/PW_MainMenuWidget.h
++++ b/PalWorld/Source/PalWorld/LMK/Public/UI/PW_MainMenuWidget.h
+@@ -67,7 +67,7 @@ private:
+ 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Main Menu", meta = (AllowPrivateAccess = "true"))
+ 	FString GameMapTravelOptions = TEXT("game=/Game/_Private/LMK/BluePrints/BP_PWGameMode.BP_PWGameMode_C");
+ 
+-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Main Menu", meta = (AllowPrivateAccess = "true", ClampMin = "2", ClampMax = "64"))
++	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Main Menu", meta = (AllowPrivateAccess = "true", ClampMin = "2", ClampMax = "20"))
+ 	int32 DefaultMaxPlayers = 4;
+ 
+ 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PW|Main Menu", meta = (AllowPrivateAccess = "true"))
+@@ -100,9 +100,6 @@ private:
+ 	UPROPERTY(meta = (BindWidgetOptional))
+ 	TObjectPtr<UButton> Button_MultiplayerOn;
+ 
+-	UPROPERTY(meta = (BindWidgetOptional))
+-	TObjectPtr<UButton> Button_PlayStart;
+-
+ 	UPROPERTY(meta = (BindWidgetOptional))
+ 	TObjectPtr<UButton> Button_PlayBack;
+ 
+@@ -157,6 +154,7 @@ private:
+ 	void UnbindSessionEvents();
+ 	void SetPageIndex(int32 PageIndex);
+ 	void RefreshPlayModeControls();
++	void ShowMultiplayerMenu();
+ 	void RefreshRoomDefaults();
+ 	void SetStatusMessage(const FText& Message);
+ 	void SetSessionButtonsEnabled(bool bEnabled);
+@@ -197,9 +195,6 @@ private:
+ 	UFUNCTION()
+ 	void HandleMultiplayerOnClicked();
+ 
+-	UFUNCTION()
+-	void HandlePlayStartClicked();
+-
+ 	UFUNCTION()
+ 	void HandlePlayBackClicked();
+ 
+diff --git a/PalWorld/Source/PalWorld/LMK/Public/UI/PW_WorldMapControllerComponent.h b/PalWorld/Source/PalWorld/LMK/Public/UI/PW_WorldMapControllerComponent.h
+index e24e098..a9abd9e 100644
+--- a/PalWorld/Source/PalWorld/LMK/Public/UI/PW_WorldMapControllerComponent.h
++++ b/PalWorld/Source/PalWorld/LMK/Public/UI/PW_WorldMapControllerComponent.h
+@@ -8,6 +8,7 @@
+ class UPW_WorldMapWidget;
+ class UPW_MapSubsystem;
+ class APW_TeleportPointActor;
++class APW_BaseCampActor;
+ 
+ UCLASS(ClassGroup = (PW), meta = (BlueprintSpawnableComponent))
+ class PALWORLD_API UPW_WorldMapControllerComponent : public UActorComponent
+@@ -42,6 +43,7 @@ public:
+ 	void RequestTeleportToMarker(EPW_MapMarkerType MarkerType, FName MarkerId);
+ 
+ 	void SetActiveTeleportSource(APW_TeleportPointActor* TeleportSource);
++	void SetActiveBaseCampTeleportSource(APW_BaseCampActor* BaseCampSource);
+ 
+ 	UFUNCTION(Client, Reliable)
+ 	void ClientShowTeleportMap();
+@@ -111,6 +113,9 @@ private:
+ 	UPROPERTY(Transient)
+ 	TObjectPtr<APW_TeleportPointActor> ActiveTeleportSource;
+ 
++	UPROPERTY(Transient)
++	TObjectPtr<APW_BaseCampActor> ActiveBaseCampTeleportSource;
++
+ 	FTimerHandle RevealTimerHandle;
+ 	bool bPreviousShowMouseCursor = false;
+ 	bool bHasAppliedWorldMapInputMode = false;
+diff --git a/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerController.cpp b/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerController.cpp
+index de28ad2..d34937c 100644
+--- a/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerController.cpp
++++ b/PalWorld/Source/PalWorld/PJH/Private/Player/Core/PWPlayerController.cpp
+@@ -27,6 +27,9 @@ void APWPlayerController::BeginPlay()
+ 		return;
+ 	}
+ 
++	bShowMouseCursor = false;
++	SetInputMode(FInputModeGameOnly());
++
+ 	ULocalPlayer* LocalPlayer = GetLocalPlayer();
+ 	if (!LocalPlayer)
+ 	{
+diff --git a/PalWorld/Source/PalWorld/PalWorld.Build.cs b/PalWorld/Source/PalWorld/PalWorld.Build.cs
+index 311a818..d1725e6 100644
+--- a/PalWorld/Source/PalWorld/PalWorld.Build.cs
++++ b/PalWorld/Source/PalWorld/PalWorld.Build.cs
+@@ -23,7 +23,6 @@ public class PalWorld : ModuleRules
+ 			"AIModule",
+ 			"NavigationSystem",
+ 			"StateTreeModule",
+-			"StateTreeEditorModule",
+ 			"GameplayStateTreeModule",
+ 			"OnlineSubsystem",
+ 			"OnlineSubsystemSteam",

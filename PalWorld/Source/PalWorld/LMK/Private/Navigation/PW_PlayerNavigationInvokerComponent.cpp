@@ -66,9 +66,10 @@ float UPW_PlayerNavigationInvokerComponent::GetResolvedGenerationRadius() const
 {
 	float ResolvedRadius = GenerationRadius;
 	const AActor* Owner = GetOwner();
-	if (bUseOwnerNetCullDistanceAsFallback && Owner != nullptr && Owner->NetCullDistanceSquared > 0.0f)
+	const float OwnerNetCullDistanceSquared = Owner != nullptr ? Owner->GetNetCullDistanceSquared() : 0.0f;
+	if (bUseOwnerNetCullDistanceAsFallback && OwnerNetCullDistanceSquared > 0.0f)
 	{
-		ResolvedRadius = FMath::Sqrt(Owner->NetCullDistanceSquared);
+		ResolvedRadius = FMath::Sqrt(OwnerNetCullDistanceSquared);
 	}
 
 	return FMath::Clamp(ResolvedRadius, MinGenerationRadius, MaxGenerationRadius);

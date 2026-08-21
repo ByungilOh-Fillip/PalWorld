@@ -38,5 +38,8 @@ void UPWPalAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     }
 
     // 4. 상태 태그 (CurrentActionTag)
-    // TODO: 블루프린트 BehaviorTree 태스크 수행 시 이 ActionTag를 업데이트하도록 연동할 예정
+    if (OwnerCharacter)
+    {
+        CurrentActionTag = OwnerCharacter->CurrentActionTag;
+    }
 }

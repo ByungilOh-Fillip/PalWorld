@@ -15,7 +15,7 @@ APW_StorageBoxActor::APW_StorageBoxActor()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	SetNetCullDistanceSquared(FMath::Square(8000.0f));
-	NetUpdateFrequency = 2.0f;
+	SetNetUpdateFrequency(2.0f);
 
 	StorageMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StorageMesh"));
 	SetRootComponent(StorageMesh);
@@ -43,6 +43,11 @@ void APW_StorageBoxActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (HasAuthority())
 	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(BaseCampRegistrationRetryTimerHandle);
+		}
+
 		UnregisterFromBaseCamp();
 	}
 
@@ -102,7 +107,30 @@ void APW_StorageBoxActor::RegisterWithBaseCamp()
 	if (OwningBaseCamp != nullptr && OwningBaseCamp->GetInventoryAggregatorComponent() != nullptr)
 	{
 		OwningBaseCamp->GetInventoryAggregatorComponent()->RegisterStorageBox(this);
+		if (World != nullptr)
+		{
+			World->GetTimerManager().ClearTimer(BaseCampRegistrationRetryTimerHandle);
+		}
+		return;
 	}
+
+	ScheduleBaseCampRegistrationRetry();
+}
+
+void APW_StorageBoxActor::ScheduleBaseCampRegistrationRetry()
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr || World->GetTimerManager().IsTimerActive(BaseCampRegistrationRetryTimerHandle))
+	{
+		return;
+	}
+
+	World->GetTimerManager().SetTimer(
+		BaseCampRegistrationRetryTimerHandle,
+		this,
+		&APW_StorageBoxActor::RegisterWithBaseCamp,
+		0.5f,
+		true);
 }
 
 void APW_StorageBoxActor::UnregisterFromBaseCamp()

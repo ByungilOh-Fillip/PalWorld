@@ -65,6 +65,85 @@ bool UPW_BasePalAssignmentComponent::UnassignPal(int32 SlotIndex)
 	return false;
 }
 
+bool UPW_BasePalAssignmentComponent::FindIdleAssignedPal(FPW_AssignedPalSlot& OutSlot) const
+{
+	for (const FPW_AssignedPalSlot& Slot : AssignedPalSlots)
+	{
+		if (Slot.AssignedState == TEXT("Idle") && Slot.CurrentWorkTargetId.IsNone() && IsValid(Slot.SpawnedPalActor))
+		{
+			OutSlot = Slot;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UPW_BasePalAssignmentComponent::TryAssignPalToWorkTarget(int32 SlotIndex, FName WorkTargetId)
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || !Owner->HasAuthority() || WorkTargetId.IsNone())
+	{
+		return false;
+	}
+
+	FPW_AssignedPalSlot* Slot = FindAssignedPalSlot(SlotIndex);
+	if (Slot == nullptr || Slot->AssignedState != TEXT("Idle") || !Slot->CurrentWorkTargetId.IsNone() || !IsValid(Slot->SpawnedPalActor))
+	{
+		return false;
+	}
+
+	Slot->CurrentWorkTargetId = WorkTargetId;
+	Slot->AssignedState = TEXT("MovingToWork");
+	Owner->ForceNetUpdate();
+	return true;
+}
+
+bool UPW_BasePalAssignmentComponent::SetAssignedPalState(int32 SlotIndex, FName AssignedState)
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || !Owner->HasAuthority() || AssignedState.IsNone())
+	{
+		return false;
+	}
+
+	FPW_AssignedPalSlot* Slot = FindAssignedPalSlot(SlotIndex);
+	if (Slot == nullptr)
+	{
+		return false;
+	}
+
+	Slot->AssignedState = AssignedState;
+	Owner->ForceNetUpdate();
+	return true;
+}
+
+bool UPW_BasePalAssignmentComponent::ClearAssignedPalWorkTarget(int32 SlotIndex)
+{
+	AActor* Owner = GetOwner();
+	if (Owner == nullptr || !Owner->HasAuthority())
+	{
+		return false;
+	}
+
+	FPW_AssignedPalSlot* Slot = FindAssignedPalSlot(SlotIndex);
+	if (Slot == nullptr)
+	{
+		return false;
+	}
+
+	Slot->CurrentWorkTargetId = NAME_None;
+	Slot->AssignedState = TEXT("Idle");
+	Owner->ForceNetUpdate();
+	return true;
+}
+
+AActor* UPW_BasePalAssignmentComponent::GetSpawnedPalActorForSlot(int32 SlotIndex) const
+{
+	const FPW_AssignedPalSlot* Slot = FindAssignedPalSlot(SlotIndex);
+	return Slot != nullptr ? Slot->SpawnedPalActor.Get() : nullptr;
+}
+
 int32 UPW_BasePalAssignmentComponent::FindFreeSlotIndex() const
 {
 	for (int32 CandidateIndex = 0; CandidateIndex < MaxAssignedPals; ++CandidateIndex)
@@ -86,6 +165,32 @@ int32 UPW_BasePalAssignmentComponent::FindFreeSlotIndex() const
 	}
 
 	return INDEX_NONE;
+}
+
+FPW_AssignedPalSlot* UPW_BasePalAssignmentComponent::FindAssignedPalSlot(int32 SlotIndex)
+{
+	for (FPW_AssignedPalSlot& Slot : AssignedPalSlots)
+	{
+		if (Slot.SlotIndex == SlotIndex)
+		{
+			return &Slot;
+		}
+	}
+
+	return nullptr;
+}
+
+const FPW_AssignedPalSlot* UPW_BasePalAssignmentComponent::FindAssignedPalSlot(int32 SlotIndex) const
+{
+	for (const FPW_AssignedPalSlot& Slot : AssignedPalSlots)
+	{
+		if (Slot.SlotIndex == SlotIndex)
+		{
+			return &Slot;
+		}
+	}
+
+	return nullptr;
 }
 
 bool UPW_BasePalAssignmentComponent::SpawnAssignedPalActor(FPW_AssignedPalSlot& Slot, TSubclassOf<AActor> PalActorClass)

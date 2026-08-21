@@ -82,6 +82,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
 	bool DestroyItemFromSlot(int32 SlotIndex, int32 Count);
 
+	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
+	bool UseItemFromSlot(int32 SlotIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Inventory")
+	bool ConsumeItem(FName ItemId, int32 Count);
+
 	UFUNCTION(BlueprintPure, Category = "Player|Inventory")
 	int32 GetItemCount(FName ItemId) const;
 
@@ -114,7 +120,7 @@ public:
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Inventory", meta = (ClampMin = "1"))
-	int32 InventorySlotCount = 40;
+	int32 InventorySlotCount = 42;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player|Inventory", meta = (ClampMin = "0.0"))
 	float MaxCarryWeight = 1000.f;
@@ -146,16 +152,28 @@ private:
 	UFUNCTION(Server, Reliable)
 	void ServerDestroyItemFromSlot(int32 SlotIndex, int32 Count);
 
+	UFUNCTION(Server, Reliable)
+	void ServerUseItemFromSlot(int32 SlotIndex);
+
+	UFUNCTION(Server, Reliable)
+	void ServerConsumeItem(FName ItemId, int32 Count);
+
 	UFUNCTION()
 	void OnRep_Items();
 
 	friend class UPWPlayerEquipmentComponent;
 
 	bool AddItemAuthority(FName ItemId, int32 Count);
+	bool AddItemToSlotAuthority(FName ItemId, int32 Count, int32 TargetSlotIndex);
 	bool MoveItemSlotAuthority(int32 FromSlotIndex, int32 ToSlotIndex);
+	bool ConsumeItemAuthority(FName ItemId, int32 Count);
 	bool RemoveItemFromSlotAuthority(int32 SlotIndex, int32 Count, FPWInventoryItemStack* OutRemovedStack = nullptr);
+	bool UseItemFromSlotAuthority(int32 SlotIndex);
+	bool ApplyConsumableItemAuthority(UPWItemDataAsset* ItemData);
+	bool DropItemStackToWorldAuthority(const FPWInventoryItemStack& ItemStack);
 	void EnsureDefaultItemDefinitions();
 	void GrantStarterItemsAuthority();
+	FName NormalizeItemId(FName ItemId) const;
 	FPWInventoryItemStack* FindStack(FName ItemId);
 	const FPWInventoryItemStack* FindStack(FName ItemId) const;
 	FPWInventoryItemStack* FindStackBySlot(int32 SlotIndex);

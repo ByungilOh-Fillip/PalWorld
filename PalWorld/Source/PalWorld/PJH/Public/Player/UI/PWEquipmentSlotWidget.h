@@ -41,7 +41,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|UI|Equipment")
 	UPWItemDataAsset* GetItemData() const { return ItemData; }
 
+	UFUNCTION(BlueprintPure, Category = "Player|UI|Equipment")
+	int32 GetItemCount() const { return Count; }
+
 protected:
+	virtual void NativePreConstruct() override;
+	virtual FReply NativeOnPreviewMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
@@ -58,6 +63,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Player|UI|Equipment")
 	TObjectPtr<UPWItemDataAsset> ItemData = nullptr;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Player|UI|Equipment")
+	int32 Count = 0;
+
 	// WBP_EquipmentSlot에서 이름을 맞춰두면 C++이 기본 아이콘/선택 표시를 자동으로 처리한다.
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Equipment|Bind")
 	TObjectPtr<UImage> Image_Icon = nullptr;
@@ -66,12 +74,17 @@ protected:
 	TObjectPtr<UTextBlock> Text_Name = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Equipment|Bind")
+	TObjectPtr<UTextBlock> Text_Count = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Equipment|Bind")
 	TObjectPtr<UWidget> Panel_ItemRoot = nullptr;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional), Category = "Player|UI|Equipment|Bind")
 	TObjectPtr<UWidget> Panel_Selected = nullptr;
 
 private:
+	FReply HandleSlotMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent);
+	UWidget* CreateDefaultDragVisual() const;
 	void RefreshBoundWidgets();
 
 	UPROPERTY(Transient)
